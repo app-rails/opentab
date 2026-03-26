@@ -24,6 +24,11 @@ Thumbs.db
 # WXT
 .wxt/
 
+# SQLite databases
+app-server/data/*.db
+app-server/data/*.db-journal
+app-server/data/*.db-wal
+
 # Context (conductor)
 .context/
 .claude/
