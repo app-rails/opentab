@@ -11,7 +11,6 @@ app.use(
   cors({
     origin: (origin) => {
       if (!origin) return null;
-      if (origin.startsWith("chrome-extension://")) return origin;
       if (env.TRUSTED_ORIGINS.includes(origin)) return origin;
       return null;
     },

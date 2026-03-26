@@ -48,7 +48,7 @@ MOD   .gitignore                          — add app-server/data/*.db
 - [ ] **Step 1: Add dependencies to app-server**
 
 ```bash
-cd /Users/liang.zhao/conductor/workspaces/opentab/sofia-v2
+# From the repository root
 pnpm --filter @opentab/server add better-auth better-sqlite3
 pnpm --filter @opentab/server add -D @types/better-sqlite3 vitest
 ```
@@ -240,7 +240,7 @@ git commit -m "feat(server): mount CORS middleware and better-auth route handler
 - [ ] **Step 1: Run better-auth migration**
 
 ```bash
-cd /Users/liang.zhao/conductor/workspaces/opentab/sofia-v2/app-server
+# From the repository root/app-server
 pnpm db:migrate
 ```
 
@@ -251,7 +251,7 @@ If the CLI prompts for confirmation, answer `y`.
 - [ ] **Step 2: Verify the database was created**
 
 ```bash
-ls -la /Users/liang.zhao/conductor/workspaces/opentab/sofia-v2/app-server/data/
+ls -la app-server/data/
 ```
 
 Expected: `auth.db` file exists alongside `.gitkeep`.
@@ -259,7 +259,7 @@ Expected: `auth.db` file exists alongside `.gitkeep`.
 - [ ] **Step 3: Verify tables exist**
 
 ```bash
-sqlite3 /Users/liang.zhao/conductor/workspaces/opentab/sofia-v2/app-server/data/auth.db ".tables"
+sqlite3 app-server/data/auth.db ".tables"
 ```
 
 Expected: Output includes `user`, `session`, `account` tables.
@@ -349,7 +349,7 @@ Note: Uses Hono's built-in `app.request()` test helper — no running server nee
 - [ ] **Step 3: Run the tests**
 
 ```bash
-cd /Users/liang.zhao/conductor/workspaces/opentab/sofia-v2
+# From the repository root
 pnpm --filter @opentab/server test
 ```
 
@@ -399,7 +399,7 @@ export type { HealthResponse, AuthState } from "./types.js";
 - [ ] **Step 3: Verify types compile**
 
 ```bash
-cd /Users/liang.zhao/conductor/workspaces/opentab/sofia-v2
+# From the repository root
 pnpm --filter @opentab/shared lint
 ```
 
@@ -652,7 +652,7 @@ export default defineConfig({
 - [ ] **Step 2: Verify extension type-checks**
 
 ```bash
-cd /Users/liang.zhao/conductor/workspaces/opentab/sofia-v2
+# From the repository root
 pnpm --filter @opentab/extension lint
 ```
 
@@ -672,7 +672,7 @@ git commit -m "feat(extension): add storage and alarms permissions to manifest"
 - [ ] **Step 1: Full lint across all packages**
 
 ```bash
-cd /Users/liang.zhao/conductor/workspaces/opentab/sofia-v2
+# From the repository root
 pnpm lint
 ```
 
@@ -681,7 +681,7 @@ Expected: All packages pass type checking and biome.
 - [ ] **Step 2: Start dev servers**
 
 ```bash
-cd /Users/liang.zhao/conductor/workspaces/opentab/sofia-v2
+# From the repository root
 pnpm dev
 ```
 
@@ -711,7 +711,7 @@ Expected: `{ opentab_auth: { mode: "online", accountId: "...", sessionToken: "..
 - [ ] **Step 5: Verify SQLite has the user**
 
 ```bash
-sqlite3 /Users/liang.zhao/conductor/workspaces/opentab/sofia-v2/app-server/data/auth.db "SELECT id, name, email FROM user;"
+sqlite3 app-server/data/auth.db "SELECT id, name, email FROM user;"
 ```
 
 Expected: One row with an anonymous user.

@@ -6,10 +6,16 @@ function required(name: string): string {
   return value;
 }
 
-const trustedOrigins = (process.env.TRUSTED_ORIGINS ?? "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+const trustedOrigins = [
+  ...(process.env.TRUSTED_ORIGINS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+  ...(process.env.TRUSTED_EXTENSION_ORIGINS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+];
 
 export const env = {
   get BETTER_AUTH_SECRET() {
