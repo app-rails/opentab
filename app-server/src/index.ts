@@ -1,6 +1,6 @@
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
 import type { HealthResponse } from "@opentab/shared";
+import { Hono } from "hono";
 
 const app = new Hono();
 

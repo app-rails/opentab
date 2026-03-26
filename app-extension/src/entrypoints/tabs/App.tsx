@@ -1,12 +1,5 @@
-import type { HealthResponse } from "@opentab/shared";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function App() {
   return (
@@ -42,9 +35,7 @@ export default function App() {
         </Card>
       </div>
       <div className="mt-8">
-        <Button variant="outline">
-          Tailwind + shadcn/ui working!
-        </Button>
+        <Button variant="outline">Tailwind + shadcn/ui working!</Button>
       </div>
     </div>
   );
