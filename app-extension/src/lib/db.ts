@@ -49,8 +49,8 @@ const db = new Dexie("OpenTabDB") as Dexie & {
 db.version(1).stores({
   accounts: "++id, accountId",
   workspaces: "++id, accountId, order",
-  tabCollections: "++id, workspaceId, order",
-  collectionTabs: "++id, collectionId, order",
+  tabCollections: "++id, [workspaceId+order]",
+  collectionTabs: "++id, [collectionId+order]",
   settings: "key",
 });
 

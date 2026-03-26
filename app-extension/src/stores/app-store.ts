@@ -1,9 +1,10 @@
+import Dexie from "dexie";
 import { create } from "zustand";
 import type { CollectionTab, TabCollection, Workspace } from "@/lib/db";
 import { db } from "@/lib/db";
 
 function loadCollections(workspaceId: number) {
-  return db.tabCollections.where("workspaceId").equals(workspaceId).sortBy("order");
+  return db.tabCollections.where("[workspaceId+order]").between([workspaceId, Dexie.minKey], [workspaceId, Dexie.maxKey]).toArray();
 }
 
 interface AppState {
@@ -28,22 +29,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   isLoading: true,
 
   initialize: async () => {
-    const workspaces = await db.workspaces.orderBy("order").toArray();
-    const activeWorkspaceId = workspaces[0]?.id ?? null;
+    try {
+      const workspaces = await db.workspaces.orderBy("order").toArray();
+      const activeWorkspaceId = workspaces[0]?.id ?? null;
 
-    let collections: TabCollection[] = [];
-    if (activeWorkspaceId != null) {
-      collections = await loadCollections(activeWorkspaceId);
+      let collections: TabCollection[] = [];
+      if (activeWorkspaceId != null) {
+        collections = await loadCollections(activeWorkspaceId);
+      }
+
+      set({
+        workspaces,
+        activeWorkspaceId,
+        collections,
+        activeCollectionId: collections[0]?.id ?? null,
+        tabs: [],
+        isLoading: false,
+      });
+    } catch (err) {
+      console.error("[store] failed to initialize:", err);
+      set({ isLoading: false });
     }
-
-    set({
-      workspaces,
-      activeWorkspaceId,
-      collections,
-      activeCollectionId: collections[0]?.id ?? null,
-      tabs: [],
-      isLoading: false,
-    });
   },
 
   setActiveWorkspace: (id) => {
@@ -64,9 +70,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().activeCollectionId === id) return;
     set({ activeCollectionId: id, tabs: [] });
     db.collectionTabs
-      .where("collectionId")
-      .equals(id)
-      .sortBy("order")
+      .where("[collectionId+order]")
+      .between([id, Dexie.minKey], [id, Dexie.maxKey])
+      .toArray()
       .then((tabs) => {
         if (get().activeCollectionId !== id) return;
         set({ tabs });
