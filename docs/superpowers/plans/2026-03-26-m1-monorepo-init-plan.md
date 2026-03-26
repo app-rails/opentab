@@ -637,15 +637,15 @@ git commit -m "feat: integrate Tailwind v4 + shadcn/ui with Button and Card"
 - [ ] **Step 2: Create `app-extension/src/entrypoints/popup/main.tsx`**
 
 ```tsx
-import React from "react";
-import ReactDOM from "react-dom/client";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 import "@/assets/main.css";
 import App from "./App";
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
     <App />
-  </React.StrictMode>
+  </StrictMode>
 );
 ```
 
@@ -695,15 +695,15 @@ export default function App() {
 - [ ] **Step 5: Create `app-extension/src/entrypoints/tabs/main.tsx`**
 
 ```tsx
-import React from "react";
-import ReactDOM from "react-dom/client";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 import "@/assets/main.css";
 import App from "./App";
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
     <App />
-  </React.StrictMode>
+  </StrictMode>
 );
 ```
 
