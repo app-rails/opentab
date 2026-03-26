@@ -463,7 +463,7 @@ const API_BASE = "http://localhost:3001";
 
 interface SignInAnonymousResponse {
   user: { id: string; isAnonymous: boolean };
-  session: { id: string; token: string };
+  token: string;
 }
 
 export async function signInAnonymous(): Promise<SignInAnonymousResponse> {
