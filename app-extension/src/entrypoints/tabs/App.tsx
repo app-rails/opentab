@@ -1,3 +1,4 @@
+import type { HealthResponse } from "@opentab/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,

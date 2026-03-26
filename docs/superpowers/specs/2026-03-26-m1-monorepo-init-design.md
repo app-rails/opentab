@@ -1,7 +1,7 @@
 # Spec: M1 — Monorepo 项目初始化
 
 Date: 2026-03-26
-Milestone: [idea-1/M1](../milestones/20260326-opentab-manager-idea-1-m1.md)
+Milestone: [idea-1/M1](../../milestones/20260326-opentab-manager-idea-1-m1.md)
 Status: DRAFT
 
 ## 目标

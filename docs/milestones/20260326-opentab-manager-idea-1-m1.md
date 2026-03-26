@@ -14,7 +14,7 @@ Monorepo 搭建完成，扩展和后端可同时启动。
 - [x] `app-extension`: Tailwind CSS + shadcn/ui 集成
 - [x] `app-server`: Hono 后端初始化
 - [x] `packages/shared`: 共享类型定义包
-- [x] turborepo pipeline 配置（dev / build / lint）
+- [x] turborepo tasks 配置（dev / build / lint）
 
 ## 验收标准
 
