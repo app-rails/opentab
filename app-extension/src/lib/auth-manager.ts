@@ -16,7 +16,7 @@ export async function initializeAuth(): Promise<void> {
       sessionToken: token,
     });
     console.log("[auth] anonymous account created:", user.id);
-  } catch (err) {
+  } catch {
     const localUuid = crypto.randomUUID();
     await setAuthState({ mode: "offline", localUuid });
     console.warn("[auth] backend unreachable, using local UUID:", localUuid);
@@ -37,12 +37,7 @@ export async function attemptRegistration(): Promise<void> {
       sessionToken: token,
       localUuid: state.localUuid,
     });
-    console.log(
-      "[auth] offline → online, account:",
-      user.id,
-      "localUuid:",
-      state.localUuid,
-    );
+    console.log("[auth] offline → online, account:", user.id, "localUuid:", state.localUuid);
   } catch {
     // Still offline, will retry on next alarm
   }

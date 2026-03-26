@@ -8,6 +8,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   srcDir: "src",
   modules: ["@wxt-dev/module-react"],
+  manifest: {
+    permissions: ["storage", "alarms"],
+  },
   vite: () => ({
     plugins: [tailwindcss()],
     resolve: {
