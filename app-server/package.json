@@ -7,7 +7,7 @@
     "dev": "tsx watch --env-file=.env src/index.ts",
     "build": "tsc",
     "lint": "tsc --noEmit && biome check .",
-    "test": "node --env-file=.env ./node_modules/.bin/vitest run",
+    "test": "vitest run",
     "db:migrate": "npx @better-auth/cli migrate"
   },
   "dependencies": {
