@@ -32,5 +32,5 @@ Date: 2026-03-26
 
 | # | 名称 | 文件 |
 |---|------|------|
-| M1 | 文档体系 | [milestone](../../milestones/20260326-opentab-manager-idea-7-m1.md) |
-| M2 | 自部署方案 | [milestone](../../milestones/20260326-opentab-manager-idea-7-m2.md) |
+| M1 | 文档体系 | [milestone](../milestones/20260326-opentab-manager-idea-7-m1.md) |
+| M2 | 自部署方案 | [milestone](../milestones/20260326-opentab-manager-idea-7-m2.md) |

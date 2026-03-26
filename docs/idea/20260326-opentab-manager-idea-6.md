@@ -31,5 +31,5 @@ Date: 2026-03-26
 
 | # | 名称 | 文件 |
 |---|------|------|
-| M1 | 发布素材准备 | [milestone](../../milestones/20260326-opentab-manager-idea-6-m1.md) |
-| M2 | 提交审核 + 上线 | [milestone](../../milestones/20260326-opentab-manager-idea-6-m2.md) |
+| M1 | 发布素材准备 | [milestone](../milestones/20260326-opentab-manager-idea-6-m1.md) |
+| M2 | 提交审核 + 上线 | [milestone](../milestones/20260326-opentab-manager-idea-6-m2.md) |

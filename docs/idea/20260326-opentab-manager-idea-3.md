@@ -29,5 +29,5 @@ Date: 2026-03-26
 
 | # | 名称 | 文件 |
 |---|------|------|
-| M1 | 快照创建 | [milestone](../../milestones/20260326-opentab-manager-idea-3-m1.md) |
-| M2 | 快照管理 + 恢复 | [milestone](../../milestones/20260326-opentab-manager-idea-3-m2.md) |
+| M1 | 快照创建 | [milestone](../milestones/20260326-opentab-manager-idea-3-m1.md) |
+| M2 | 快照管理 + 恢复 | [milestone](../milestones/20260326-opentab-manager-idea-3-m2.md) |

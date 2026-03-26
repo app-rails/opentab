@@ -35,6 +35,6 @@ Date: 2026-03-26
 
 | # | 名称 | 文件 |
 |---|------|------|
-| M1 | Workspace CRUD | [milestone](../../milestones/20260326-opentab-manager-idea-2-m1.md) |
-| M2 | 集合 + Tab 管理 | [milestone](../../milestones/20260326-opentab-manager-idea-2-m2.md) |
-| M3 | 切换 + 自动归属 + 健壮性 | [milestone](../../milestones/20260326-opentab-manager-idea-2-m3.md) |
+| M1 | Workspace CRUD | [milestone](../milestones/20260326-opentab-manager-idea-2-m1.md) |
+| M2 | 集合 + Tab 管理 | [milestone](../milestones/20260326-opentab-manager-idea-2-m2.md) |
+| M3 | 切换 + 自动归属 + 健壮性 | [milestone](../milestones/20260326-opentab-manager-idea-2-m3.md) |

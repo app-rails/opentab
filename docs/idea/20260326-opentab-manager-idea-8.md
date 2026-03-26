@@ -34,6 +34,6 @@ Date: 2026-03-26
 
 | # | 名称 | 文件 |
 |---|------|------|
-| M1 | 账号升级流程 | [milestone](../../milestones/20260326-opentab-manager-idea-8-m1.md) |
-| M2 | 数据同步引擎 | [milestone](../../milestones/20260326-opentab-manager-idea-8-m2.md) |
-| M3 | 同步健壮性 | [milestone](../../milestones/20260326-opentab-manager-idea-8-m3.md) |
+| M1 | 账号升级流程 | [milestone](../milestones/20260326-opentab-manager-idea-8-m1.md) |
+| M2 | 数据同步引擎 | [milestone](../milestones/20260326-opentab-manager-idea-8-m2.md) |
+| M3 | 同步健壮性 | [milestone](../milestones/20260326-opentab-manager-idea-8-m3.md) |

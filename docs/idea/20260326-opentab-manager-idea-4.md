@@ -30,5 +30,5 @@ Date: 2026-03-26
 
 | # | 名称 | 文件 |
 |---|------|------|
-| M1 | 主题 + 空状态 | [milestone](../../milestones/20260326-opentab-manager-idea-4-m1.md) |
-| M2 | 快捷键系统 | [milestone](../../milestones/20260326-opentab-manager-idea-4-m2.md) |
+| M1 | 主题 + 空状态 | [milestone](../milestones/20260326-opentab-manager-idea-4-m1.md) |
+| M2 | 快捷键系统 | [milestone](../milestones/20260326-opentab-manager-idea-4-m2.md) |

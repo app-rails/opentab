@@ -34,6 +34,6 @@ Date: 2026-03-26
 
 | # | 名称 | 文件 |
 |---|------|------|
-| M1 | 项目初始化 | [milestone](../../milestones/20260326-opentab-manager-idea-1-m1.md) |
-| M2 | 认证体系 | [milestone](../../milestones/20260326-opentab-manager-idea-1-m2.md) |
-| M3 | 数据层 + UI 骨架 | [milestone](../../milestones/20260326-opentab-manager-idea-1-m3.md) |
+| M1 | 项目初始化 | [milestone](../milestones/20260326-opentab-manager-idea-1-m1.md) |
+| M2 | 认证体系 | [milestone](../milestones/20260326-opentab-manager-idea-1-m2.md) |
+| M3 | 数据层 + UI 骨架 | [milestone](../milestones/20260326-opentab-manager-idea-1-m3.md) |

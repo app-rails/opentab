@@ -30,5 +30,5 @@ Date: 2026-03-26
 
 | # | 名称 | 文件 |
 |---|------|------|
-| M1 | 基础 TabGroups 映射 | [milestone](../../milestones/20260326-opentab-manager-idea-5-m1.md) |
-| M2 | 切换联动 TabGroups | [milestone](../../milestones/20260326-opentab-manager-idea-5-m2.md) |
+| M1 | 基础 TabGroups 映射 | [milestone](../milestones/20260326-opentab-manager-idea-5-m1.md) |
+| M2 | 切换联动 TabGroups | [milestone](../milestones/20260326-opentab-manager-idea-5-m2.md) |

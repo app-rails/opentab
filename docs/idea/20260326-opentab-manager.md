@@ -252,7 +252,7 @@ Settings（单例，存储在 Chrome Storage sync 中，支持跨设备同步）
 - [ ] 匿名账号创建流程：扩展安装 → 自动请求后端 → 创建匿名 account → 返回 token → 存入 Chrome Storage
 
 **数据层任务：**
-- [ ] Dexie.js schema 定义（Account、Workspace、WorkspaceTab、Settings）
+- [ ] Dexie.js schema 定义（Account、Workspace、TabCollection、CollectionTab、Settings）
 - [ ] 初始化逻辑：首次安装时创建默认 Workspace（"Default"）
 
 **UI 任务：**
@@ -284,7 +284,7 @@ Settings（单例，存储在 Chrome Storage sync 中，支持跨设备同步）
 **数据流：**
 - Tab 打开 → Background 监听 `chrome.tabs.onCreated` → 分配到当前活跃 workspace → 写入 Dexie
 - Tab URL 变化 → Background 监听 `chrome.tabs.onUpdated` → 更新 Dexie 中的 title/url/favicon
-- Tab 在 workspace 间移动 → 更新 WorkspaceTab.workspaceId
+- Tab 在 workspace 间移动 → 更新 CollectionTab.collectionId（将 tab 移到目标 workspace 下的目标 collection）
 
 **UI 任务：**
 - [ ] 左栏：Workspace 列表，支持新建、选中高亮、右键菜单（重命名/改色/删除）
@@ -315,14 +315,14 @@ Settings（单例，存储在 Chrome Storage sync 中，支持跨设备同步）
 **目标：** 关闭的 tab 自动归档到 workspace，可搜索可恢复。这是核心差异化功能。
 
 **业务逻辑：**
-- Tab 关闭 → Background 监听 `chrome.tabs.onRemoved` → WorkspaceTab.status 从 `active` 改为 `archived`，记录 archivedAt
+- Tab 关闭 → Background 监听 `chrome.tabs.onRemoved` → CollectionTab.status 从 `active` 改为 `archived`，记录 archivedAt
 - 归档 tab 保留在 workspace 中，灰色/半透明显示
 - 点击归档 tab → `chrome.tabs.create({ url })` → status 恢复为 `active`
 - 搜索范围：当前 workspace（workspace 内搜索）或全局（全局搜索栏）
 - 搜索字段：title + URL，使用 Dexie.js 索引实现
 
 **数据层：**
-- Dexie 索引：WorkspaceTab 表对 `title` 和 `url` 建立复合索引
+- Dexie 索引：CollectionTab 表对 `title` 和 `url` 建立复合索引
 - 归档保留策略（V1 简单处理）：保留全部，后续可加 TTL 或数量限制
 
 **UI 任务：**
