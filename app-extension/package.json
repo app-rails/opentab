@@ -1,0 +1,25 @@
+{
+  "name": "@opentab/extension",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opentab/shared": "workspace:*",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@wxt-dev/module-react": "^1",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "wxt": "^0.20"
+  }
+}
