@@ -1,6 +1,6 @@
+import type { HealthResponse } from "@opentab/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import type { HealthResponse } from "@opentab/shared";
 import { auth } from "./auth.js";
 import { env } from "./env.js";
 
