@@ -2,6 +2,10 @@ import { create } from "zustand";
 import type { CollectionTab, TabCollection, Workspace } from "@/lib/db";
 import { db } from "@/lib/db";
 
+function loadCollections(workspaceId: number) {
+  return db.tabCollections.where("workspaceId").equals(workspaceId).sortBy("order");
+}
+
 interface AppState {
   workspaces: Workspace[];
   activeWorkspaceId: number | null;
@@ -15,7 +19,7 @@ interface AppState {
   setActiveCollection: (id: number) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   workspaces: [],
   activeWorkspaceId: null,
   collections: [],
@@ -24,17 +28,12 @@ export const useAppStore = create<AppState>((set) => ({
   isLoading: true,
 
   initialize: async () => {
-    set({ isLoading: true });
-
     const workspaces = await db.workspaces.orderBy("order").toArray();
     const activeWorkspaceId = workspaces[0]?.id ?? null;
 
     let collections: TabCollection[] = [];
     if (activeWorkspaceId != null) {
-      collections = await db.tabCollections
-        .where("workspaceId")
-        .equals(activeWorkspaceId)
-        .sortBy("order");
+      collections = await loadCollections(activeWorkspaceId);
     }
 
     set({
@@ -48,12 +47,11 @@ export const useAppStore = create<AppState>((set) => ({
   },
 
   setActiveWorkspace: (id) => {
+    if (get().activeWorkspaceId === id) return;
     set({ activeWorkspaceId: id, collections: [], activeCollectionId: null, tabs: [] });
-    db.tabCollections
-      .where("workspaceId")
-      .equals(id)
-      .sortBy("order")
+    loadCollections(id)
       .then((collections) => {
+        if (get().activeWorkspaceId !== id) return;
         set({
           collections,
           activeCollectionId: collections[0]?.id ?? null,
@@ -63,12 +61,14 @@ export const useAppStore = create<AppState>((set) => ({
   },
 
   setActiveCollection: (id) => {
+    if (get().activeCollectionId === id) return;
     set({ activeCollectionId: id, tabs: [] });
     db.collectionTabs
       .where("collectionId")
       .equals(id)
       .sortBy("order")
       .then((tabs) => {
+        if (get().activeCollectionId !== id) return;
         set({ tabs });
       })
       .catch((err) => console.error("[store] failed to load tabs:", err));
