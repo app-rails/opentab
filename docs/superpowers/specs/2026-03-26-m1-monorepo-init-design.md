@@ -33,7 +33,7 @@ port-louis/
           index.html
           main.tsx
           App.tsx          # 全页面骨架（Button + Card）
-        background.ts      # icon click → open/focus tabs page
+        background.ts      # service worker entry point
       assets/
         main.css           # Tailwind v4 + shadcn theme
       lib/
@@ -65,7 +65,7 @@ port-louis/
 ### 2. Turborepo 配置
 
 - 使用 v2 `tasks` 格式（不是已废弃的 `pipeline`）
-- `dev`: `persistent: true`, `cache: false`, `dependsOn: ["^build"]`
+- `dev`: `persistent: true`, `cache: false`（shared 导出 raw TS，dev 时不需要先 build）
 - `build`: `dependsOn: ["^build"]`, outputs: `[".output/**", "dist/**"]`
 - `lint`: `dependsOn: ["^build"]`
 

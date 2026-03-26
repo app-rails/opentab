@@ -150,7 +150,9 @@ packages:
       "cache": false,
       "persistent": true
     },
-    "lint": {}
+    "lint": {
+      "dependsOn": ["^build"]
+    }
   }
 }
 ```
@@ -434,7 +436,10 @@ git commit -m "feat: add @opentab/server with Hono /api/health endpoint"
 ```ts
 import { defineConfig } from "wxt";
 import tailwindcss from "@tailwindcss/vite";
-import path from "path";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   srcDir: "src",
@@ -443,7 +448,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src"),
+        "@": resolve(__dirname, "./src"),
       },
     },
   }),
@@ -565,15 +570,7 @@ export function cn(...inputs: ClassValue[]) {
 
 If not generated, create this file manually.
 
-- [ ] **Step 5: Install shadcn peer dependencies**
-
-Some shadcn dependencies may not be installed yet:
-
-```bash
-pnpm --filter @opentab/extension add -D class-variance-authority clsx tailwind-merge tw-animate-css lucide-react
-```
-
-- [ ] **Step 6: Add Button component**
+- [ ] **Step 5: Add Button component**
 
 ```bash
 cd app-extension && pnpm dlx shadcn@latest add button
@@ -581,7 +578,7 @@ cd app-extension && pnpm dlx shadcn@latest add button
 
 Expected: `src/components/ui/button.tsx` created.
 
-- [ ] **Step 7: Add Card component**
+- [ ] **Step 6: Add Card component**
 
 ```bash
 cd app-extension && pnpm dlx shadcn@latest add card
@@ -589,11 +586,21 @@ cd app-extension && pnpm dlx shadcn@latest add card
 
 Expected: `src/components/ui/card.tsx` created.
 
+- [ ] **Step 7: Verify all shadcn deps were auto-installed**
+
+Check that `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css`, and `lucide-react` are present in `app-extension/package.json`. If any are missing, install them:
+
+```bash
+pnpm --filter @opentab/extension add class-variance-authority clsx tailwind-merge tw-animate-css lucide-react
+```
+
+Note: these are runtime dependencies (imported by shadcn components at build time), so install without `-D`.
+
 - [ ] **Step 8: Commit**
 
 ```bash
 cd ..
-git add app-extension/components.json app-extension/src/assets/ app-extension/src/lib/ app-extension/src/components/ pnpm-lock.yaml
+git add app-extension/components.json app-extension/src/assets/ app-extension/src/lib/ app-extension/src/components/ app-extension/package.json pnpm-lock.yaml
 git commit -m "feat: integrate Tailwind v4 + shadcn/ui with Button and Card"
 ```
 
@@ -762,24 +769,11 @@ Note: The `HealthResponse` import validates that `@opentab/shared` types resolve
 
 ```ts
 export default defineBackground(() => {
-  browser.action.onClicked.addListener(async () => {
-    const tabs = await browser.tabs.query({
-      url: browser.runtime.getURL("/tabs.html"),
-    });
-
-    if (tabs.length > 0 && tabs[0].id !== undefined) {
-      browser.tabs.update(tabs[0].id, { active: true });
-      if (tabs[0].windowId !== undefined) {
-        browser.windows.update(tabs[0].windowId, { focused: true });
-      }
-    } else {
-      browser.tabs.create({ url: browser.runtime.getURL("/tabs.html") });
-    }
-  });
+  console.log("OpenTab background service worker started");
 });
 ```
 
-**Important:** Since we have a popup defined, `browser.action.onClicked` will NOT fire (Chrome shows the popup instead of firing onClicked). The popup's "Open Dashboard" button handles navigation. The background script is scaffolded here for future use (M3 will remove popup and switch to onClicked). For now, the background still serves as the service worker entry point.
+The background is minimal for now — just the service worker entry point. M3 will add icon-click → open/focus tabs page logic here (when popup is removed in favor of direct navigation).
 
 - [ ] **Step 8: Commit**
 
