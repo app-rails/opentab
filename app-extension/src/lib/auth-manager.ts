@@ -1,44 +1,58 @@
+import type { AuthState } from "@opentab/shared";
 import { signInAnonymous } from "./api.js";
 import { getAuthState, setAuthState } from "./auth-storage.js";
 
-export async function initializeAuth(): Promise<void> {
+type OnlineState = Extract<AuthState, { mode: "online" }>;
+
+async function registerAndPersist(existingLocalUuid?: string): Promise<OnlineState> {
+  const { user, token } = await signInAnonymous();
+  const state: OnlineState = {
+    mode: "online",
+    accountId: user.id,
+    sessionToken: token,
+    ...(existingLocalUuid && { localUuid: existingLocalUuid }),
+  };
+  await setAuthState(state);
+  return state;
+}
+
+export async function initializeAuth(): Promise<AuthState> {
   const existing = await getAuthState();
   if (existing?.mode === "online") {
     console.log("[auth] already authenticated, skipping init");
-    return;
+    return existing;
   }
 
   try {
-    const { user, token } = await signInAnonymous();
-    await setAuthState({
-      mode: "online",
-      accountId: user.id,
-      sessionToken: token,
-    });
-    console.log("[auth] anonymous account created:", user.id);
-  } catch {
-    const localUuid = crypto.randomUUID();
-    await setAuthState({ mode: "offline", localUuid });
-    console.warn("[auth] backend unreachable, using local UUID:", localUuid);
+    const state = await registerAndPersist();
+    console.log("[auth] anonymous account created:", state.accountId);
+    return state;
+  } catch (error) {
+    const localUuid = existing?.mode === "offline" ? existing.localUuid : crypto.randomUUID();
+    const state: AuthState = { mode: "offline", localUuid };
+    await setAuthState(state);
+    console.warn("[auth] backend unreachable, using local UUID:", localUuid, error);
+    return state;
   }
 }
 
-export async function attemptRegistration(): Promise<void> {
+export async function attemptRegistration(): Promise<AuthState | null> {
   const state = await getAuthState();
   if (!state || state.mode === "online") {
-    return;
+    return state;
   }
 
   try {
-    const { user, token } = await signInAnonymous();
-    await setAuthState({
-      mode: "online",
-      accountId: user.id,
-      sessionToken: token,
-      localUuid: state.localUuid,
-    });
-    console.log("[auth] offline → online, account:", user.id, "localUuid:", state.localUuid);
-  } catch {
-    // Still offline, will retry on next alarm
+    const updated = await registerAndPersist(state.localUuid);
+    console.log(
+      "[auth] offline → online, account:",
+      updated.accountId,
+      "localUuid:",
+      state.localUuid,
+    );
+    return updated;
+  } catch (error) {
+    console.warn("[auth] registration attempt failed, will retry:", error);
+    return state;
   }
 }

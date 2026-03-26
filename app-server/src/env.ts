@@ -6,6 +6,11 @@ function required(name: string): string {
   return value;
 }
 
+const trustedOrigins = (process.env.TRUSTED_ORIGINS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 export const env = {
   get BETTER_AUTH_SECRET() {
     return required("BETTER_AUTH_SECRET");
@@ -14,9 +19,6 @@ export const env = {
     return process.env.BETTER_AUTH_URL ?? "http://localhost:3001";
   },
   get TRUSTED_ORIGINS() {
-    return (process.env.TRUSTED_ORIGINS ?? "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    return trustedOrigins;
   },
 } as const;
