@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "postinstall": "wxt prepare"
   },
   "dependencies": {
     "@opentab/shared": "workspace:*",
