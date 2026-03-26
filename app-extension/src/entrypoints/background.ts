@@ -1,4 +1,5 @@
 import { attemptRegistration, initializeAuth } from "@/lib/auth-manager";
+import { seedDefaultData } from "@/lib/db-init";
 
 const AUTH_RETRY_ALARM = "opentab-auth-retry";
 
@@ -17,6 +18,11 @@ export default defineBackground(() => {
         console.log("[bg] offline mode — retry alarm created");
       }
     }
+
+    // Seed on both install and update (M2→M3 upgrade path).
+    // seedDefaultData() is idempotent — skips if data already exists.
+    console.log("[bg] ensuring default database data exists");
+    await seedDefaultData();
   });
 
   browser.alarms.onAlarm.addListener(async (alarm) => {
