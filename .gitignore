@@ -26,3 +26,5 @@ Thumbs.db
 
 # Context (conductor)
 .context/
+.worktree-files
+.claude/
