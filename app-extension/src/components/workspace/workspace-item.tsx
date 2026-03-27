@@ -38,6 +38,7 @@ export function WorkspaceItem({ workspace, isActive, onSelect, onRequestDelete }
   const [renameValue, setRenameValue] = useState(workspace.name);
   const [iconPopoverOpen, setIconPopoverOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isConfirmingRef = useRef(false);
 
   useEffect(() => {
     if (isRenaming) {
@@ -52,11 +53,14 @@ export function WorkspaceItem({ workspace, isActive, onSelect, onRequestDelete }
   }
 
   function confirmRename() {
+    if (isConfirmingRef.current) return;
+    isConfirmingRef.current = true;
     const trimmed = renameValue.trim();
     if (trimmed.length > 0 && trimmed !== workspace.name && workspace.id != null) {
       renameWorkspace(workspace.id, trimmed);
     }
     setIsRenaming(false);
+    isConfirmingRef.current = false;
   }
 
   function cancelRename() {
@@ -68,6 +72,40 @@ export function WorkspaceItem({ workspace, isActive, onSelect, onRequestDelete }
 
   function openIconPicker() {
     setIconPopoverOpen(true);
+  }
+
+  function renderMenuItems(
+    MenuItem: typeof DropdownMenuItem,
+    MenuSeparator: typeof DropdownMenuSeparator,
+  ) {
+    return (
+      <>
+        <MenuItem onClick={startRename}>
+          <Pencil className="mr-2 size-4" />
+          Change Name
+        </MenuItem>
+        <MenuItem onClick={openIconPicker}>
+          <ImagePlus className="mr-2 size-4" />
+          Change Icon
+        </MenuItem>
+        <MenuSeparator />
+        <MenuItem
+          onClick={onRequestDelete}
+          disabled={workspace.isDefault}
+          className={cn(
+            workspace.isDefault
+              ? "text-muted-foreground"
+              : "text-destructive focus:text-destructive",
+          )}
+        >
+          <Trash2 className="mr-2 size-4" />
+          Delete
+          {workspace.isDefault && (
+            <span className="ml-auto text-xs italic text-muted-foreground">default</span>
+          )}
+        </MenuItem>
+      </>
+    );
   }
 
   return (
@@ -120,60 +158,14 @@ export function WorkspaceItem({ workspace, isActive, onSelect, onRequestDelete }
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" side="bottom">
-                  <DropdownMenuItem onClick={startRename}>
-                    <Pencil className="mr-2 size-4" />
-                    Change Name
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={openIconPicker}>
-                    <ImagePlus className="mr-2 size-4" />
-                    Change Icon
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={onRequestDelete}
-                    disabled={workspace.isDefault}
-                    className={cn(
-                      workspace.isDefault
-                        ? "text-muted-foreground"
-                        : "text-destructive focus:text-destructive",
-                    )}
-                  >
-                    <Trash2 className="mr-2 size-4" />
-                    Delete
-                    {workspace.isDefault && (
-                      <span className="ml-auto text-xs italic text-muted-foreground">default</span>
-                    )}
-                  </DropdownMenuItem>
+                  {renderMenuItems(DropdownMenuItem, DropdownMenuSeparator)}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </PopoverAnchor>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem onClick={startRename}>
-            <Pencil className="mr-2 size-4" />
-            Change Name
-          </ContextMenuItem>
-          <ContextMenuItem onClick={openIconPicker}>
-            <ImagePlus className="mr-2 size-4" />
-            Change Icon
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            onClick={onRequestDelete}
-            disabled={workspace.isDefault}
-            className={cn(
-              workspace.isDefault
-                ? "text-muted-foreground"
-                : "text-destructive focus:text-destructive",
-            )}
-          >
-            <Trash2 className="mr-2 size-4" />
-            Delete
-            {workspace.isDefault && (
-              <span className="ml-auto text-xs italic text-muted-foreground">default</span>
-            )}
-          </ContextMenuItem>
+          {renderMenuItems(ContextMenuItem, ContextMenuSeparator)}
         </ContextMenuContent>
       </ContextMenu>
       <PopoverContent className="w-auto p-3" side="right" align="start">

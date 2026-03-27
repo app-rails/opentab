@@ -4,7 +4,12 @@ import { create } from "zustand";
 import { getAuthState } from "@/lib/auth-storage";
 import type { CollectionTab, TabCollection, Workspace } from "@/lib/db";
 import { db } from "@/lib/db";
-import { DEFAULT_ICON, WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
+import {
+  DEFAULT_ICON,
+  WORKSPACE_ICON_OPTIONS,
+  WORKSPACE_NAME_MAX_LENGTH,
+  type WorkspaceIconName,
+} from "@/lib/constants";
 
 function loadCollections(workspaceId: number) {
   return db.tabCollections
@@ -22,11 +27,17 @@ function validateName(name: string): string | null {
   return trimmed;
 }
 
+function validatedIcon(icon: string): WorkspaceIconName {
+  return WORKSPACE_ICON_OPTIONS.includes(icon as WorkspaceIconName)
+    ? (icon as WorkspaceIconName)
+    : DEFAULT_ICON;
+}
+
 async function resolveAccountId(): Promise<string> {
   const authState = await getAuthState();
   if (authState?.mode === "online") return authState.accountId;
   if (authState?.mode === "offline") return authState.localUuid;
-  return "unknown";
+  throw new Error("Cannot resolve accountId: auth state is not available");
 }
 
 interface AppState {
@@ -119,7 +130,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const id = await db.workspaces.add({
       accountId: await resolveAccountId(),
       name: validName,
-      icon: icon || DEFAULT_ICON,
+      icon: validatedIcon(icon),
       isDefault: false,
       order: newOrder,
       createdAt: Date.now(),
@@ -153,17 +164,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   changeWorkspaceIcon: async (id, icon) => {
+    const validIcon = validatedIcon(icon);
     const { workspaces } = get();
     const prev = workspaces.find((w) => w.id === id);
     if (!prev) return;
 
     // Optimistic update
     set({
-      workspaces: workspaces.map((w) => (w.id === id ? { ...w, icon } : w)),
+      workspaces: workspaces.map((w) => (w.id === id ? { ...w, icon: validIcon } : w)),
     });
 
     try {
-      await db.workspaces.update(id, { icon });
+      await db.workspaces.update(id, { icon: validIcon });
     } catch (err) {
       console.error("[store] failed to change workspace icon:", err);
       set({ workspaces: workspaces.map((w) => (w.id === id ? prev : w)) });
@@ -175,16 +187,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     const target = workspaces.find((w) => w.id === id);
     if (!target || target.isDefault) return;
 
-    // Cascade delete in transaction
-    await db.transaction("rw", [db.workspaces, db.tabCollections, db.collectionTabs], async () => {
-      const collections = await db.tabCollections.where("workspaceId").equals(id).toArray();
-      const collectionIds = collections.map((c) => c.id!);
-      if (collectionIds.length > 0) {
-        await db.collectionTabs.where("collectionId").anyOf(collectionIds).delete();
-      }
-      await db.tabCollections.where("workspaceId").equals(id).delete();
-      await db.workspaces.delete(id);
-    });
+    try {
+      await db.transaction("rw", [db.workspaces, db.tabCollections, db.collectionTabs], async () => {
+        const collections = await db.tabCollections.where("workspaceId").equals(id).toArray();
+        const collectionIds = collections.map((c) => c.id!);
+        if (collectionIds.length > 0) {
+          await db.collectionTabs.where("collectionId").anyOf(collectionIds).delete();
+        }
+        await db.tabCollections.where("workspaceId").equals(id).delete();
+        await db.workspaces.delete(id);
+      });
+    } catch (err) {
+      console.error("[store] failed to delete workspace:", err);
+      return;
+    }
 
     const remaining = workspaces.filter((w) => w.id !== id);
     const needSwitch = activeWorkspaceId === id;
