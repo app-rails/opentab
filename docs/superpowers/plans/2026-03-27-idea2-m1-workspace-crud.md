@@ -540,7 +540,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (err) {
       console.error("[store] failed to reorder workspace:", err);
       set({
-        workspaces: workspaces.sort((a, b) =>
+        workspaces: [...workspaces].sort((a, b) =>
           a.order < b.order ? -1 : a.order > b.order ? 1 : 0,
         ),
       });
@@ -909,19 +909,122 @@ export function WorkspaceItem({ workspace, isActive, onSelect, onRequestDelete }
   }
 
   const LucideIcon = icons[toPascalCase(workspace.icon) as keyof typeof icons] ?? icons.Folder;
+  const iconPopoverAnchorRef = useRef<HTMLDivElement>(null);
 
-  const menuContent = (
+  function openIconPicker() {
+    setIconPopoverOpen(true);
+  }
+
+  return (
     <>
-      <DropdownMenuItem onClick={startRename}>
-        <Pencil className="mr-2 size-4" />
-        Change Name
-      </DropdownMenuItem>
-      <Popover open={iconPopoverOpen} onOpenChange={setIconPopoverOpen}>
-        <PopoverTrigger asChild>
-          <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={() => setIconPopoverOpen(true)}>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div
+            ref={iconPopoverAnchorRef}
+            className={cn(
+              "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+              isActive
+                ? "bg-sidebar-accent text-sidebar-accent-foreground border border-sidebar-accent-foreground/10"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/50",
+            )}
+            onClick={onSelect}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              startRename();
+            }}
+          >
+            <LucideIcon className="size-4 shrink-0" />
+
+            {isRenaming ? (
+              <Input
+                ref={inputRef}
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                maxLength={WORKSPACE_NAME_MAX_LENGTH}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") confirmRename();
+                  if (e.key === "Escape") cancelRename();
+                }}
+                onBlur={confirmRename}
+                className="h-6 flex-1 px-1 py-0 text-sm"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <span className="flex-1 truncate">{workspace.name}</span>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="shrink-0 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Ellipsis className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" side="bottom">
+                <DropdownMenuItem onClick={startRename}>
+                  <Pencil className="mr-2 size-4" />
+                  Change Name
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openIconPicker}>
+                  <ImagePlus className="mr-2 size-4" />
+                  Change Icon
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={onRequestDelete}
+                  disabled={workspace.isDefault}
+                  className={cn(
+                    workspace.isDefault
+                      ? "text-muted-foreground"
+                      : "text-destructive focus:text-destructive",
+                  )}
+                >
+                  <Trash2 className="mr-2 size-4" />
+                  Delete
+                  {workspace.isDefault && (
+                    <span className="ml-auto text-xs italic text-muted-foreground">default</span>
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={startRename}>
+            <Pencil className="mr-2 size-4" />
+            Change Name
+          </ContextMenuItem>
+          <ContextMenuItem onClick={openIconPicker}>
             <ImagePlus className="mr-2 size-4" />
             Change Icon
-          </DropdownMenuItem>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onClick={onRequestDelete}
+            disabled={workspace.isDefault}
+            className={cn(
+              workspace.isDefault
+                ? "text-muted-foreground"
+                : "text-destructive focus:text-destructive",
+            )}
+          >
+            <Trash2 className="mr-2 size-4" />
+            Delete
+            {workspace.isDefault && (
+              <span className="ml-auto text-xs italic text-muted-foreground">default</span>
+            )}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+
+      {/* Icon picker Popover — lives outside both menus so it renders correctly from either trigger */}
+      <Popover open={iconPopoverOpen} onOpenChange={setIconPopoverOpen}>
+        <PopoverTrigger asChild>
+          <div ref={iconPopoverAnchorRef} className="hidden" />
         </PopoverTrigger>
         <PopoverContent className="w-auto p-3" side="right" align="start">
           <IconPicker
@@ -933,105 +1036,7 @@ export function WorkspaceItem({ workspace, isActive, onSelect, onRequestDelete }
           />
         </PopoverContent>
       </Popover>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem
-        onClick={onRequestDelete}
-        disabled={workspace.isDefault}
-        className={cn(
-          workspace.isDefault
-            ? "text-muted-foreground"
-            : "text-destructive focus:text-destructive",
-        )}
-      >
-        <Trash2 className="mr-2 size-4" />
-        Delete
-        {workspace.isDefault && (
-          <span className="ml-auto text-xs italic text-muted-foreground">default</span>
-        )}
-      </DropdownMenuItem>
     </>
-  );
-
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          className={cn(
-            "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-            isActive
-              ? "bg-sidebar-accent text-sidebar-accent-foreground border border-sidebar-accent-foreground/10"
-              : "text-sidebar-foreground hover:bg-sidebar-accent/50",
-          )}
-          onClick={onSelect}
-          onDoubleClick={(e) => {
-            e.stopPropagation();
-            startRename();
-          }}
-        >
-          <LucideIcon className="size-4 shrink-0" />
-
-          {isRenaming ? (
-            <Input
-              ref={inputRef}
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              maxLength={WORKSPACE_NAME_MAX_LENGTH}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") confirmRename();
-                if (e.key === "Escape") cancelRename();
-              }}
-              onBlur={confirmRename}
-              className="h-6 flex-1 px-1 py-0 text-sm"
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            <span className="flex-1 truncate">{workspace.name}</span>
-          )}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                className="shrink-0 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Ellipsis className="size-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="bottom">
-              {menuContent}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem onClick={startRename}>
-          <Pencil className="mr-2 size-4" />
-          Change Name
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => setIconPopoverOpen(true)}>
-          <ImagePlus className="mr-2 size-4" />
-          Change Icon
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem
-          onClick={onRequestDelete}
-          disabled={workspace.isDefault}
-          className={cn(
-            workspace.isDefault
-              ? "text-muted-foreground"
-              : "text-destructive focus:text-destructive",
-          )}
-        >
-          <Trash2 className="mr-2 size-4" />
-          Delete
-          {workspace.isDefault && (
-            <span className="ml-auto text-xs italic text-muted-foreground">default</span>
-          )}
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
   );
 }
 ```
@@ -1142,23 +1147,16 @@ export function WorkspaceSidebar() {
     const newIndex = workspaces.findIndex((w) => w.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    // Compute new fractional index between new neighbors
-    const before = newIndex > 0 ? workspaces[newIndex - (newIndex > oldIndex ? 0 : 1)]?.order ?? null : null;
-    const after =
-      newIndex < workspaces.length - 1
-        ? workspaces[newIndex + (newIndex < oldIndex ? 0 : 1)]?.order ?? null
-        : null;
-
-    // Adjust: we need the order of the items that will be neighbors AFTER the move
+    // Compute fractional index between the new neighbors AFTER the move
     let lowerBound: string | null = null;
     let upperBound: string | null = null;
 
     if (newIndex < oldIndex) {
-      // Moving up
+      // Moving up: insert between [newIndex - 1] and [newIndex]
       lowerBound = newIndex > 0 ? workspaces[newIndex - 1].order : null;
       upperBound = workspaces[newIndex].order;
     } else {
-      // Moving down
+      // Moving down: insert between [newIndex] and [newIndex + 1]
       lowerBound = workspaces[newIndex].order;
       upperBound = newIndex < workspaces.length - 1 ? workspaces[newIndex + 1].order : null;
     }
