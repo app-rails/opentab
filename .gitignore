@@ -33,3 +33,23 @@ app-server/data/*.db-wal
 .context/
 .claude/
 .superpowers/
+
+# Cloudflare
+.mf
+.wrangler
+.dev.vars*
+wrangler.jsonc
+worker-configuration.d.ts
+
+# Worktrees
+.worktrees/
+
+# tmp files
+.context/
+.superpowers/
+.playwright-mcp/
+*.log
+/*.png
+icons/
+.gstack/
+app-extension/smoke-screenshots/*.png
