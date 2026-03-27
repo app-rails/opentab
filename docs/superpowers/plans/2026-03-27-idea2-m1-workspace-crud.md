@@ -61,6 +61,18 @@ Run from `app-extension/`:
 pnpm dlx shadcn@latest add dialog dropdown-menu context-menu alert-dialog input popover
 ```
 
+- [ ] **Step 2b: Ensure PopoverAnchor is exported from popover.tsx**
+
+After shadcn generates `popover.tsx`, verify it exports `PopoverAnchor`. If not, add:
+
+```tsx
+// At the end of app-extension/src/components/ui/popover.tsx
+import { PopoverAnchor } from "radix-ui";
+export { PopoverAnchor };
+```
+
+This is needed by `WorkspaceItem` to position the icon picker Popover relative to the workspace row.
+
 - [ ] **Step 3: Verify build compiles**
 
 ```bash
@@ -852,7 +864,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
 import type { Workspace } from "@/lib/db";
@@ -909,134 +921,127 @@ export function WorkspaceItem({ workspace, isActive, onSelect, onRequestDelete }
   }
 
   const LucideIcon = icons[toPascalCase(workspace.icon) as keyof typeof icons] ?? icons.Folder;
-  const iconPopoverAnchorRef = useRef<HTMLDivElement>(null);
 
   function openIconPicker() {
     setIconPopoverOpen(true);
   }
 
   return (
-    <>
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <div
-            ref={iconPopoverAnchorRef}
-            className={cn(
-              "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-              isActive
-                ? "bg-sidebar-accent text-sidebar-accent-foreground border border-sidebar-accent-foreground/10"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/50",
-            )}
-            onClick={onSelect}
-            onDoubleClick={(e) => {
-              e.stopPropagation();
-              startRename();
-            }}
-          >
-            <LucideIcon className="size-4 shrink-0" />
+    <Popover open={iconPopoverOpen} onOpenChange={setIconPopoverOpen}>
+      <PopoverAnchor asChild>
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div
+              className={cn(
+                "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground border border-sidebar-accent-foreground/10"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50",
+              )}
+              onClick={onSelect}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                startRename();
+              }}
+            >
+              <LucideIcon className="size-4 shrink-0" />
 
-            {isRenaming ? (
-              <Input
-                ref={inputRef}
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                maxLength={WORKSPACE_NAME_MAX_LENGTH}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") confirmRename();
-                  if (e.key === "Escape") cancelRename();
-                }}
-                onBlur={confirmRename}
-                className="h-6 flex-1 px-1 py-0 text-sm"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <span className="flex-1 truncate">{workspace.name}</span>
-            )}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="shrink-0 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
+              {isRenaming ? (
+                <Input
+                  ref={inputRef}
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  maxLength={WORKSPACE_NAME_MAX_LENGTH}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") confirmRename();
+                    if (e.key === "Escape") cancelRename();
+                  }}
+                  onBlur={confirmRename}
+                  className="h-6 flex-1 px-1 py-0 text-sm"
                   onClick={(e) => e.stopPropagation()}
-                >
-                  <Ellipsis className="size-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" side="bottom">
-                <DropdownMenuItem onClick={startRename}>
-                  <Pencil className="mr-2 size-4" />
-                  Change Name
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={openIconPicker}>
-                  <ImagePlus className="mr-2 size-4" />
-                  Change Icon
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={onRequestDelete}
-                  disabled={workspace.isDefault}
-                  className={cn(
-                    workspace.isDefault
-                      ? "text-muted-foreground"
-                      : "text-destructive focus:text-destructive",
-                  )}
-                >
-                  <Trash2 className="mr-2 size-4" />
-                  Delete
-                  {workspace.isDefault && (
-                    <span className="ml-auto text-xs italic text-muted-foreground">default</span>
-                  )}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem onClick={startRename}>
-            <Pencil className="mr-2 size-4" />
-            Change Name
-          </ContextMenuItem>
-          <ContextMenuItem onClick={openIconPicker}>
-            <ImagePlus className="mr-2 size-4" />
-            Change Icon
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            onClick={onRequestDelete}
-            disabled={workspace.isDefault}
-            className={cn(
-              workspace.isDefault
-                ? "text-muted-foreground"
-                : "text-destructive focus:text-destructive",
-            )}
-          >
-            <Trash2 className="mr-2 size-4" />
-            Delete
-            {workspace.isDefault && (
-              <span className="ml-auto text-xs italic text-muted-foreground">default</span>
-            )}
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
+                />
+              ) : (
+                <span className="flex-1 truncate">{workspace.name}</span>
+              )}
 
-      {/* Icon picker Popover — lives outside both menus so it renders correctly from either trigger */}
-      <Popover open={iconPopoverOpen} onOpenChange={setIconPopoverOpen}>
-        <PopoverTrigger asChild>
-          <div ref={iconPopoverAnchorRef} className="hidden" />
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-3" side="right" align="start">
-          <IconPicker
-            value={workspace.icon}
-            onChange={(icon) => {
-              if (workspace.id != null) changeWorkspaceIcon(workspace.id, icon);
-              setIconPopoverOpen(false);
-            }}
-          />
-        </PopoverContent>
-      </Popover>
-    </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="shrink-0 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Ellipsis className="size-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" side="bottom">
+                  <DropdownMenuItem onClick={startRename}>
+                    <Pencil className="mr-2 size-4" />
+                    Change Name
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={openIconPicker}>
+                    <ImagePlus className="mr-2 size-4" />
+                    Change Icon
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={onRequestDelete}
+                    disabled={workspace.isDefault}
+                    className={cn(
+                      workspace.isDefault
+                        ? "text-muted-foreground"
+                        : "text-destructive focus:text-destructive",
+                    )}
+                  >
+                    <Trash2 className="mr-2 size-4" />
+                    Delete
+                    {workspace.isDefault && (
+                      <span className="ml-auto text-xs italic text-muted-foreground">default</span>
+                    )}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem onClick={startRename}>
+              <Pencil className="mr-2 size-4" />
+              Change Name
+            </ContextMenuItem>
+            <ContextMenuItem onClick={openIconPicker}>
+              <ImagePlus className="mr-2 size-4" />
+              Change Icon
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={onRequestDelete}
+              disabled={workspace.isDefault}
+              className={cn(
+                workspace.isDefault
+                  ? "text-muted-foreground"
+                  : "text-destructive focus:text-destructive",
+              )}
+            >
+              <Trash2 className="mr-2 size-4" />
+              Delete
+              {workspace.isDefault && (
+                <span className="ml-auto text-xs italic text-muted-foreground">default</span>
+              )}
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      </PopoverAnchor>
+      <PopoverContent className="w-auto p-3" side="right" align="start">
+        <IconPicker
+          value={workspace.icon}
+          onChange={(icon) => {
+            if (workspace.id != null) changeWorkspaceIcon(workspace.id, icon);
+            setIconPopoverOpen(false);
+          }}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 ```
