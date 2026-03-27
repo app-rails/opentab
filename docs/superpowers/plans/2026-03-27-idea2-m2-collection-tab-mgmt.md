@@ -40,14 +40,48 @@
 
 ---
 
-### Task 1: Store refactor — replace single-collection tabs with tabsByCollection Map
+### Task 1: Store refactor — replace single-collection tabs with tabsByCollection Map ✅ DONE
 
 **Files:**
+- Create: `app-extension/src/lib/dnd-types.ts`
 - Modify: `app-extension/src/stores/app-store.ts`
 
-This task changes the store data model so all collections' tabs are loaded at once when switching workspaces, instead of loading tabs for a single "active" collection.
+This task changes the store data model so all collections' tabs are loaded at once when switching workspaces, instead of loading tabs for a single "active" collection. It also creates the shared drag type definitions used by later tasks.
 
-- [ ] **Step 1: Add helper function to load all tabs for a workspace**
+> **Status:** Already implemented in working tree. Actual code improves on plan: uses `Promise.all` in `loadTabsByCollection`, adds dedup/guard logic in live tab actions, uses `compareByOrder` utility. Code blocks below are kept as historical reference.
+
+- [x] **Step 1: Create dnd-types.ts**
+
+This file is created first because Tasks 4 and 5 import from it.
+
+```ts
+import type { CollectionTab } from "@/lib/db";
+
+export const DRAG_TYPES = {
+  WORKSPACE: "workspace",
+  LIVE_TAB: "live-tab",
+  COLLECTION_TAB: "collection-tab",
+} as const;
+
+export interface WorkspaceDragData {
+  type: typeof DRAG_TYPES.WORKSPACE;
+}
+
+export interface LiveTabDragData {
+  type: typeof DRAG_TYPES.LIVE_TAB;
+  tab: chrome.tabs.Tab;
+}
+
+export interface CollectionTabDragData {
+  type: typeof DRAG_TYPES.COLLECTION_TAB;
+  tab: CollectionTab;
+  collectionId: number;
+}
+
+export type DragData = WorkspaceDragData | LiveTabDragData | CollectionTabDragData;
+```
+
+- [x] **Step 2: Add helper function to load all tabs for a workspace**
 
 Add this function after the existing `loadCollections` function (line 19):
 
@@ -68,7 +102,7 @@ async function loadTabsByCollection(
 }
 ```
 
-- [ ] **Step 2: Update AppState interface**
+- [x] **Step 3: Update AppState interface**
 
 Replace lines 43-61 of the interface with:
 
@@ -113,7 +147,7 @@ interface AppState {
 }
 ```
 
-- [ ] **Step 3: Update initial state and initialize/setActiveWorkspace**
+- [x] **Step 4: Update initial state and initialize/setActiveWorkspace**
 
 Replace initial state (lines 63-69):
 
@@ -173,11 +207,11 @@ Replace `setActiveWorkspace` (lines 95-107):
   },
 ```
 
-- [ ] **Step 4: Remove setActiveCollection**
+- [x] **Step 5: Remove setActiveCollection**
 
 Delete the entire `setActiveCollection` method (lines 109-121). It is no longer needed.
 
-- [ ] **Step 5: Add live tab actions (stub — no-op until Background SW is wired)**
+- [x] **Step 6: Add live tab actions (stub — no-op until Background SW is wired)**
 
 Add after the workspace CRUD actions (after `reorderWorkspace`):
 
@@ -202,7 +236,7 @@ Add after the workspace CRUD actions (after `reorderWorkspace`):
   },
 ```
 
-- [ ] **Step 6: Add collection CRUD actions**
+- [x] **Step 7: Add collection CRUD actions**
 
 Add after live tab actions:
 
@@ -301,7 +335,7 @@ Add after live tab actions:
   },
 ```
 
-- [ ] **Step 7: Add tab mutation actions**
+- [x] **Step 8: Add tab mutation actions**
 
 Add after collection CRUD:
 
@@ -377,7 +411,7 @@ Add after collection CRUD:
   },
 ```
 
-- [ ] **Step 8: Update deleteWorkspace to use tabsByCollection**
+- [x] **Step 9: Update deleteWorkspace to use tabsByCollection**
 
 In the `deleteWorkspace` action, update the state reset (line 209):
 
@@ -390,16 +424,16 @@ To:
     set({ workspaces: remaining, tabsByCollection: new Map() });
 ```
 
-- [ ] **Step 9: Verify types compile**
+- [x] **Step 10: Verify types compile**
 
 Run: `cd app-extension && pnpm lint`
 
 Expected: No type errors. If any components reference the removed `activeCollectionId`, `setActiveCollection`, or `tabs`, fix them.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
-git add app-extension/src/stores/app-store.ts
+git add app-extension/src/lib/dnd-types.ts app-extension/src/stores/app-store.ts
 git commit -m "feat(m2): refactor store — tabsByCollection map, live tab state, collection CRUD, tab mutations"
 ```
 
@@ -629,7 +663,7 @@ interface CollectionTabItemProps {
 export function CollectionTabItem({ tab, onRemove }: CollectionTabItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `col-tab-${tab.id}`,
-    data: { type: DRAG_TYPES.COLLECTION_TAB, tab },
+    data: { type: DRAG_TYPES.COLLECTION_TAB, tab, collectionId: tab.collectionId },
   });
 
   const style = {
@@ -1150,39 +1184,13 @@ git commit -m "feat(m2): wire collection panel with cards, create/delete dialogs
 ### Task 7: DndContext refactor — move to App.tsx, add drag types
 
 **Files:**
-- Create: `app-extension/src/lib/dnd-types.ts`
+- Uses: `app-extension/src/lib/dnd-types.ts` (already created in Task 1 Step 1)
 - Modify: `app-extension/src/entrypoints/tabs/App.tsx`
 - Modify: `app-extension/src/components/layout/workspace-sidebar.tsx`
 
-- [ ] **Step 1: Create dnd-types.ts**
+> **Note:** `dnd-types.ts` was created in Task 1 Step 1. No action needed here — proceed directly to Step 1.
 
-```ts
-import type { CollectionTab } from "@/lib/db";
-
-export const DRAG_TYPES = {
-  WORKSPACE: "workspace",
-  LIVE_TAB: "live-tab",
-  COLLECTION_TAB: "collection-tab",
-} as const;
-
-export interface WorkspaceDragData {
-  type: typeof DRAG_TYPES.WORKSPACE;
-}
-
-export interface LiveTabDragData {
-  type: typeof DRAG_TYPES.LIVE_TAB;
-  tab: chrome.tabs.Tab;
-}
-
-export interface CollectionTabDragData {
-  type: typeof DRAG_TYPES.COLLECTION_TAB;
-  tab: CollectionTab;
-}
-
-export type DragData = WorkspaceDragData | LiveTabDragData | CollectionTabDragData;
-```
-
-- [ ] **Step 2: Refactor WorkspaceSidebar — remove DndContext, add drag type data**
+- [ ] **Step 1: Refactor WorkspaceSidebar — remove DndContext, add drag type data**
 
 Replace the full content of `workspace-sidebar.tsx`:
 
@@ -1191,7 +1199,6 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import {
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -1294,7 +1301,7 @@ Key changes from original:
 - Added `data: { type: DRAG_TYPES.WORKSPACE }` to `useSortable`
 - Removed unused imports: `DndContext`, `closestCenter`, `KeyboardSensor`, `PointerSensor`, `useSensor`, `useSensors`, `DragEndEvent`, `generateKeyBetween`
 
-- [ ] **Step 3: Rewrite App.tsx with top-level DndContext**
+- [ ] **Step 2: Rewrite App.tsx with top-level DndContext**
 
 Replace the entire content of `App.tsx`:
 
@@ -1407,8 +1414,11 @@ export default function App() {
     const data = active.data.current as DragData;
     if (data.type !== DRAG_TYPES.LIVE_TAB) return;
 
-    const overData = over.data.current as { type?: string; collectionId?: number } | undefined;
-    const collectionId = overData?.collectionId;
+    const overData = over.data.current as Record<string, unknown> | undefined;
+    // Resolve collectionId from either a collection drop-zone or an existing collection-tab row
+    const collectionId =
+      (overData?.collectionId as number | undefined) ??
+      ((overData?.tab as Record<string, unknown> | undefined)?.collectionId as number | undefined);
     if (collectionId == null) return;
 
     const tab = data.tab;
@@ -1504,15 +1514,15 @@ export default function App() {
 }
 ```
 
-- [ ] **Step 4: Verify types compile**
+- [ ] **Step 3: Verify types compile**
 
 Run: `cd app-extension && pnpm lint`
 Expected: No errors.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add app-extension/src/lib/dnd-types.ts app-extension/src/entrypoints/tabs/App.tsx app-extension/src/components/layout/workspace-sidebar.tsx
+git add app-extension/src/entrypoints/tabs/App.tsx app-extension/src/components/layout/workspace-sidebar.tsx
 git commit -m "feat(m2): top-level DndContext with cross-panel drag, workspace reorder, tab reorder"
 ```
 
