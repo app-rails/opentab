@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from "react";
-import { icons, Ellipsis, Pencil, ImagePlus, Trash2 } from "lucide-react";
+import { Ellipsis, ImagePlus, icons, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -16,7 +17,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
 import type { Workspace } from "@/lib/db";
 import { cn, toPascalCase } from "@/lib/utils";
@@ -30,7 +30,12 @@ interface WorkspaceItemProps {
   onRequestDelete: () => void;
 }
 
-export function WorkspaceItem({ workspace, isActive, onSelect, onRequestDelete }: WorkspaceItemProps) {
+export function WorkspaceItem({
+  workspace,
+  isActive,
+  onSelect,
+  onRequestDelete,
+}: WorkspaceItemProps) {
   const renameWorkspace = useAppStore((s) => s.renameWorkspace);
   const changeWorkspaceIcon = useAppStore((s) => s.changeWorkspaceIcon);
 

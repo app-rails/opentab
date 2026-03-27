@@ -8,9 +8,12 @@ export default function App() {
   const isLoading = useAppStore((s) => s.isLoading);
 
   useEffect(() => {
-    useAppStore.getState().initialize().catch((err) => {
-      console.error("Failed to initialize app store:", err);
-    });
+    useAppStore
+      .getState()
+      .initialize()
+      .catch((err) => {
+        console.error("Failed to initialize app store:", err);
+      });
   }, []);
 
   if (isLoading) {
