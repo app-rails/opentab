@@ -5,6 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function compareByOrder<T extends { order: string }>(a: T, b: T): number {
+  return a.order < b.order ? -1 : a.order > b.order ? 1 : 0;
+}
+
 export function toPascalCase(str: string): string {
   return str
     .split("-")

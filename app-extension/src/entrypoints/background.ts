@@ -39,4 +39,21 @@ export default defineBackground(() => {
       console.log("[bg] now online — retry alarm cleared");
     }
   });
+
+  // --- Tab event broadcasting for live-tab panel ---
+  chrome.tabs.onCreated.addListener((tab) => {
+    chrome.runtime.sendMessage({ type: "TAB_CREATED", tab }).catch(() => {});
+  });
+
+  chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+    chrome.runtime
+      .sendMessage({ type: "TAB_REMOVED", tabId, windowId: removeInfo.windowId })
+      .catch(() => {});
+  });
+
+  chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+    chrome.runtime
+      .sendMessage({ type: "TAB_UPDATED", tabId: tab.id, changeInfo, tab })
+      .catch(() => {});
+  });
 });
