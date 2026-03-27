@@ -1,6 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { X } from "lucide-react";
+import { TabFavicon } from "@/components/tab-favicon";
 import { Button } from "@/components/ui/button";
 import type { CollectionTab } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
@@ -30,11 +31,7 @@ export function CollectionTabItem({ tab, onRemove }: CollectionTabItemProps) {
       {...listeners}
       className="group flex cursor-grab items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-accent"
     >
-      {tab.favIconUrl ? (
-        <img src={tab.favIconUrl} alt="" className="size-4 shrink-0 rounded-sm" />
-      ) : (
-        <div className="size-4 shrink-0 rounded-sm bg-muted" />
-      )}
+      <TabFavicon url={tab.favIconUrl} />
       <span className="flex-1 truncate" title={tab.url}>
         {tab.title || tab.url}
       </span>

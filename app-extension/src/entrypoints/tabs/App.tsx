@@ -13,13 +13,14 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { generateKeyBetween } from "fractional-indexing";
 import { useEffect, useState } from "react";
 import { CollectionPanel } from "@/components/layout/collection-panel";
 import { LiveTabPanel } from "@/components/layout/live-tab-panel";
 import { WorkspaceSidebar } from "@/components/layout/workspace-sidebar";
+import { TabFavicon } from "@/components/tab-favicon";
 import { useLiveTabSync } from "@/hooks/use-live-tab-sync";
 import { DRAG_TYPES, type DragData } from "@/lib/dnd-types";
+import { computeOrderBetween } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
 function getDragType(active: Active): string | undefined {
@@ -90,18 +91,7 @@ export default function App() {
     const newIndex = workspaces.findIndex((w) => w.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    let lowerBound: string | null = null;
-    let upperBound: string | null = null;
-
-    if (newIndex < oldIndex) {
-      lowerBound = newIndex > 0 ? workspaces[newIndex - 1].order : null;
-      upperBound = workspaces[newIndex].order;
-    } else {
-      lowerBound = workspaces[newIndex].order;
-      upperBound = newIndex < workspaces.length - 1 ? workspaces[newIndex + 1].order : null;
-    }
-
-    const newOrder = generateKeyBetween(lowerBound, upperBound);
+    const newOrder = computeOrderBetween(workspaces, oldIndex, newIndex);
     useAppStore.getState().reorderWorkspace(active.id as number, newOrder);
   }
 
@@ -109,11 +99,13 @@ export default function App() {
     const data = active.data.current as DragData;
     if (data.type !== DRAG_TYPES.LIVE_TAB) return;
 
-    const overData = over.data.current as Record<string, unknown> | undefined;
-    // Resolve collectionId from either a collection drop-zone or an existing collection-tab row
-    const collectionId =
-      (overData?.collectionId as number | undefined) ??
-      ((overData?.tab as Record<string, unknown> | undefined)?.collectionId as number | undefined);
+    const overData = over.data.current as DragData | undefined;
+    let collectionId: number | undefined;
+    if (overData?.type === DRAG_TYPES.COLLECTION_DROP) {
+      collectionId = overData.collectionId;
+    } else if (overData?.type === DRAG_TYPES.COLLECTION_TAB) {
+      collectionId = overData.collectionId;
+    }
     if (collectionId == null) return;
 
     const tab = data.tab;
@@ -137,18 +129,7 @@ export default function App() {
     const newIndex = tabs.findIndex((t) => `col-tab-${t.id}` === String(over.id));
     if (oldIndex === -1 || newIndex === -1) return;
 
-    let lowerBound: string | null = null;
-    let upperBound: string | null = null;
-
-    if (newIndex < oldIndex) {
-      lowerBound = newIndex > 0 ? tabs[newIndex - 1].order : null;
-      upperBound = tabs[newIndex].order;
-    } else {
-      lowerBound = tabs[newIndex].order;
-      upperBound = newIndex < tabs.length - 1 ? tabs[newIndex + 1].order : null;
-    }
-
-    const newOrder = generateKeyBetween(lowerBound, upperBound);
+    const newOrder = computeOrderBetween(tabs, oldIndex, newIndex);
     useAppStore.getState().reorderTabInCollection(data.tab.id!, collectionId, newOrder);
   }
 
@@ -160,7 +141,6 @@ export default function App() {
     );
   }
 
-  const activeDragType = activeDrag ? getDragType(activeDrag) : undefined;
   const activeDragData = activeDrag?.data.current as DragData | undefined;
 
   return (
@@ -178,29 +158,20 @@ export default function App() {
       </div>
 
       <DragOverlay>
-        {activeDragType === DRAG_TYPES.LIVE_TAB && activeDragData?.type === DRAG_TYPES.LIVE_TAB && (
+        {activeDragData?.type === DRAG_TYPES.LIVE_TAB && (
           <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
-            {activeDragData.tab.favIconUrl ? (
-              <img src={activeDragData.tab.favIconUrl} alt="" className="size-4 rounded-sm" />
-            ) : (
-              <div className="size-4 rounded-sm bg-muted" />
-            )}
+            <TabFavicon url={activeDragData.tab.favIconUrl} />
             <span className="max-w-[200px] truncate">{activeDragData.tab.title || "New Tab"}</span>
           </div>
         )}
-        {activeDragType === DRAG_TYPES.COLLECTION_TAB &&
-          activeDragData?.type === DRAG_TYPES.COLLECTION_TAB && (
-            <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
-              {activeDragData.tab.favIconUrl ? (
-                <img src={activeDragData.tab.favIconUrl} alt="" className="size-4 rounded-sm" />
-              ) : (
-                <div className="size-4 rounded-sm bg-muted" />
-              )}
-              <span className="max-w-[200px] truncate">
-                {activeDragData.tab.title || activeDragData.tab.url}
-              </span>
-            </div>
-          )}
+        {activeDragData?.type === DRAG_TYPES.COLLECTION_TAB && (
+          <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
+            <TabFavicon url={activeDragData.tab.favIconUrl} />
+            <span className="max-w-[200px] truncate">
+              {activeDragData.tab.title || activeDragData.tab.url}
+            </span>
+          </div>
+        )}
       </DragOverlay>
     </DndContext>
   );

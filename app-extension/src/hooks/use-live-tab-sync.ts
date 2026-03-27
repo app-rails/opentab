@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { MSG } from "@/lib/constants";
 import { useAppStore } from "@/stores/app-store";
 
 export function useLiveTabSync() {
@@ -27,17 +28,17 @@ export function useLiveTabSync() {
       if (currentWindowId == null) return;
 
       switch (message.type) {
-        case "TAB_CREATED":
+        case MSG.TAB_CREATED:
           if (message.tab && message.tab.windowId === currentWindowId) {
             addLiveTab(message.tab);
           }
           break;
-        case "TAB_REMOVED":
+        case MSG.TAB_REMOVED:
           if (message.windowId === currentWindowId && message.tabId != null) {
             removeLiveTab(message.tabId);
           }
           break;
-        case "TAB_UPDATED":
+        case MSG.TAB_UPDATED:
           if (
             message.tab?.windowId === currentWindowId &&
             message.tabId != null &&

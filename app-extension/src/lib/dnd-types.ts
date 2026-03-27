@@ -4,6 +4,7 @@ export const DRAG_TYPES = {
   WORKSPACE: "workspace",
   LIVE_TAB: "live-tab",
   COLLECTION_TAB: "collection-tab",
+  COLLECTION_DROP: "collection-drop",
 } as const;
 
 export interface WorkspaceDragData {
@@ -21,4 +22,13 @@ export interface CollectionTabDragData {
   collectionId: number;
 }
 
-export type DragData = WorkspaceDragData | LiveTabDragData | CollectionTabDragData;
+export interface CollectionDropData {
+  type: typeof DRAG_TYPES.COLLECTION_DROP;
+  collectionId: number;
+}
+
+export type DragData =
+  | WorkspaceDragData
+  | LiveTabDragData
+  | CollectionTabDragData
+  | CollectionDropData;

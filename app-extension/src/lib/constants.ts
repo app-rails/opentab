@@ -30,3 +30,9 @@ export type WorkspaceIconName = (typeof WORKSPACE_ICON_OPTIONS)[number];
 export const DEFAULT_ICON: WorkspaceIconName = "folder";
 
 export const WORKSPACE_NAME_MAX_LENGTH = 50;
+
+export const MSG = {
+  TAB_CREATED: "TAB_CREATED",
+  TAB_REMOVED: "TAB_REMOVED",
+  TAB_UPDATED: "TAB_UPDATED",
+} as const;

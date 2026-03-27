@@ -157,10 +157,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateLiveTab: (tabId, changeInfo) => {
-    if (Object.keys(changeInfo).length === 0) return;
+    const keys = Object.keys(changeInfo) as (keyof chrome.tabs.OnUpdatedInfo)[];
+    if (keys.length === 0) return;
     const { liveTabs } = get();
     const idx = liveTabs.findIndex((t) => t.id === tabId);
     if (idx === -1) return;
+    const existing = liveTabs[idx];
+    if (keys.every((k) => existing[k as keyof chrome.tabs.Tab] === changeInfo[k])) return;
     set({
       liveTabs: liveTabs.map((t) => (t.id === tabId ? { ...t, ...changeInfo } : t)),
     });

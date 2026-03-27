@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import type { CollectionTab, TabCollection } from "@/lib/db";
+import { DRAG_TYPES } from "@/lib/dnd-types";
 import { useAppStore } from "@/stores/app-store";
 import { AddTabInline } from "./add-tab-inline";
 import { CollectionTabItem } from "./collection-tab-item";
@@ -38,7 +39,7 @@ export function CollectionCard({
 
   const { setNodeRef, isOver } = useDroppable({
     id: `collection-drop-${collection.id}`,
-    data: { type: "collection-drop" as const, collectionId: collection.id },
+    data: { type: DRAG_TYPES.COLLECTION_DROP, collectionId: collection.id },
   });
 
   function handleRenameConfirm() {

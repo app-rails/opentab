@@ -1,4 +1,5 @@
 import { attemptRegistration, initializeAuth } from "@/lib/auth-manager";
+import { MSG } from "@/lib/constants";
 import { seedDefaultData } from "@/lib/db-init";
 
 const AUTH_RETRY_ALARM = "opentab-auth-retry";
@@ -41,19 +42,22 @@ export default defineBackground(() => {
   });
 
   // --- Tab event broadcasting for live-tab panel ---
+  const RELEVANT_TAB_FIELDS = ["title", "url", "favIconUrl", "status"] as const;
+
   chrome.tabs.onCreated.addListener((tab) => {
-    chrome.runtime.sendMessage({ type: "TAB_CREATED", tab }).catch(() => {});
+    chrome.runtime.sendMessage({ type: MSG.TAB_CREATED, tab }).catch(() => {});
   });
 
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     chrome.runtime
-      .sendMessage({ type: "TAB_REMOVED", tabId, windowId: removeInfo.windowId })
+      .sendMessage({ type: MSG.TAB_REMOVED, tabId, windowId: removeInfo.windowId })
       .catch(() => {});
   });
 
   chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+    if (!RELEVANT_TAB_FIELDS.some((k) => k in changeInfo)) return;
     chrome.runtime
-      .sendMessage({ type: "TAB_UPDATED", tabId: tab.id, changeInfo, tab })
+      .sendMessage({ type: MSG.TAB_UPDATED, tabId: tab.id, changeInfo, tab })
       .catch(() => {});
   });
 });
