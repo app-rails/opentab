@@ -1,4 +1,5 @@
 import { attemptRegistration, initializeAuth } from "@/lib/auth-manager";
+import { MSG } from "@/lib/constants";
 import { seedDefaultData } from "@/lib/db-init";
 
 const AUTH_RETRY_ALARM = "opentab-auth-retry";
@@ -38,5 +39,25 @@ export default defineBackground(() => {
       await browser.alarms.clear(AUTH_RETRY_ALARM);
       console.log("[bg] now online — retry alarm cleared");
     }
+  });
+
+  // --- Tab event broadcasting for live-tab panel ---
+  const RELEVANT_TAB_FIELDS = ["title", "url", "favIconUrl", "status"] as const;
+
+  chrome.tabs.onCreated.addListener((tab) => {
+    chrome.runtime.sendMessage({ type: MSG.TAB_CREATED, tab }).catch(() => {});
+  });
+
+  chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+    chrome.runtime
+      .sendMessage({ type: MSG.TAB_REMOVED, tabId, windowId: removeInfo.windowId })
+      .catch(() => {});
+  });
+
+  chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+    if (!RELEVANT_TAB_FIELDS.some((k) => k in changeInfo)) return;
+    chrome.runtime
+      .sendMessage({ type: MSG.TAB_UPDATED, tabId: _tabId, changeInfo, tab })
+      .catch(() => {});
   });
 });

@@ -1,6 +1,6 @@
 import { generateKeyBetween } from "fractional-indexing";
-import { DEFAULT_ICON } from "./constants";
 import { getAuthState } from "./auth-storage";
+import { DEFAULT_ICON } from "./constants";
 import { db } from "./db";
 
 export async function seedDefaultData(): Promise<void> {
