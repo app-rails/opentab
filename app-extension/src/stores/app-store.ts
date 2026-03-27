@@ -79,7 +79,7 @@ interface AppState {
   setLiveTabs: (tabs: chrome.tabs.Tab[]) => void;
   addLiveTab: (tab: chrome.tabs.Tab) => void;
   removeLiveTab: (tabId: number) => void;
-  updateLiveTab: (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => void;
+  updateLiveTab: (tabId: number, changeInfo: chrome.tabs.OnUpdatedInfo) => void;
 
   // Collection CRUD
   createCollection: (name: string) => Promise<void>;
