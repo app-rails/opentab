@@ -1,3 +1,5 @@
+import { generateKeyBetween } from "fractional-indexing";
+import { DEFAULT_ICON } from "./constants";
 import { getAuthState } from "./auth-storage";
 import { db } from "./db";
 
@@ -18,6 +20,7 @@ export async function seedDefaultData(): Promise<void> {
   }
 
   const now = Date.now();
+  const firstOrder = generateKeyBetween(null, null);
 
   await db.transaction("rw", [db.accounts, db.workspaces, db.tabCollections], async () => {
     await db.accounts.add({
@@ -28,15 +31,17 @@ export async function seedDefaultData(): Promise<void> {
 
     const workspaceId = await db.workspaces.add({
       accountId,
-      name: "Default Workspace",
-      order: 0,
+      name: "Default",
+      icon: DEFAULT_ICON,
+      isDefault: true,
+      order: firstOrder,
       createdAt: now,
     });
 
     await db.tabCollections.add({
       workspaceId: workspaceId as number,
       name: "Unsorted",
-      order: 0,
+      order: firstOrder,
       createdAt: now,
     });
   });
