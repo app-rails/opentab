@@ -109,8 +109,10 @@ export default function App() {
     if (collectionId == null) return;
 
     const tab = data.tab;
+    if (!tab || !tab.url) return;
+
     useAppStore.getState().addTabToCollection(collectionId, {
-      url: tab.url ?? "",
+      url: tab.url,
       title: tab.title ?? tab.url ?? "Untitled",
       favIconUrl: tab.favIconUrl,
     });

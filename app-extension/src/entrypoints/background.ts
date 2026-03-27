@@ -57,7 +57,7 @@ export default defineBackground(() => {
   chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     if (!RELEVANT_TAB_FIELDS.some((k) => k in changeInfo)) return;
     chrome.runtime
-      .sendMessage({ type: MSG.TAB_UPDATED, tabId: tab.id, changeInfo, tab })
+      .sendMessage({ type: MSG.TAB_UPDATED, tabId: _tabId, changeInfo, tab })
       .catch(() => {});
   });
 });

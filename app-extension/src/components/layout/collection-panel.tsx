@@ -34,7 +34,7 @@ export function CollectionPanel() {
               key={col.id}
               collection={col}
               tabs={tabsByCollection.get(col.id!) ?? []}
-              canDelete={canDelete}
+              canDelete={canDelete && col.name !== "Unsorted"}
               onRequestDelete={() => setDeleteTarget(col)}
             />
           ))}
