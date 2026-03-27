@@ -10,10 +10,14 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@opentab/shared": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dexie": "^4.3.0",
+    "fractional-indexing": "^3.2.0",
     "lucide-react": "^1.7.0",
     "radix-ui": "^1.4.3",
     "react": "^19",
