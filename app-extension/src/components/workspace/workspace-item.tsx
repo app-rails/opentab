@@ -19,7 +19,7 @@ import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
 import type { Workspace } from "@/lib/db";
-import { cn } from "@/lib/utils";
+import { cn, toPascalCase } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 import { IconPicker } from "./icon-picker";
 
@@ -28,13 +28,6 @@ interface WorkspaceItemProps {
   isActive: boolean;
   onSelect: () => void;
   onRequestDelete: () => void;
-}
-
-function toPascalCase(str: string): string {
-  return str
-    .split("-")
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join("");
 }
 
 export function WorkspaceItem({ workspace, isActive, onSelect, onRequestDelete }: WorkspaceItemProps) {

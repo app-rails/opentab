@@ -1,6 +1,6 @@
 import { icons } from "lucide-react";
 import { WORKSPACE_ICON_OPTIONS } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, toPascalCase } from "@/lib/utils";
 
 interface IconPickerProps {
   value: string;
@@ -31,11 +31,4 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
       })}
     </div>
   );
-}
-
-function toPascalCase(str: string): string {
-  return str
-    .split("-")
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join("");
 }

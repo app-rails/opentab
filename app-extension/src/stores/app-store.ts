@@ -1,6 +1,7 @@
 import Dexie from "dexie";
 import { generateKeyBetween } from "fractional-indexing";
 import { create } from "zustand";
+import { getAuthState } from "@/lib/auth-storage";
 import type { CollectionTab, TabCollection, Workspace } from "@/lib/db";
 import { db } from "@/lib/db";
 import { DEFAULT_ICON, WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
@@ -12,13 +13,20 @@ function loadCollections(workspaceId: number) {
     .toArray();
 }
 
-function validateName(name: string): string {
+function validateName(name: string): string | null {
   const trimmed = name.trim();
-  if (trimmed.length === 0) throw new Error("Workspace name cannot be empty");
+  if (trimmed.length === 0) return null;
   if (trimmed.length > WORKSPACE_NAME_MAX_LENGTH) {
     return trimmed.slice(0, WORKSPACE_NAME_MAX_LENGTH);
   }
   return trimmed;
+}
+
+async function resolveAccountId(): Promise<string> {
+  const authState = await getAuthState();
+  if (authState?.mode === "online") return authState.accountId;
+  if (authState?.mode === "offline") return authState.localUuid;
+  return "unknown";
 }
 
 interface AppState {
@@ -103,12 +111,13 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createWorkspace: async (name, icon) => {
     const validName = validateName(name);
+    if (!validName) return;
     const { workspaces } = get();
     const lastOrder = workspaces.length > 0 ? workspaces[workspaces.length - 1].order : null;
     const newOrder = generateKeyBetween(lastOrder, null);
 
     const id = await db.workspaces.add({
-      accountId: (await db.workspaces.toCollection().first())?.accountId ?? "unknown",
+      accountId: await resolveAccountId(),
       name: validName,
       icon: icon || DEFAULT_ICON,
       isDefault: false,
@@ -124,6 +133,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   renameWorkspace: async (id, name) => {
     const validName = validateName(name);
+    if (!validName) return;
     const { workspaces } = get();
     const prev = workspaces.find((w) => w.id === id);
     if (!prev) return;
