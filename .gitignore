@@ -32,3 +32,4 @@ app-server/data/*.db-wal
 # Context (conductor)
 .context/
 .claude/
+.superpowers/
