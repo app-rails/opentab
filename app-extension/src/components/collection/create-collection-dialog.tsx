@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,10 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAppStore } from "@/stores/app-store";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
+import { useAppStore } from "@/stores/app-store";
 
 interface CreateCollectionDialogProps {
   open: boolean;

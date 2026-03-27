@@ -41,8 +41,8 @@ export function DeleteCollectionDialog({
           </div>
           <AlertDialogTitle>Delete &ldquo;{collectionName}&rdquo;?</AlertDialogTitle>
           <AlertDialogDescription>
-            This collection and all its saved tabs will be permanently deleted. This action cannot be
-            undone.
+            This collection and all its saved tabs will be permanently deleted. This action cannot
+            be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

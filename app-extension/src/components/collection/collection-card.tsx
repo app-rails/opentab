@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { ExternalLink, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -65,9 +65,7 @@ export function CollectionCard({
     addTabToCollection(collection.id, {
       url,
       title: url,
-      favIconUrl: domain
-        ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
-        : undefined,
+      favIconUrl: domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32` : undefined,
     });
   }
 

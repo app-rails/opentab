@@ -1,11 +1,11 @@
-import { useState } from "react";
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import type { TabCollection } from "@/lib/db";
-import { useAppStore } from "@/stores/app-store";
+import { useState } from "react";
 import { CollectionCard } from "@/components/collection/collection-card";
 import { CreateCollectionDialog } from "@/components/collection/create-collection-dialog";
 import { DeleteCollectionDialog } from "@/components/collection/delete-collection-dialog";
+import { Button } from "@/components/ui/button";
+import type { TabCollection } from "@/lib/db";
+import { useAppStore } from "@/stores/app-store";
 
 export function CollectionPanel() {
   const collections = useAppStore((s) => s.collections);
