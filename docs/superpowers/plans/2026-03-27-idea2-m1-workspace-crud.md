@@ -928,9 +928,9 @@ export function WorkspaceItem({ workspace, isActive, onSelect, onRequestDelete }
 
   return (
     <Popover open={iconPopoverOpen} onOpenChange={setIconPopoverOpen}>
-      <PopoverAnchor asChild>
-        <ContextMenu>
-          <ContextMenuTrigger asChild>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <PopoverAnchor asChild>
             <div
               className={cn(
                 "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
@@ -1003,35 +1003,35 @@ export function WorkspaceItem({ workspace, isActive, onSelect, onRequestDelete }
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </ContextMenuTrigger>
-          <ContextMenuContent>
-            <ContextMenuItem onClick={startRename}>
-              <Pencil className="mr-2 size-4" />
-              Change Name
-            </ContextMenuItem>
-            <ContextMenuItem onClick={openIconPicker}>
-              <ImagePlus className="mr-2 size-4" />
-              Change Icon
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-            <ContextMenuItem
-              onClick={onRequestDelete}
-              disabled={workspace.isDefault}
-              className={cn(
-                workspace.isDefault
-                  ? "text-muted-foreground"
-                  : "text-destructive focus:text-destructive",
-              )}
-            >
-              <Trash2 className="mr-2 size-4" />
-              Delete
-              {workspace.isDefault && (
-                <span className="ml-auto text-xs italic text-muted-foreground">default</span>
-              )}
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
-      </PopoverAnchor>
+          </PopoverAnchor>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={startRename}>
+            <Pencil className="mr-2 size-4" />
+            Change Name
+          </ContextMenuItem>
+          <ContextMenuItem onClick={openIconPicker}>
+            <ImagePlus className="mr-2 size-4" />
+            Change Icon
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onClick={onRequestDelete}
+            disabled={workspace.isDefault}
+            className={cn(
+              workspace.isDefault
+                ? "text-muted-foreground"
+                : "text-destructive focus:text-destructive",
+            )}
+          >
+            <Trash2 className="mr-2 size-4" />
+            Delete
+            {workspace.isDefault && (
+              <span className="ml-auto text-xs italic text-muted-foreground">default</span>
+            )}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
       <PopoverContent className="w-auto p-3" side="right" align="start">
         <IconPicker
           value={workspace.icon}
