@@ -179,7 +179,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const validName = validateName(name);
     if (!validName) return;
     const { workspaces } = get();
-    const lastOrder = workspaces.length > 0 ? workspaces[workspaces.length - 1].order : null;
+    const sorted = [...workspaces].sort(compareByOrder);
+    const lastOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : null;
     const newOrder = generateKeyBetween(lastOrder, null);
 
     const workspace: Workspace = {
