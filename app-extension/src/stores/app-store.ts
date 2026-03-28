@@ -94,6 +94,12 @@ interface AppState {
   ) => Promise<void>;
   removeTabFromCollection: (tabId: number, collectionId: number) => Promise<void>;
   reorderTabInCollection: (tabId: number, collectionId: number, newOrder: string) => Promise<void>;
+
+  // Bulk save
+  saveTabsAsCollection: (
+    name: string,
+    tabs: { url: string; title: string; favIconUrl?: string }[],
+  ) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -289,7 +295,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { activeWorkspaceId, collections } = get();
     if (activeWorkspaceId == null) return;
 
-    const lastOrder = collections.length > 0 ? collections[collections.length - 1].order : null;
+    const sorted = [...collections].sort(compareByOrder);
+    const lastOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : null;
     const newOrder = generateKeyBetween(lastOrder, null);
 
     const collection: TabCollection = {
@@ -441,6 +448,69 @@ export const useAppStore = create<AppState>((set, get) => ({
       const revertMap = new Map(get().tabsByCollection);
       revertMap.set(collectionId, prevTabs);
       set({ tabsByCollection: revertMap });
+    }
+  },
+
+  saveTabsAsCollection: async (name, tabs) => {
+    const validName = validateName(name);
+    if (!validName || tabs.length === 0) return;
+    const { activeWorkspaceId, collections } = get();
+    if (activeWorkspaceId == null) return;
+
+    const sorted = [...collections].sort(compareByOrder);
+    const lastCollectionOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : null;
+    const collectionOrder = generateKeyBetween(lastCollectionOrder, null);
+
+    const collection: TabCollection = {
+      workspaceId: activeWorkspaceId,
+      name: validName,
+      order: collectionOrder,
+      createdAt: Date.now(),
+    };
+
+    const collectionTabs: CollectionTab[] = [];
+    let prevTabOrder: string | null = null;
+    for (const tab of tabs) {
+      const tabOrder = generateKeyBetween(prevTabOrder, null);
+      collectionTabs.push({
+        collectionId: -1,
+        url: tab.url,
+        title: tab.title,
+        favIconUrl: tab.favIconUrl,
+        order: tabOrder,
+        createdAt: Date.now(),
+      });
+      prevTabOrder = tabOrder;
+    }
+
+    try {
+      const collectionId = await db.transaction(
+        "rw",
+        [db.tabCollections, db.collectionTabs],
+        async () => {
+          const id = (await db.tabCollections.add(collection)) as number;
+          const withId = collectionTabs.map((t) => ({ ...t, collectionId: id }));
+          await db.collectionTabs.bulkAdd(withId);
+          return id;
+        },
+      );
+
+      collection.id = collectionId;
+
+      // Reload from DB to get correct auto-increment IDs
+      const freshTabs = await db.collectionTabs
+        .where("[collectionId+order]")
+        .between([collectionId, Dexie.minKey], [collectionId, Dexie.maxKey])
+        .toArray();
+
+      const newMap = new Map(get().tabsByCollection);
+      newMap.set(collectionId, freshTabs);
+      set({
+        collections: [...get().collections, collection],
+        tabsByCollection: newMap,
+      });
+    } catch (err) {
+      console.error("[store] failed to save tabs as collection:", err);
     }
   },
 }));
