@@ -78,11 +78,12 @@ In `WorkspaceSidebar`, add a settings gear icon button at the bottom. On click: 
 ```
 1. Read settings via getSettings()
 2. If server_enabled === false:
-   - Set offline mode directly (localUuid = crypto.randomUUID())
+   - Call setAuthState({ mode: "offline", localUuid: crypto.randomUUID() })
+     (uses existing auth-storage.ts, persists to browser.storage.local)
    - Skip initializeAuth() entirely
    - Do NOT create retry alarm
 3. If server_enabled === true:
-   - Call initializeAuth() using server_url from settings
+   - Call initializeAuth(serverUrl) using server_url from settings
    - On failure, create retry alarm (existing behavior)
 4. Always run seedDefaultData()
 ```
@@ -91,19 +92,27 @@ In `WorkspaceSidebar`, add a settings gear icon button at the bottom. On click: 
 
 Background listens for `MSG.SETTINGS_CHANGED`:
 
-- **false → true**: Read `server_url` from settings, call `initializeAuth()` with that URL. On failure, create retry alarm.
-- **true → false**: Set `offlineMode = true`, clear retry alarm. Do NOT clear existing auth data in storage.
+- **false → true**: Read `server_url` from settings, call `initializeAuth(serverUrl)`. On failure, create retry alarm.
+- **true → false**: Call `setAuthState({ mode: "offline", localUuid: crypto.randomUUID() })`, clear retry alarm. Do NOT call `clearAuthState()` — we preserve the localUuid for potential future re-enable.
 
 #### API base URL
 
-`lib/api.ts` currently uses `import.meta.env.VITE_API_BASE ?? "http://localhost:3001"`. Change to accept an optional `baseUrl` parameter:
+`lib/api.ts` currently uses `const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:3001"` at module scope. Add optional `baseUrl` parameter to each function, using `baseUrl ?? API_BASE` as effective base:
 
 ```ts
-export async function signInAnonymous(baseUrl?: string): Promise<...>
-export async function checkHealth(baseUrl?: string): Promise<boolean>
+export async function signInAnonymous(baseUrl?: string): Promise<...> {
+  const base = baseUrl ?? API_BASE;
+  const res = await fetch(`${base}/api/auth/sign-in/anonymous`, ...);
+  ...
+}
+
+export async function checkHealth(baseUrl?: string): Promise<boolean> {
+  const base = baseUrl ?? API_BASE;
+  ...
+}
 ```
 
-Background reads `server_url` from settings and passes it. Settings page passes the user-entered URL for "Test Connection".
+`API_BASE` constant remains as fallback. Background reads `server_url` from settings and passes it. Settings page passes the user-entered URL for "Test Connection".
 
 ### 4. Constants
 
@@ -123,11 +132,11 @@ export const MSG = {
 | `lib/settings.ts` | **New** — getSettings / updateSettings |
 | `lib/constants.ts` | **Edit** — add SETTINGS_CHANGED message type |
 | `lib/api.ts` | **Edit** — accept optional baseUrl param |
-| `lib/auth-manager.ts` | **Edit** — accept optional baseUrl, pass to api |
+| `lib/auth-manager.ts` | **Edit** — thread `baseUrl` through all 3 functions: `registerAndPersist(existingLocalUuid?, baseUrl?)` → `signInAnonymous(baseUrl)`, `initializeAuth(baseUrl?)` → `registerAndPersist(undefined, baseUrl)`, `attemptRegistration(baseUrl?)` → `registerAndPersist(localUuid, baseUrl)` |
 | `entrypoints/settings/index.html` | **New** — settings page HTML shell |
 | `entrypoints/settings/main.tsx` | **New** — React mount |
 | `entrypoints/settings/App.tsx` | **New** — settings UI |
-| `entrypoints/background.ts` | **Edit** — conditional auth, listen for SETTINGS_CHANGED |
+| `entrypoints/background.ts` | **Edit** — conditional auth on startup, listen for SETTINGS_CHANGED, alarm listener reads `server_url` from settings before calling `attemptRegistration(serverUrl)` |
 | `components/layout/workspace-sidebar.tsx` | **Edit** — add settings gear button |
 | `wxt.config.ts` | No change needed (WXT auto-discovers entrypoints) |
 
