@@ -8,10 +8,11 @@ import { DRAG_TYPES } from "@/lib/dnd-types";
 
 interface CollectionTabItemProps {
   tab: CollectionTab;
+  isOpen: boolean;
   onRemove: () => void;
 }
 
-export function CollectionTabItem({ tab, onRemove }: CollectionTabItemProps) {
+export function CollectionTabItem({ tab, isOpen, onRemove }: CollectionTabItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `col-tab-${tab.id}`,
     data: { type: DRAG_TYPES.COLLECTION_TAB, tab, collectionId: tab.collectionId },
@@ -29,8 +30,11 @@ export function CollectionTabItem({ tab, onRemove }: CollectionTabItemProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className="group flex cursor-grab items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-accent"
+      className="group relative flex cursor-grab items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-accent"
     >
+      {isOpen && (
+        <span className="absolute right-1 top-1 size-1.5 rounded-full bg-green-500" />
+      )}
       <TabFavicon url={tab.favIconUrl} />
       <span className="flex-1 truncate" title={tab.url}>
         {tab.title || tab.url}

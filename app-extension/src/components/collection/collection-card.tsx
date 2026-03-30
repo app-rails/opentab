@@ -1,6 +1,6 @@
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { ExternalLink, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ExternalLink, Info, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { CollectionTab, TabCollection } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
 import { useAppStore } from "@/stores/app-store";
@@ -33,6 +39,8 @@ export function CollectionCard({
   const renameCollection = useAppStore((s) => s.renameCollection);
   const removeTabFromCollection = useAppStore((s) => s.removeTabFromCollection);
   const addTabToCollection = useAppStore((s) => s.addTabToCollection);
+  const restoreCollection = useAppStore((s) => s.restoreCollection);
+  const liveTabUrls = useAppStore((s) => s.liveTabUrls);
 
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(collection.name);
@@ -50,8 +58,8 @@ export function CollectionCard({
   }
 
   function handleOpenAll() {
-    if (tabs.length === 0) return;
-    chrome.windows.create({ url: tabs.map((t) => t.url) });
+    if (tabs.length === 0 || collection.id == null) return;
+    restoreCollection(collection.id);
   }
 
   function handleAddUrl(url: string) {
@@ -93,14 +101,26 @@ export function CollectionCard({
           />
         ) : (
           <h3
-            className="flex-1 text-sm font-medium"
+            className="flex flex-1 items-center gap-1.5 text-sm font-medium"
             onDoubleClick={() => {
               setRenameValue(collection.name);
               setIsRenaming(true);
             }}
           >
             {collection.name}
-            <span className="ml-1.5 text-xs font-normal text-muted-foreground">{tabs.length}</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {tabs.length}
+            </span>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="size-3 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Created: {new Date(collection.createdAt).toLocaleString()}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </h3>
         )}
 
@@ -152,6 +172,7 @@ export function CollectionCard({
             <CollectionTabItem
               key={tab.id}
               tab={tab}
+              isOpen={liveTabUrls.has(tab.url)}
               onRemove={() => {
                 if (tab.id != null && collection.id != null) {
                   removeTabFromCollection(tab.id, collection.id);
