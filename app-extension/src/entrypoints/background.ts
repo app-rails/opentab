@@ -1,6 +1,8 @@
 import { attemptRegistration, initializeAuth } from "@/lib/auth-manager";
+import { getAuthState, setAuthState } from "@/lib/auth-storage";
 import { MSG } from "@/lib/constants";
 import { seedDefaultData } from "@/lib/db-init";
+import { getSettings } from "@/lib/settings";
 
 const AUTH_RETRY_ALARM = "opentab-auth-retry";
 
@@ -8,19 +10,30 @@ export default defineBackground(() => {
   console.log("[bg] OpenTab background service worker started");
 
   browser.runtime.onInstalled.addListener(async (details) => {
-    // Initialize auth on both install and update so seedDefaultData always has a valid account.
-    console.log("[bg] ensuring auth is initialized");
-    const state = await initializeAuth();
+    const settings = await getSettings();
+    console.log("[bg] server_enabled:", settings.server_enabled);
 
-    if (details.reason === "install" && state.mode === "offline") {
-      await browser.alarms.create(AUTH_RETRY_ALARM, {
-        periodInMinutes: 1,
+    if (settings.server_enabled) {
+      console.log("[bg] server enabled — initializing auth");
+      const state = await initializeAuth(settings.server_url);
+
+      if (details.reason === "install" && state.mode === "offline") {
+        await browser.alarms.create(AUTH_RETRY_ALARM, {
+          periodInMinutes: 1,
+        });
+        console.log("[bg] offline mode — retry alarm created");
+      }
+    } else {
+      console.log("[bg] server disabled — setting offline mode");
+      const existing = await getAuthState();
+      await setAuthState({
+        mode: "offline",
+        localUuid:
+          (existing?.mode === "offline" ? existing.localUuid : existing?.localUuid) ??
+          crypto.randomUUID(),
       });
-      console.log("[bg] offline mode — retry alarm created");
     }
 
-    // Seed on both install and update (M2→M3 upgrade path).
-    // seedDefaultData() is idempotent — skips if data already exists.
     try {
       console.log("[bg] ensuring default database data exists");
       await seedDefaultData();
@@ -33,12 +46,50 @@ export default defineBackground(() => {
     if (alarm.name !== AUTH_RETRY_ALARM) return;
 
     console.log("[bg] auth retry alarm fired");
-    const state = await attemptRegistration();
+    const settings = await getSettings();
+
+    if (!settings.server_enabled) {
+      await browser.alarms.clear(AUTH_RETRY_ALARM);
+      console.log("[bg] server disabled — clearing retry alarm");
+      return;
+    }
+
+    const state = await attemptRegistration(settings.server_url);
 
     if (state?.mode === "online") {
       await browser.alarms.clear(AUTH_RETRY_ALARM);
       console.log("[bg] now online — retry alarm cleared");
     }
+  });
+
+  // --- Settings change listener ---
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type !== MSG.SETTINGS_CHANGED) return;
+
+    (async () => {
+      const settings = await getSettings();
+      console.log("[bg] settings changed, server_enabled:", settings.server_enabled);
+
+      if (settings.server_enabled) {
+        const state = await initializeAuth(settings.server_url);
+        if (state.mode === "offline") {
+          await browser.alarms.create(AUTH_RETRY_ALARM, {
+            periodInMinutes: 1,
+          });
+          console.log("[bg] offline after enable — retry alarm created");
+        }
+      } else {
+        const existing = await getAuthState();
+        await setAuthState({
+          mode: "offline",
+          localUuid:
+            (existing?.mode === "offline" ? existing.localUuid : existing?.localUuid) ??
+            crypto.randomUUID(),
+        });
+        await browser.alarms.clear(AUTH_RETRY_ALARM);
+        console.log("[bg] server disabled — set offline, cleared alarm");
+      }
+    })();
   });
 
   // --- Tab event broadcasting for live-tab panel ---
