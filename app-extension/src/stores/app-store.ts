@@ -63,6 +63,7 @@ interface AppState {
   collections: TabCollection[];
   tabsByCollection: Map<number, CollectionTab[]>;
   liveTabs: chrome.tabs.Tab[];
+  liveTabUrls: Set<string>;
   isLoading: boolean;
 
   initialize: () => Promise<void>;
@@ -108,6 +109,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   collections: [],
   tabsByCollection: new Map(),
   liveTabs: [],
+  liveTabUrls: new Set(),
   isLoading: true,
 
   initialize: async () => {
@@ -149,17 +151,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Live tabs
-  setLiveTabs: (tabs) => set({ liveTabs: tabs }),
+  setLiveTabs: (tabs) => set({
+    liveTabs: tabs,
+    liveTabUrls: new Set(tabs.map((t) => t.url).filter((u): u is string => u != null)),
+  }),
 
   addLiveTab: (tab) => {
     if (get().liveTabs.some((t) => t.id === tab.id)) return;
-    set({ liveTabs: [...get().liveTabs, tab] });
+    const newTabs = [...get().liveTabs, tab];
+    set({
+      liveTabs: newTabs,
+      liveTabUrls: new Set(newTabs.map((t) => t.url).filter((u): u is string => u != null)),
+    });
   },
 
   removeLiveTab: (tabId) => {
     const { liveTabs } = get();
     if (!liveTabs.some((t) => t.id === tabId)) return;
-    set({ liveTabs: liveTabs.filter((t) => t.id !== tabId) });
+    const newTabs = liveTabs.filter((t) => t.id !== tabId);
+    set({
+      liveTabs: newTabs,
+      liveTabUrls: new Set(newTabs.map((t) => t.url).filter((u): u is string => u != null)),
+    });
   },
 
   updateLiveTab: (tabId, changeInfo) => {
@@ -170,8 +183,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (idx === -1) return;
     const existing = liveTabs[idx];
     if (keys.every((k) => existing[k as keyof chrome.tabs.Tab] === changeInfo[k])) return;
+    const newTabs = liveTabs.map((t) => (t.id === tabId ? { ...t, ...changeInfo } : t));
     set({
-      liveTabs: liveTabs.map((t) => (t.id === tabId ? { ...t, ...changeInfo } : t)),
+      liveTabs: newTabs,
+      liveTabUrls: new Set(newTabs.map((t) => t.url).filter((u): u is string => u != null)),
     });
   },
 
