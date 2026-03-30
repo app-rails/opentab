@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { TabFavicon } from "@/components/tab-favicon";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
 import { useAppStore } from "@/stores/app-store";
+import { toast } from "sonner";
 
 function formatTimestamp(): string {
   const now = new Date();
@@ -84,6 +85,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
         favIconUrl: t.favIconUrl,
       }));
     saveTabsAsCollection(trimmedName, selectedTabs);
+    toast.success(`已保存 ${selectedTabs.length} 个标签页到「${trimmedName}」`);
     onOpenChange(false);
   }
 
