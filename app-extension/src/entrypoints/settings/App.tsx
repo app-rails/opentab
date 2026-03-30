@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -8,9 +8,25 @@ import { type AppSettings, getSettings, updateSettings } from "@/lib/settings";
 
 type ConnectionStatus = "not_enabled" | "testing" | "connected" | "disconnected";
 
+function useDebouncedSave(delayMs: number) {
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  return useCallback(
+    (partial: Partial<AppSettings>) => {
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(async () => {
+        await updateSettings(partial);
+        chrome.runtime.sendMessage({ type: MSG.SETTINGS_CHANGED }).catch(() => {});
+      }, delayMs);
+    },
+    [delayMs],
+  );
+}
+
 export default function App() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("not_enabled");
+  const debouncedSave = useDebouncedSave(500);
 
   useEffect(() => {
     getSettings().then(setSettings);
@@ -31,11 +47,12 @@ export default function App() {
   );
 
   const handleUrlChange = useCallback(
-    async (url: string) => {
+    (url: string) => {
       setSettings((prev) => (prev ? { ...prev, server_url: url } : prev));
-      await saveAndNotify({ server_url: url });
+      setConnectionStatus("disconnected");
+      debouncedSave({ server_url: url });
     },
-    [saveAndNotify],
+    [debouncedSave],
   );
 
   const handleTestConnection = useCallback(async () => {

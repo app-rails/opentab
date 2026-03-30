@@ -6,6 +6,14 @@ import { getSettings } from "@/lib/settings";
 
 const AUTH_RETRY_ALARM = "opentab-auth-retry";
 
+async function setOfflineMode(): Promise<void> {
+  const existing = await getAuthState();
+  await setAuthState({
+    mode: "offline",
+    localUuid: existing?.localUuid ?? crypto.randomUUID(),
+  });
+}
+
 export default defineBackground(() => {
   console.log("[bg] OpenTab background service worker started");
 
@@ -25,13 +33,7 @@ export default defineBackground(() => {
       }
     } else {
       console.log("[bg] server disabled — setting offline mode");
-      const existing = await getAuthState();
-      await setAuthState({
-        mode: "offline",
-        localUuid:
-          (existing?.mode === "offline" ? existing.localUuid : existing?.localUuid) ??
-          crypto.randomUUID(),
-      });
+      await setOfflineMode();
     }
 
     try {
@@ -79,13 +81,7 @@ export default defineBackground(() => {
           console.log("[bg] offline after enable — retry alarm created");
         }
       } else {
-        const existing = await getAuthState();
-        await setAuthState({
-          mode: "offline",
-          localUuid:
-            (existing?.mode === "offline" ? existing.localUuid : existing?.localUuid) ??
-            crypto.randomUUID(),
-        });
+        await setOfflineMode();
         await browser.alarms.clear(AUTH_RETRY_ALARM);
         console.log("[bg] server disabled — set offline, cleared alarm");
       }
