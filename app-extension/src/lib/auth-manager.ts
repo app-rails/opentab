@@ -4,8 +4,11 @@ import { getAuthState, setAuthState } from "./auth-storage.js";
 
 type OnlineState = Extract<AuthState, { mode: "online" }>;
 
-async function registerAndPersist(existingLocalUuid?: string): Promise<OnlineState> {
-  const { user, token } = await signInAnonymous();
+async function registerAndPersist(
+  existingLocalUuid?: string,
+  baseUrl?: string,
+): Promise<OnlineState> {
+  const { user, token } = await signInAnonymous(baseUrl);
   const state: OnlineState = {
     mode: "online",
     accountId: user.id,
@@ -16,7 +19,7 @@ async function registerAndPersist(existingLocalUuid?: string): Promise<OnlineSta
   return state;
 }
 
-export async function initializeAuth(): Promise<AuthState> {
+export async function initializeAuth(baseUrl?: string): Promise<AuthState> {
   const existing = await getAuthState();
   if (existing?.mode === "online") {
     console.log("[auth] already authenticated, skipping init");
@@ -24,7 +27,7 @@ export async function initializeAuth(): Promise<AuthState> {
   }
 
   try {
-    const state = await registerAndPersist();
+    const state = await registerAndPersist(undefined, baseUrl);
     console.log("[auth] anonymous account created:", state.accountId);
     return state;
   } catch (error) {
@@ -36,14 +39,14 @@ export async function initializeAuth(): Promise<AuthState> {
   }
 }
 
-export async function attemptRegistration(): Promise<AuthState | null> {
+export async function attemptRegistration(baseUrl?: string): Promise<AuthState | null> {
   const state = await getAuthState();
   if (!state || state.mode === "online") {
     return state;
   }
 
   try {
-    const updated = await registerAndPersist(state.localUuid);
+    const updated = await registerAndPersist(state.localUuid, baseUrl);
     console.log(
       "[auth] offline → online, account:",
       updated.accountId,
