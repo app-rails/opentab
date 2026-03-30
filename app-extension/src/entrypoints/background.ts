@@ -32,7 +32,8 @@ export default defineBackground(() => {
         console.log("[bg] offline mode — retry alarm created");
       }
     } else {
-      console.log("[bg] server disabled — setting offline mode");
+      console.log("[bg] server disabled — clearing retry alarm and setting offline mode");
+      await browser.alarms.clear(AUTH_RETRY_ALARM);
       await setOfflineMode();
     }
 

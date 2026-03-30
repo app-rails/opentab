@@ -29,7 +29,10 @@ export default function App() {
   const debouncedSave = useDebouncedSave(500);
 
   useEffect(() => {
-    getSettings().then(setSettings);
+    getSettings().then((loaded) => {
+      setSettings(loaded);
+      setConnectionStatus(loaded.server_enabled ? "disconnected" : "not_enabled");
+    });
   }, []);
 
   const saveAndNotify = useCallback(async (partial: Partial<AppSettings>) => {
