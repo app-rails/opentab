@@ -539,17 +539,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   restoreCollection: async (collectionId) => {
-    const { tabsByCollection } = get();
-    const collectionTabs = tabsByCollection.get(collectionId);
-    if (!collectionTabs || collectionTabs.length === 0) return;
+    try {
+      const { tabsByCollection } = get();
+      const collectionTabs = tabsByCollection.get(collectionId);
+      if (!collectionTabs || collectionTabs.length === 0) return;
 
-    const { liveTabUrls } = get();
-    const tabsToOpen = collectionTabs.filter((t) => !liveTabUrls.has(t.url));
+      const { liveTabUrls } = get();
+      const tabsToOpen = collectionTabs.filter((t) => !liveTabUrls.has(t.url));
 
-    if (tabsToOpen.length === 0) return;
+      if (tabsToOpen.length === 0) return;
 
-    for (const tab of tabsToOpen) {
-      await chrome.tabs.create({ url: tab.url, active: false });
+      // Optimistically mark URLs as open to prevent double-click duplicates
+      const optimisticUrls = new Set(liveTabUrls);
+      for (const tab of tabsToOpen) {
+        optimisticUrls.add(tab.url);
+      }
+      set({ liveTabUrls: optimisticUrls });
+
+      for (const tab of tabsToOpen) {
+        await chrome.tabs.create({ url: tab.url, active: false });
+      }
+    } catch (err) {
+      console.error("[store] failed to restore collection:", err);
     }
   },
 }));

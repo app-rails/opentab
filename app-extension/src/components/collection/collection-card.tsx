@@ -114,7 +114,14 @@ export function CollectionCard({
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="size-3 text-muted-foreground" />
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Collection info"
+                    className="p-0"
+                  >
+                    <Info className="size-3 text-muted-foreground" />
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   <p>Created: {new Date(collection.createdAt).toLocaleString()}</p>
