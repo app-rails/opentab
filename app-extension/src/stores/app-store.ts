@@ -50,6 +50,10 @@ function validatedIcon(icon: string): WorkspaceIconName {
     : DEFAULT_ICON;
 }
 
+function buildLiveTabUrls(tabs: chrome.tabs.Tab[]): Set<string> {
+  return new Set(tabs.map((t) => t.url).filter((u): u is string => u != null));
+}
+
 async function resolveAccountId(): Promise<string> {
   const authState = await getAuthState();
   if (authState?.mode === "online") return authState.accountId;
@@ -156,7 +160,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Live tabs
   setLiveTabs: (tabs) => set({
     liveTabs: tabs,
-    liveTabUrls: new Set(tabs.map((t) => t.url).filter((u): u is string => u != null)),
+    liveTabUrls: buildLiveTabUrls(tabs),
   }),
 
   addLiveTab: (tab) => {
@@ -164,7 +168,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const newTabs = [...get().liveTabs, tab];
     set({
       liveTabs: newTabs,
-      liveTabUrls: new Set(newTabs.map((t) => t.url).filter((u): u is string => u != null)),
+      liveTabUrls: buildLiveTabUrls(newTabs),
     });
   },
 
@@ -174,7 +178,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const newTabs = liveTabs.filter((t) => t.id !== tabId);
     set({
       liveTabs: newTabs,
-      liveTabUrls: new Set(newTabs.map((t) => t.url).filter((u): u is string => u != null)),
+      liveTabUrls: buildLiveTabUrls(newTabs),
     });
   },
 
@@ -187,9 +191,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const existing = liveTabs[idx];
     if (keys.every((k) => existing[k as keyof chrome.tabs.Tab] === changeInfo[k])) return;
     const newTabs = liveTabs.map((t) => (t.id === tabId ? { ...t, ...changeInfo } : t));
+    const urlChanged = "url" in changeInfo;
     set({
       liveTabs: newTabs,
-      liveTabUrls: new Set(newTabs.map((t) => t.url).filter((u): u is string => u != null)),
+      ...(urlChanged && { liveTabUrls: buildLiveTabUrls(newTabs) }),
     });
   },
 
