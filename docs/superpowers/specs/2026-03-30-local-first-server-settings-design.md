@@ -78,8 +78,9 @@ In `WorkspaceSidebar`, add a settings gear icon button at the bottom. On click: 
 ```
 1. Read settings via getSettings()
 2. If server_enabled === false:
-   - Call setAuthState({ mode: "offline", localUuid: crypto.randomUUID() })
-     (uses existing auth-storage.ts, persists to browser.storage.local)
+   - Read existing auth state, then call
+     setAuthState({ mode: "offline", localUuid: existing?.localUuid ?? crypto.randomUUID() })
+     (reuse existing localUuid if present; uses auth-storage.ts, persists to browser.storage.local)
    - Skip initializeAuth() entirely
    - Do NOT create retry alarm
 3. If server_enabled === true:
@@ -93,7 +94,7 @@ In `WorkspaceSidebar`, add a settings gear icon button at the bottom. On click: 
 Background listens for `MSG.SETTINGS_CHANGED`:
 
 - **false → true**: Read `server_url` from settings, call `initializeAuth(serverUrl)`. On failure, create retry alarm.
-- **true → false**: Call `setAuthState({ mode: "offline", localUuid: crypto.randomUUID() })`, clear retry alarm. Do NOT call `clearAuthState()` — we preserve the localUuid for potential future re-enable.
+- **true → false**: Read existing auth state, then call `setAuthState({ mode: "offline", localUuid: existing?.localUuid ?? crypto.randomUUID() })`, clear retry alarm. Preserves existing localUuid for potential future re-enable (mirrors pattern in auth-manager.ts:31).
 
 #### API base URL
 
