@@ -26,7 +26,7 @@
 **Files:**
 - Create: `app-extension/src/components/ui/tooltip.tsx`
 
-- [ ] **Step 1: Generate the Tooltip component via shadcn CLI**
+- [x] **Step 1: Generate the Tooltip component via shadcn CLI**
 
 ```bash
 cd app-extension && pnpm dlx shadcn@latest add tooltip
@@ -68,7 +68,7 @@ TooltipContent.displayName = TooltipPrimitive.Content.displayName;
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };
 ```
 
-- [ ] **Step 2: Verify @radix-ui/react-tooltip is installed**
+- [x] **Step 2: Verify @radix-ui/react-tooltip is installed**
 
 ```bash
 cd app-extension && pnpm ls @radix-ui/react-tooltip
@@ -80,7 +80,7 @@ If not installed:
 cd app-extension && pnpm add @radix-ui/react-tooltip
 ```
 
-- [ ] **Step 3: Verify the build compiles**
+- [x] **Step 3: Verify the build compiles**
 
 ```bash
 cd app-extension && pnpm run build
@@ -88,7 +88,7 @@ cd app-extension && pnpm run build
 
 Expected: Build succeeds with no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app-extension/src/components/ui/tooltip.tsx app-extension/package.json app-extension/pnpm-lock.yaml
@@ -104,7 +104,7 @@ git commit -m "feat(m2): add shadcn Tooltip component"
 
 The store already has `liveTabs: chrome.tabs.Tab[]`. We need a `Set<string>` of their URLs for O(1) lookup. We add `liveTabUrls` as store state, recomputed in each live tab mutator to avoid creating a new Set on every render.
 
-- [ ] **Step 1: Add the `liveTabUrls` as store state**
+- [x] **Step 1: Add the `liveTabUrls` as store state**
 
 In the `AppState` interface, add after `liveTabs`:
 
@@ -171,7 +171,7 @@ For `updateLiveTab`:
   },
 ```
 
-- [ ] **Step 2: Verify the build compiles**
+- [x] **Step 2: Verify the build compiles**
 
 ```bash
 cd app-extension && pnpm run build
@@ -179,7 +179,7 @@ cd app-extension && pnpm run build
 
 Expected: Build succeeds.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app-extension/src/stores/app-store.ts
@@ -195,7 +195,7 @@ git commit -m "feat(m2): add liveTabUrls state to store"
 
 This action takes a collection ID, computes which tabs are NOT already open (exact URL match against `liveTabs`), and creates only those tabs via `chrome.tabs.create`.
 
-- [ ] **Step 1: Add `restoreCollection` to the AppState interface**
+- [x] **Step 1: Add `restoreCollection` to the AppState interface**
 
 In the `AppState` interface, after the `saveTabsAsCollection` declaration, add:
 
@@ -204,7 +204,7 @@ In the `AppState` interface, after the `saveTabsAsCollection` declaration, add:
   restoreCollection: (collectionId: number) => Promise<void>;
 ```
 
-- [ ] **Step 2: Implement `restoreCollection` in the store**
+- [x] **Step 2: Implement `restoreCollection` in the store**
 
 Inside `create<AppState>((set, get) => ({`, after the `saveTabsAsCollection` implementation, add:
 
@@ -225,7 +225,7 @@ Inside `create<AppState>((set, get) => ({`, after the `saveTabsAsCollection` imp
   },
 ```
 
-- [ ] **Step 3: Verify the build compiles**
+- [x] **Step 3: Verify the build compiles**
 
 ```bash
 cd app-extension && pnpm run build
@@ -233,7 +233,7 @@ cd app-extension && pnpm run build
 
 Expected: Build succeeds.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app-extension/src/stores/app-store.ts
@@ -250,7 +250,7 @@ git commit -m "feat(m2): add restoreCollection action with dedup"
 
 Both files are modified in a single task to avoid an intermediate broken build (CollectionTabItem's new required `isOpen` prop must be passed by CollectionCard).
 
-- [ ] **Step 1: Add `isOpen` prop to `CollectionTabItemProps`**
+- [x] **Step 1: Add `isOpen` prop to `CollectionTabItemProps`**
 
 In `app-extension/src/components/collection/collection-tab-item.tsx`, update the interface and component:
 
@@ -264,7 +264,7 @@ interface CollectionTabItemProps {
 export function CollectionTabItem({ tab, isOpen, onRemove }: CollectionTabItemProps) {
 ```
 
-- [ ] **Step 2: Add the green dot to the JSX**
+- [x] **Step 2: Add the green dot to the JSX**
 
 Replace the outer `<div>` return of `CollectionTabItem` with:
 
@@ -301,7 +301,7 @@ Key changes from original:
 - Added `relative` to the outer div's className
 - Added the green dot `<span>` conditionally when `isOpen` is true
 
-- [ ] **Step 3: Update imports in CollectionCard**
+- [x] **Step 3: Update imports in CollectionCard**
 
 At the top of `app-extension/src/components/collection/collection-card.tsx`, update imports:
 
@@ -332,7 +332,7 @@ import { AddTabInline } from "./add-tab-inline";
 import { CollectionTabItem } from "./collection-tab-item";
 ```
 
-- [ ] **Step 4: Wire up store selectors inside the component**
+- [x] **Step 4: Wire up store selectors inside the component**
 
 Inside the `CollectionCard` function, after the existing store hooks, add:
 
@@ -341,7 +341,7 @@ Inside the `CollectionCard` function, after the existing store hooks, add:
   const liveTabUrls = useAppStore((s) => s.liveTabUrls);
 ```
 
-- [ ] **Step 5: Replace `handleOpenAll` with restore-aware version**
+- [x] **Step 5: Replace `handleOpenAll` with restore-aware version**
 
 Replace the existing `handleOpenAll` function. Note: this deliberately changes behavior from opening a **new window** (`chrome.windows.create`) to opening tabs in the **current window** (`chrome.tabs.create`), because dedup only works against the current window's live tabs.
 
@@ -352,7 +352,7 @@ Replace the existing `handleOpenAll` function. Note: this deliberately changes b
   }
 ```
 
-- [ ] **Step 6: Update the header to show tab count + info tooltip**
+- [x] **Step 6: Update the header to show tab count + info tooltip**
 
 Replace the `<h3>` element (the non-renaming branch, lines 95-104 approximately) with:
 
@@ -381,7 +381,7 @@ Replace the `<h3>` element (the non-renaming branch, lines 95-104 approximately)
           </h3>
 ```
 
-- [ ] **Step 7: Pass `isOpen` to each `CollectionTabItem`**
+- [x] **Step 7: Pass `isOpen` to each `CollectionTabItem`**
 
 In the tab list mapping, update the `CollectionTabItem` usage:
 
@@ -400,7 +400,7 @@ In the tab list mapping, update the `CollectionTabItem` usage:
           ))}
 ```
 
-- [ ] **Step 8: Verify the full build compiles**
+- [x] **Step 8: Verify the full build compiles**
 
 ```bash
 cd app-extension && pnpm run build
@@ -408,7 +408,7 @@ cd app-extension && pnpm run build
 
 Expected: Build succeeds with no errors.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app-extension/src/components/collection/collection-tab-item.tsx app-extension/src/components/collection/collection-card.tsx
