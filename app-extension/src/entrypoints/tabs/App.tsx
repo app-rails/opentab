@@ -14,6 +14,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useEffect, useState } from "react";
+import { Toaster } from "sonner";
 import { CollectionPanel } from "@/components/layout/collection-panel";
 import { LiveTabPanel } from "@/components/layout/live-tab-panel";
 import { WorkspaceSidebar } from "@/components/layout/workspace-sidebar";
@@ -146,6 +147,7 @@ export default function App() {
   const activeDragData = activeDrag?.data.current as DragData | undefined;
 
   return (
+    <>
     <DndContext
       sensors={sensors}
       collisionDetection={customCollisionDetection}
@@ -176,5 +178,7 @@ export default function App() {
         )}
       </DragOverlay>
     </DndContext>
+    <Toaster position="bottom-center" theme="system" />
+    </>
   );
 }
