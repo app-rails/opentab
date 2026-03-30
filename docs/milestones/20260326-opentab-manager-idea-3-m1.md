@@ -13,7 +13,7 @@ Status: TODO
 - [ ] 点击后：chrome.tabs.query 获取所有 live tab → 创建新 TabCollection → 批量写入 CollectionTab
 - [ ] 默认集合名："Snapshot YYYY-MM-DD HH:mm"（可编辑）
 - [ ] 保存后中栏立即显示新集合
-- [ ] 保存确认反馈（toast 通知）
+- [x] 保存确认反馈（toast 通知）
 
 ## 验收标准
 
