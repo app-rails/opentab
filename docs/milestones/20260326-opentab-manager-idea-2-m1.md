@@ -1,7 +1,7 @@
 # Milestone: idea-2 / M1 — Workspace CRUD
 
 Parent Idea: [idea-2](../idea/20260326-opentab-manager-idea-2.md)
-Status: TODO
+Status: DONE
 
 ## 目标
 
@@ -9,16 +9,16 @@ Status: TODO
 
 ## 任务
 
-- [ ] 左栏 Workspace 列表 UI（shadcn/ui 组件）
-- [ ] 创建 Workspace（名称 + 颜色选择）
-- [ ] 重命名 Workspace（双击或右键菜单）
-- [ ] 修改 Workspace 颜色
-- [ ] 删除 Workspace（Default 除外，确认弹窗）
-- [ ] Workspace 拖拽排序（fractional indexing）
-- [ ] 选中 Workspace 高亮显示
-- [ ] 右键上下文菜单（重命名 / 改色 / 删除）
-- [ ] Zustand store: workspaces 状态管理
-- [ ] Dexie CRUD 操作封装
+- [x] 左栏 Workspace 列表 UI（shadcn/ui 组件）
+- [x] 创建 Workspace（名称 + 图标选择）
+- [x] 重命名 Workspace（双击或右键菜单）
+- [x] 修改 Workspace 图标
+- [x] 删除 Workspace（Default 除外，确认弹窗）
+- [x] Workspace 拖拽排序（fractional indexing）
+- [x] 选中 Workspace 高亮显示
+- [x] 右键上下文菜单（重命名 / 改图标 / 删除）
+- [x] Zustand store: workspaces 状态管理
+- [x] Dexie CRUD 操作封装
 
 ## 验收标准
 

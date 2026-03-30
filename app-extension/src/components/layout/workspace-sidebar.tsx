@@ -1,6 +1,6 @@
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
@@ -89,6 +89,20 @@ export function WorkspaceSidebar() {
           if (!open) setDeleteTarget(null);
         }}
       />
+
+      <div className="border-t border-border pt-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-sidebar-foreground/60"
+          onClick={() => {
+            chrome.tabs.create({ url: chrome.runtime.getURL("/settings.html") });
+          }}
+        >
+          <Settings className="size-4" />
+          Settings
+        </Button>
+      </div>
     </aside>
   );
 }

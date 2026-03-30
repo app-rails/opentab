@@ -5,8 +5,9 @@ interface SignInAnonymousResponse {
   user: { id: string; isAnonymous: boolean };
 }
 
-export async function signInAnonymous(): Promise<SignInAnonymousResponse> {
-  const res = await fetch(`${API_BASE}/api/auth/sign-in/anonymous`, {
+export async function signInAnonymous(baseUrl?: string): Promise<SignInAnonymousResponse> {
+  const base = baseUrl ?? API_BASE;
+  const res = await fetch(`${base}/api/auth/sign-in/anonymous`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
@@ -19,9 +20,10 @@ export async function signInAnonymous(): Promise<SignInAnonymousResponse> {
   return res.json();
 }
 
-export async function checkHealth(): Promise<boolean> {
+export async function checkHealth(baseUrl?: string): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/api/health`);
+    const base = baseUrl ?? API_BASE;
+    const res = await fetch(`${base}/api/health`);
     return res.ok;
   } catch {
     return false;

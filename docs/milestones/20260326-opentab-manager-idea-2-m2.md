@@ -1,7 +1,7 @@
 # Milestone: idea-2 / M2 — 集合 + Tab 管理
 
 Parent Idea: [idea-2](../idea/20260326-opentab-manager-idea-2.md)
-Status: TODO
+Status: DONE
 
 ## 目标
 
@@ -9,18 +9,18 @@ Status: TODO
 
 ## 任务
 
-- [ ] 右栏：chrome.tabs.query 获取所有 live tab 并实时显示
-- [ ] 右栏：监听 chrome.tabs.onCreated/onRemoved/onUpdated 实时更新
-- [ ] Background Service Worker：tab 事件监听和消息路由
-- [ ] 中栏：按 TabCollection 分组显示 tab（集合名称作为分组标题）
-- [ ] 集合 CRUD：创建 / 重命名 / 删除集合
-- [ ] 拖拽：右栏 tab → 中栏集合（加入 workspace）
-- [ ] 拖拽库集成（dnd-kit 或 @hello-pangea/dnd）
-- [ ] 中栏集合内 tab 拖拽排序
-- [ ] 集合「全部打开」按钮 → chrome.tabs.create 批量创建
-- [ ] 手动添加 tab 到集合（输入 URL）
-- [ ] 从集合中移除 tab
-- [ ] Zustand store: collections + tabs 状态管理
+- [x] 右栏：chrome.tabs.query 获取所有 live tab 并实时显示
+- [x] 右栏：监听 chrome.tabs.onCreated/onRemoved/onUpdated 实时更新
+- [x] Background Service Worker：tab 事件监听和消息路由
+- [x] 中栏：按 TabCollection 分组显示 tab（集合名称作为分组标题）
+- [x] 集合 CRUD：创建 / 重命名 / 删除集合
+- [x] 拖拽：右栏 tab → 中栏集合（加入 workspace）
+- [x] 拖拽库集成（dnd-kit 或 @hello-pangea/dnd）
+- [x] 中栏集合内 tab 拖拽排序
+- [x] 集合「全部打开」按钮 → chrome.tabs.create 批量创建
+- [x] 手动添加 tab 到集合（输入 URL）
+- [x] 从集合中移除 tab
+- [x] Zustand store: collections + tabs 状态管理
 
 ## 验收标准
 
