@@ -96,6 +96,9 @@ interface AppState {
   removeTabFromCollection: (tabId: number, collectionId: number) => Promise<void>;
   reorderTabInCollection: (tabId: number, collectionId: number, newOrder: string) => Promise<void>;
 
+  // Restore
+  restoreCollection: (collectionId: number) => Promise<void>;
+
   // Bulk save
   saveTabsAsCollection: (
     name: string,
@@ -527,6 +530,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
     } catch (err) {
       console.error("[store] failed to save tabs as collection:", err);
+    }
+  },
+
+  restoreCollection: async (collectionId) => {
+    const { tabsByCollection } = get();
+    const collectionTabs = tabsByCollection.get(collectionId);
+    if (!collectionTabs || collectionTabs.length === 0) return;
+
+    const { liveTabUrls } = get();
+    const tabsToOpen = collectionTabs.filter((t) => !liveTabUrls.has(t.url));
+
+    if (tabsToOpen.length === 0) return;
+
+    for (const tab of tabsToOpen) {
+      await chrome.tabs.create({ url: tab.url, active: false });
     }
   },
 }));
