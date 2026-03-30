@@ -4,7 +4,7 @@
 
 **Goal:** Make tab collections manageable and restorable — show metadata, compare with live tabs, restore with deduplication.
 
-**Architecture:** Add `liveTabUrls: Set<string>` to Zustand store state, recomputed whenever `liveTabs` changes. Modify `CollectionCard` header to show tab count + info tooltip (created/updated time). Add a green dot indicator to `CollectionTabItem` for open tabs. Change "Open All" to filter out already-open URLs before calling `chrome.tabs.create`.
+**Architecture:** Add `liveTabUrls: Set<string>` to Zustand store state, recomputed whenever `liveTabs` changes. Modify `CollectionCard` header to show tab count + info tooltip (created time). Add a green dot indicator to `CollectionTabItem` for open tabs. Change "Open All" to restore with dedup — missing tabs are opened in the **current window** via `chrome.tabs.create` (deliberate change from the previous `chrome.windows.create` which opened a new window; dedup only works in the context of the current window's live tabs).
 
 **Tech Stack:** React, Zustand, Tailwind CSS, shadcn/ui Tooltip, chrome.tabs API
 
@@ -32,7 +32,11 @@
 cd app-extension && pnpm dlx shadcn@latest add tooltip
 ```
 
-If the CLI fails or the project doesn't use the shadcn CLI, create the file manually:
+If the CLI fails or the project doesn't use the shadcn CLI, first install the dependency, then create the file manually:
+
+```bash
+cd app-extension && pnpm add @radix-ui/react-tooltip
+```
 
 ```tsx
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
@@ -238,12 +242,13 @@ git commit -m "feat(m2): add restoreCollection action with dedup"
 
 ---
 
-### Task 4: Add green dot indicator to CollectionTabItem
+### Task 4: Add green dot indicator + wire up CollectionCard (info tooltip, restore, isOpen)
 
 **Files:**
 - Modify: `app-extension/src/components/collection/collection-tab-item.tsx`
+- Modify: `app-extension/src/components/collection/collection-card.tsx`
 
-Each collection tab needs to show a small green dot in the top-right corner when the exact URL is open in the browser.
+Both files are modified in a single task to avoid an intermediate broken build (CollectionTabItem's new required `isOpen` prop must be passed by CollectionCard).
 
 - [ ] **Step 1: Add `isOpen` prop to `CollectionTabItemProps`**
 
@@ -296,34 +301,7 @@ Key changes from original:
 - Added `relative` to the outer div's className
 - Added the green dot `<span>` conditionally when `isOpen` is true
 
-- [ ] **Step 3: Verify the build compiles (expect errors in collection-card.tsx — that's fine, we fix it next task)**
-
-```bash
-cd app-extension && pnpm run build 2>&1 | head -20
-```
-
-Expected: Type error in `collection-card.tsx` because `CollectionTabItem` now requires `isOpen` prop. This is expected and will be fixed in Task 5.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add app-extension/src/components/collection/collection-tab-item.tsx
-git commit -m "feat(m2): add green dot open-status indicator to CollectionTabItem"
-```
-
----
-
-### Task 5: Wire up CollectionCard — info tooltip, restore action, isOpen prop
-
-**Files:**
-- Modify: `app-extension/src/components/collection/collection-card.tsx`
-
-This task:
-1. Adds an info icon with tooltip showing created time next to tab count
-2. Changes "Open All" (ExternalLink) to use `restoreCollection` (dedup-aware)
-3. Passes `isOpen` prop to each `CollectionTabItem`
-
-- [ ] **Step 1: Add imports**
+- [ ] **Step 3: Update imports in CollectionCard**
 
 At the top of `app-extension/src/components/collection/collection-card.tsx`, update imports:
 
@@ -354,7 +332,7 @@ import { AddTabInline } from "./add-tab-inline";
 import { CollectionTabItem } from "./collection-tab-item";
 ```
 
-- [ ] **Step 2: Wire up store selectors inside the component**
+- [ ] **Step 4: Wire up store selectors inside the component**
 
 Inside the `CollectionCard` function, after the existing store hooks, add:
 
@@ -363,9 +341,9 @@ Inside the `CollectionCard` function, after the existing store hooks, add:
   const liveTabUrls = useAppStore((s) => s.liveTabUrls);
 ```
 
-- [ ] **Step 3: Replace `handleOpenAll` with restore-aware version**
+- [ ] **Step 5: Replace `handleOpenAll` with restore-aware version**
 
-Replace the existing `handleOpenAll` function:
+Replace the existing `handleOpenAll` function. Note: this deliberately changes behavior from opening a **new window** (`chrome.windows.create`) to opening tabs in the **current window** (`chrome.tabs.create`), because dedup only works against the current window's live tabs.
 
 ```tsx
   function handleOpenAll() {
@@ -374,7 +352,7 @@ Replace the existing `handleOpenAll` function:
   }
 ```
 
-- [ ] **Step 4: Update the header to show tab count + info tooltip**
+- [ ] **Step 6: Update the header to show tab count + info tooltip**
 
 Replace the `<h3>` element (the non-renaming branch, lines 95-104 approximately) with:
 
@@ -403,7 +381,7 @@ Replace the `<h3>` element (the non-renaming branch, lines 95-104 approximately)
           </h3>
 ```
 
-- [ ] **Step 5: Pass `isOpen` to each `CollectionTabItem`**
+- [ ] **Step 7: Pass `isOpen` to each `CollectionTabItem`**
 
 In the tab list mapping, update the `CollectionTabItem` usage:
 
@@ -422,7 +400,7 @@ In the tab list mapping, update the `CollectionTabItem` usage:
           ))}
 ```
 
-- [ ] **Step 6: Verify the full build compiles**
+- [ ] **Step 8: Verify the full build compiles**
 
 ```bash
 cd app-extension && pnpm run build
@@ -430,16 +408,16 @@ cd app-extension && pnpm run build
 
 Expected: Build succeeds with no errors.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add app-extension/src/components/collection/collection-card.tsx
-git commit -m "feat(m2): add info tooltip, restore with dedup, open-status indicator"
+git add app-extension/src/components/collection/collection-tab-item.tsx app-extension/src/components/collection/collection-card.tsx
+git commit -m "feat(m2): add green dot indicator, info tooltip, restore with dedup"
 ```
 
 ---
 
-### Task 6: Manual verification
+### Task 5: Manual verification
 
 - [ ] **Step 1: Load the extension in Chrome**
 
