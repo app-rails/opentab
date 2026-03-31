@@ -1,6 +1,7 @@
 # OpenTab Interface Audit Remediation
 
 Addresses all 21 findings from the interface audit (2 critical, 6 high, 8 medium, 5 low).
+2 findings (H2, H6) are already implemented — 19 remain.
 Fixes land on `feat/theme-dashboard-refresh` in 6 category-based commits.
 
 ## Fix Order
@@ -64,13 +65,9 @@ new Date(collection.createdAt).toLocaleString(undefined, { dateStyle: "medium", 
 
 Add to the outer `<div>`: `role="button"`, `tabIndex={0}`, and `onKeyDown` handler that calls `onSelect` on Enter/Space. Keep `<div>` (can't use `<button>` due to nested interactive elements).
 
-### H2 — Collection collapse toggle aria
+### H2 — Collection collapse toggle aria *(already done)*
 
-**File:** `app-extension/src/components/collection/collection-card.tsx:88-96`
-
-Add to the chevron button:
-- `aria-label={collapsed ? "Expand collection" : "Collapse collection"}`
-- `aria-expanded={!collapsed}`
+Already implemented at `collection-card.tsx:92-93`. No work needed.
 
 ### H3 — Icon picker buttons aria
 
@@ -80,11 +77,9 @@ Add to each icon button:
 - `aria-label={name}`
 - `aria-pressed={value === name}`
 
-### H6 — Theme selector radio semantics
+### H6 — Theme selector radio semantics *(already done)*
 
-**File:** `app-extension/src/entrypoints/settings/App.tsx:104-120`
-
-Wrap theme buttons in `<div role="radiogroup" aria-label="Theme">`. Each button gets `role="radio"` and `aria-checked={themeMode === opt.value}`.
+Already implemented at `settings/App.tsx:106-112`. No work needed.
 
 ### M4 — aria-live for loading states
 
@@ -275,16 +270,23 @@ All paths relative to `app-extension/src/`.
 | `components/live-tabs/save-tabs-dialog.tsx` | C1 |
 | `components/workspace/workspace-item.tsx` | H1, H5, C2 |
 | `components/workspace/icon-picker.tsx` | H3, C2 |
-| `components/collection/collection-card.tsx` | H2, H5, L3, L5 |
+| `components/collection/collection-card.tsx` | H5, L3, L5 (H2 already done) |
 | `components/collection/collection-tab-item.tsx` | M7, H4 |
 | `components/collection/add-tab-inline.tsx` | M8 |
 | `components/collection/delete-collection-dialog.tsx` | H4, M5 |
 | `components/workspace/delete-workspace-dialog.tsx` | H4, M5 |
-| `entrypoints/settings/App.tsx` | H6, M2, M4, H4 |
+| `entrypoints/settings/App.tsx` | M2, M4, H4 (H6 already done) |
 | `entrypoints/tabs/App.tsx` | M1, M4, L2 |
 | `stores/app-store.ts` | M6, M3 |
 | `components/layout/collection-panel.tsx` | M1 (toggle button), M5 (focus target ref) |
 | `lib/workspace-icons.ts` | C2 (new file) |
+
+## Pre-existing Changes (already live on branch)
+
+These changes are already committed on `feat/theme-dashboard-refresh` and are not part of this remediation work. Noted here to avoid accidental overwrite:
+
+- **`collection-panel.tsx`**: `<WelcomeBanner />` changed to `{isEmpty && <WelcomeBanner />}` (conditional rendering)
+- **`settings/App.tsx`**: `useDebouncedSave` hook now wraps `saveSettings` in `void saveSettings(partial).catch(...)` (error handling)
 
 ## Out of Scope
 
