@@ -1,4 +1,3 @@
-import { FolderPlusIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { LiveTabItem } from "@/components/live-tabs/live-tab-item";
 import { SaveTabsDialog } from "@/components/live-tabs/save-tabs-dialog";
@@ -17,19 +16,18 @@ export function LiveTabPanel() {
     <aside className="flex h-full flex-col border-l border-border p-4">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold">
-          Live Tabs
-          <span className="ml-2 text-xs font-normal text-muted-foreground">
-            {liveTabs.length}
+          Tabs
+          <span className="ml-1 text-xs font-normal text-muted-foreground">
+            ({liveTabs.length})
           </span>
         </h2>
         <Button
-          variant="ghost"
-          size="icon-xs"
-          title="Save as Collection"
+          variant="default"
+          size="xs"
           disabled={savableTabs.length === 0 || activeWorkspaceId == null}
           onClick={() => setDialogOpen(true)}
         >
-          <FolderPlusIcon />
+          Save
         </Button>
       </div>
       <div className="flex-1 space-y-0.5 overflow-auto">
