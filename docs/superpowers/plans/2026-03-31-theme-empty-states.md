@@ -46,7 +46,14 @@ export async function getSettings(): Promise<AppSettings> {
   for (let i = 0; i < KEYS.length; i++) {
     const row = rows[i];
     if (row) {
-      (result as Record<string, unknown>)[KEYS[i]] = JSON.parse(row.value);
+      try {
+        (result as Record<string, unknown>)[KEYS[i]] = JSON.parse(row.value);
+      } catch {
+        // Legacy value stored as plain string — coerce booleans, keep strings
+        const v = row.value;
+        (result as Record<string, unknown>)[KEYS[i]] =
+          v === "true" ? true : v === "false" ? false : v;
+      }
     }
   }
   return result;
