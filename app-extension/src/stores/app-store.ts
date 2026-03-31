@@ -50,6 +50,10 @@ function validatedIcon(icon: string): WorkspaceIconName {
     : DEFAULT_ICON;
 }
 
+function buildLiveTabUrls(tabs: chrome.tabs.Tab[]): Set<string> {
+  return new Set(tabs.map((t) => t.url).filter((u): u is string => u != null));
+}
+
 async function resolveAccountId(): Promise<string> {
   const authState = await getAuthState();
   if (authState?.mode === "online") return authState.accountId;
@@ -63,6 +67,7 @@ interface AppState {
   collections: TabCollection[];
   tabsByCollection: Map<number, CollectionTab[]>;
   liveTabs: chrome.tabs.Tab[];
+  liveTabUrls: Set<string>;
   isLoading: boolean;
 
   initialize: () => Promise<void>;
@@ -95,6 +100,9 @@ interface AppState {
   removeTabFromCollection: (tabId: number, collectionId: number) => Promise<void>;
   reorderTabInCollection: (tabId: number, collectionId: number, newOrder: string) => Promise<void>;
 
+  // Restore
+  restoreCollection: (collectionId: number) => Promise<void>;
+
   // Bulk save
   saveTabsAsCollection: (
     name: string,
@@ -108,6 +116,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   collections: [],
   tabsByCollection: new Map(),
   liveTabs: [],
+  liveTabUrls: new Set(),
   isLoading: true,
 
   initialize: async () => {
@@ -149,17 +158,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Live tabs
-  setLiveTabs: (tabs) => set({ liveTabs: tabs }),
+  setLiveTabs: (tabs) => set({
+    liveTabs: tabs,
+    liveTabUrls: buildLiveTabUrls(tabs),
+  }),
 
   addLiveTab: (tab) => {
     if (get().liveTabs.some((t) => t.id === tab.id)) return;
-    set({ liveTabs: [...get().liveTabs, tab] });
+    const newTabs = [...get().liveTabs, tab];
+    set({
+      liveTabs: newTabs,
+      liveTabUrls: buildLiveTabUrls(newTabs),
+    });
   },
 
   removeLiveTab: (tabId) => {
     const { liveTabs } = get();
     if (!liveTabs.some((t) => t.id === tabId)) return;
-    set({ liveTabs: liveTabs.filter((t) => t.id !== tabId) });
+    const newTabs = liveTabs.filter((t) => t.id !== tabId);
+    set({
+      liveTabs: newTabs,
+      liveTabUrls: buildLiveTabUrls(newTabs),
+    });
   },
 
   updateLiveTab: (tabId, changeInfo) => {
@@ -170,8 +190,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (idx === -1) return;
     const existing = liveTabs[idx];
     if (keys.every((k) => existing[k as keyof chrome.tabs.Tab] === changeInfo[k])) return;
+    const newTabs = liveTabs.map((t) => (t.id === tabId ? { ...t, ...changeInfo } : t));
+    const urlChanged = "url" in changeInfo;
     set({
-      liveTabs: liveTabs.map((t) => (t.id === tabId ? { ...t, ...changeInfo } : t)),
+      liveTabs: newTabs,
+      ...(urlChanged && { liveTabUrls: buildLiveTabUrls(newTabs) }),
     });
   },
 
@@ -512,6 +535,32 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
     } catch (err) {
       console.error("[store] failed to save tabs as collection:", err);
+    }
+  },
+
+  restoreCollection: async (collectionId) => {
+    try {
+      const { tabsByCollection } = get();
+      const collectionTabs = tabsByCollection.get(collectionId);
+      if (!collectionTabs || collectionTabs.length === 0) return;
+
+      const { liveTabUrls } = get();
+      const tabsToOpen = collectionTabs.filter((t) => !liveTabUrls.has(t.url));
+
+      if (tabsToOpen.length === 0) return;
+
+      // Optimistically mark URLs as open to prevent double-click duplicates
+      const optimisticUrls = new Set(liveTabUrls);
+      for (const tab of tabsToOpen) {
+        optimisticUrls.add(tab.url);
+      }
+      set({ liveTabUrls: optimisticUrls });
+
+      for (const tab of tabsToOpen) {
+        await chrome.tabs.create({ url: tab.url, active: false });
+      }
+    } catch (err) {
+      console.error("[store] failed to restore collection:", err);
     }
   },
 }));
