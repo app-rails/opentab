@@ -28,6 +28,14 @@ interface AppSettings {
 
 Stored in Dexie `settings` table, same as existing settings. Default is `"system"`.
 
+**Important:** `getSettings()` and `updateSettings()` in `lib/settings.ts` are currently hardcoded to only handle `server_enabled` and `server_url` (explicit `if` checks and `bulkGet` calls for specific keys). Both functions must be refactored to be generic/key-driven:
+
+- Define a `DEFAULTS` map containing all `AppSettings` keys and their defaults.
+- `getSettings()`: iterate over all keys in `DEFAULTS`, `bulkGet` them, and merge with defaults.
+- `updateSettings(partial)`: iterate over provided keys in `partial`, serialize each, and `bulkPut` them.
+
+This avoids having to add explicit `if` branches every time a new setting is introduced.
+
 ### 1.2 Theme Application Logic
 
 Create `lib/theme.ts`:
@@ -105,6 +113,7 @@ When the active workspace has only the default "Unsorted" collection and it's em
 
 - Muted text, centered in the collection panel
 - The button triggers `SaveTabsDialog` (same as the Live Tabs panel's save button)
+- **Data wiring:** `SaveTabsDialog` requires a `tabs` prop of filtered `chrome.tabs.Tab[]`. The `empty-workspace.tsx` component should read `liveTabs` directly from `useAppStore` and apply the `isValidTab` filter. Extract `isValidTab` from `live-tab-panel.tsx` into a shared utility (`lib/tab-utils.ts`) so both components use the same filtering logic without prop threading.
 - Disappears once any collection has tabs
 
 ### 2.2 Empty Collection
@@ -189,6 +198,7 @@ Change from vertical list to grid inside each collection:
 - Hover: show delete button, subtle background change
 - Green dot for open tabs stays (positioned top-right of card)
 - Drag-and-drop reordering still works within grid via dnd-kit
+- **DnD strategy change:** `collection-card.tsx` currently uses `verticalListSortingStrategy` (line 175) which only works for 1D lists. Switching to grid layout requires importing and using `rectSortingStrategy` from `@dnd-kit/sortable` instead, which handles 2D grid reordering correctly.
 
 ### 3.5 Collection Cards — Collapsible
 
@@ -213,6 +223,7 @@ Add collapse/expand to collection headers:
 | File | Purpose |
 |------|---------|
 | `lib/theme.ts` | Theme logic: apply, watch, `useTheme` hook |
+| `lib/tab-utils.ts` | Shared `isValidTab` filter (extracted from `live-tab-panel.tsx`) |
 | `components/layout/empty-workspace.tsx` | Empty workspace guidance component |
 | `components/layout/welcome-banner.tsx` | First-use dismissible banner |
 
@@ -225,7 +236,7 @@ Add collapse/expand to collection headers:
 | `components/layout/collection-panel.tsx` | Sticky topbar, empty state, welcome banner |
 | `components/collection/collection-card.tsx` | Grid layout for tabs, collapsible header |
 | `components/collection/collection-tab-item.tsx` | Card style instead of list row |
-| `components/layout/live-tab-panel.tsx` | Header text, save button style |
+| `components/layout/live-tab-panel.tsx` | Header text, save button style, use shared `isValidTab` from `lib/tab-utils.ts` |
 | `entrypoints/settings/App.tsx` | Appearance section with segmented theme control |
 | `assets/main.css` | No changes expected (dark vars already present) |
 
