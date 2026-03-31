@@ -124,7 +124,7 @@ export function WorkspaceSidebar({ themeMode, onCycleTheme }: WorkspaceSidebarPr
           <Settings className="size-4" />
           Settings
         </Button>
-        <Button variant="ghost" size="icon-sm" onClick={onCycleTheme} title={`Theme: ${themeMode}`}>
+        <Button variant="ghost" size="icon-sm" onClick={onCycleTheme} title={`Theme: ${themeMode}`} aria-label="Cycle theme">
           <ThemeIcon className="size-4" />
         </Button>
       </div>

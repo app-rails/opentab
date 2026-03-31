@@ -62,11 +62,13 @@ export function useTheme() {
     const idx = THEME_CYCLE.indexOf(mode);
     const next = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
     setMode(next);
+    applyTheme(next);
     await saveSettings({ theme: next });
   }, [mode]);
 
   const setTheme = useCallback(async (next: ThemeMode) => {
     setMode(next);
+    applyTheme(next);
     await saveSettings({ theme: next });
   }, []);
 

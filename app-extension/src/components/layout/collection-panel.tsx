@@ -42,7 +42,7 @@ export function CollectionPanel() {
       </div>
 
       <div className="flex-1 p-6">
-        <WelcomeBanner />
+        {isEmpty && <WelcomeBanner />}
 
         {isEmpty ? (
           <EmptyWorkspace />

@@ -22,7 +22,9 @@ function useDebouncedSave(delayMs: number) {
     (partial: Partial<AppSettings>) => {
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        saveSettings(partial);
+        void saveSettings(partial).catch((error) => {
+          console.error("Failed to save settings:", error);
+        });
       }, delayMs);
     },
     [delayMs],
@@ -101,11 +103,13 @@ export default function App() {
 
           <div className="space-y-2">
             <span className="text-sm font-medium">Theme</span>
-            <div className="flex gap-1 rounded-lg border border-border p-1">
+            <div className="flex gap-1 rounded-lg border border-border p-1" role="radiogroup" aria-label="Theme">
               {THEME_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
+                  role="radio"
+                  aria-checked={themeMode === opt.value}
                   className={cn(
                     "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                     themeMode === opt.value

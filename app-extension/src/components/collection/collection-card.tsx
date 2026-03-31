@@ -89,6 +89,8 @@ export function CollectionCard({
           type="button"
           className="flex items-center gap-1 p-0.5 text-muted-foreground hover:text-foreground"
           onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? "Expand collection" : "Collapse collection"}
+          aria-expanded={!collapsed}
         >
           <ChevronRight
             className={cn("size-3.5 transition-transform", !collapsed && "rotate-90")}
