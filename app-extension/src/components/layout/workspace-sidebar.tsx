@@ -1,6 +1,6 @@
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Settings } from "lucide-react";
+import { Monitor, Moon, Plus, Settings, Sun } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
@@ -8,7 +8,14 @@ import { DeleteWorkspaceDialog } from "@/components/workspace/delete-workspace-d
 import { WorkspaceItem } from "@/components/workspace/workspace-item";
 import type { Workspace } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
+import type { ThemeMode } from "@/lib/settings";
 import { useAppStore } from "@/stores/app-store";
+
+const THEME_ICON: Record<ThemeMode, typeof Monitor> = {
+  system: Monitor,
+  light: Sun,
+  dark: Moon,
+};
 
 function SortableWorkspaceItem({
   workspace,
@@ -44,7 +51,12 @@ function SortableWorkspaceItem({
   );
 }
 
-export function WorkspaceSidebar() {
+interface WorkspaceSidebarProps {
+  themeMode: ThemeMode;
+  onCycleTheme: () => void;
+}
+
+export function WorkspaceSidebar({ themeMode, onCycleTheme }: WorkspaceSidebarProps) {
   const workspaces = useAppStore((s) => s.workspaces);
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
   const setActiveWorkspace = useAppStore((s) => s.setActiveWorkspace);
@@ -52,18 +64,27 @@ export function WorkspaceSidebar() {
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Workspace | null>(null);
 
+  const ThemeIcon = THEME_ICON[themeMode];
+
   return (
-    <aside className="flex h-full flex-col border-r border-border bg-sidebar p-4">
-      <div className="mb-4 flex items-center justify-between">
+    <aside className="flex h-full flex-col border-r border-border bg-sidebar">
+      {/* Brand */}
+      <div className="px-4 pt-4 pb-2">
+        <h1 className="text-lg font-semibold text-sidebar-foreground">OpenTab</h1>
+      </div>
+
+      {/* Workspaces header */}
+      <div className="mb-1 flex items-center justify-between px-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
-          Workspaces
+          Spaces
         </h2>
         <Button variant="ghost" size="icon-xs" onClick={() => setCreateOpen(true)}>
           <Plus className="size-4" />
         </Button>
       </div>
 
-      <div className="flex-1 space-y-1">
+      {/* Workspace list */}
+      <div className="flex-1 space-y-0.5 overflow-auto px-2">
         <SortableContext
           items={workspaces.map((w) => w.id!)}
           strategy={verticalListSortingStrategy}
@@ -90,17 +111,26 @@ export function WorkspaceSidebar() {
         }}
       />
 
-      <div className="border-t border-border pt-2">
+      {/* Bottom bar: Settings + Theme toggle */}
+      <div className="flex items-center justify-between border-t border-border px-3 py-2">
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start gap-2 text-sidebar-foreground/60"
+          className="gap-2 text-sidebar-foreground/60"
           onClick={() => {
             chrome.tabs.create({ url: chrome.runtime.getURL("/settings.html") });
           }}
         >
           <Settings className="size-4" />
           Settings
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onCycleTheme}
+          title={`Theme: ${themeMode}`}
+        >
+          <ThemeIcon className="size-4" />
         </Button>
       </div>
     </aside>

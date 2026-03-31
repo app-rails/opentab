@@ -21,6 +21,7 @@ import { WorkspaceSidebar } from "@/components/layout/workspace-sidebar";
 import { TabFavicon } from "@/components/tab-favicon";
 import { useLiveTabSync } from "@/hooks/use-live-tab-sync";
 import { DRAG_TYPES, type DragData } from "@/lib/dnd-types";
+import { useTheme } from "@/lib/theme";
 import { computeOrderBetween } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
@@ -40,6 +41,7 @@ export default function App() {
   const isLoading = useAppStore((s) => s.isLoading);
 
   useLiveTabSync();
+  const { mode, cycleTheme, setTheme } = useTheme();
 
   useEffect(() => {
     useAppStore
@@ -155,8 +157,8 @@ export default function App() {
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="grid h-screen grid-cols-[240px_1fr_320px] bg-background">
-        <WorkspaceSidebar />
+      <div className="grid h-screen grid-cols-[200px_1fr_280px] bg-background">
+        <WorkspaceSidebar themeMode={mode} onCycleTheme={cycleTheme} />
         <CollectionPanel />
         <LiveTabPanel />
       </div>
@@ -178,7 +180,7 @@ export default function App() {
         )}
       </DragOverlay>
     </DndContext>
-    <Toaster position="bottom-center" theme="system" />
+    <Toaster position="bottom-center" theme={mode === "system" ? "system" : mode} />
     </>
   );
 }
