@@ -164,22 +164,19 @@ export default function App() {
         </div>
 
         <DragOverlay>
-          {activeDragData?.type === DRAG_TYPES.LIVE_TAB && (
-            <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
-              <TabFavicon url={activeDragData.tab.favIconUrl} />
-              <span className="max-w-[200px] truncate">
-                {activeDragData.tab.title || "New Tab"}
-              </span>
-            </div>
-          )}
-          {activeDragData?.type === DRAG_TYPES.COLLECTION_TAB && (
-            <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
-              <TabFavicon url={activeDragData.tab.favIconUrl} />
-              <span className="max-w-[200px] truncate">
-                {activeDragData.tab.title || activeDragData.tab.url}
-              </span>
-            </div>
-          )}
+          {activeDragData &&
+            (activeDragData.type === DRAG_TYPES.LIVE_TAB ||
+              activeDragData.type === DRAG_TYPES.COLLECTION_TAB) && (
+              <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
+                <TabFavicon url={activeDragData.tab.favIconUrl} />
+                <span className="max-w-[200px] truncate">
+                  {activeDragData.tab.title ||
+                    (activeDragData.type === DRAG_TYPES.LIVE_TAB
+                      ? "New Tab"
+                      : activeDragData.tab.url)}
+                </span>
+              </div>
+            )}
         </DragOverlay>
       </DndContext>
       <Toaster position="bottom-center" theme={mode === "system" ? "system" : mode} />

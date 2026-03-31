@@ -1,3 +1,4 @@
+import { MSG } from "./constants";
 import { db } from "./db";
 
 export type ThemeMode = "light" | "dark" | "system";
@@ -47,4 +48,10 @@ export async function updateSettings(partial: Partial<AppSettings>): Promise<voi
   if (entries.length > 0) {
     await db.settings.bulkPut(entries);
   }
+}
+
+/** Update settings and broadcast SETTINGS_CHANGED to all extension tabs. */
+export async function saveSettings(partial: Partial<AppSettings>): Promise<void> {
+  await updateSettings(partial);
+  chrome.runtime.sendMessage({ type: MSG.SETTINGS_CHANGED }).catch(() => {});
 }

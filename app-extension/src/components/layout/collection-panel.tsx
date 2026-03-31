@@ -12,24 +12,23 @@ import { useAppStore } from "@/stores/app-store";
 export function CollectionPanel() {
   const collections = useAppStore((s) => s.collections);
   const tabsByCollection = useAppStore((s) => s.tabsByCollection);
-  const workspaces = useAppStore((s) => s.workspaces);
-  const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
+  const workspaceName = useAppStore(
+    (s) => s.workspaces.find((w) => w.id === s.activeWorkspaceId)?.name ?? "Workspace",
+  );
 
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TabCollection | null>(null);
 
   const canDelete = collections.length > 1;
-  const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
-  const totalTabs = Array.from(tabsByCollection.values()).reduce(
-    (sum, tabs) => sum + tabs.length,
-    0,
-  );
+  const isEmpty =
+    collections.length <= 1 &&
+    (collections[0]?.id == null || (tabsByCollection.get(collections[0].id)?.length ?? 0) === 0);
 
   return (
     <main className="flex h-full flex-col overflow-auto">
       {/* Sticky topbar */}
       <div className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background/70 px-6 backdrop-blur-md">
-        <h2 className="text-lg font-semibold truncate">{activeWorkspace?.name ?? "Workspace"}</h2>
+        <h2 className="text-lg font-semibold truncate">{workspaceName}</h2>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -45,7 +44,7 @@ export function CollectionPanel() {
       <div className="flex-1 p-6">
         <WelcomeBanner />
 
-        {totalTabs === 0 && collections.length <= 1 ? (
+        {isEmpty ? (
           <EmptyWorkspace />
         ) : (
           <div className="mt-2 space-y-4">

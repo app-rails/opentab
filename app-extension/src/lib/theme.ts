@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { MSG } from "./constants";
-import { getSettings, type ThemeMode, updateSettings } from "./settings";
+import { getSettings, saveSettings, type ThemeMode } from "./settings";
 
 function resolveEffective(mode: ThemeMode): "light" | "dark" {
   if (mode === "system") {
@@ -62,16 +62,12 @@ export function useTheme() {
     const idx = THEME_CYCLE.indexOf(mode);
     const next = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
     setMode(next);
-    applyTheme(next);
-    await updateSettings({ theme: next });
-    chrome.runtime.sendMessage({ type: MSG.SETTINGS_CHANGED }).catch(() => {});
+    await saveSettings({ theme: next });
   }, [mode]);
 
   const setTheme = useCallback(async (next: ThemeMode) => {
     setMode(next);
-    applyTheme(next);
-    await updateSettings({ theme: next });
-    chrome.runtime.sendMessage({ type: MSG.SETTINGS_CHANGED }).catch(() => {});
+    await saveSettings({ theme: next });
   }, []);
 
   return { mode, cycleTheme, setTheme };

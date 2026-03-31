@@ -1,8 +1,7 @@
 import { X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { MSG } from "@/lib/constants";
-import { getSettings, updateSettings } from "@/lib/settings";
+import { getSettings, saveSettings } from "@/lib/settings";
 
 export function WelcomeBanner() {
   const [dismissed, setDismissed] = useState(true); // hidden by default until loaded
@@ -13,8 +12,7 @@ export function WelcomeBanner() {
 
   const handleDismiss = useCallback(async () => {
     setDismissed(true);
-    await updateSettings({ welcome_dismissed: true });
-    chrome.runtime.sendMessage({ type: MSG.SETTINGS_CHANGED }).catch(() => {});
+    await saveSettings({ welcome_dismissed: true });
   }, []);
 
   if (dismissed) return null;

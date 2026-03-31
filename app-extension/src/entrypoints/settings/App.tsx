@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { checkHealth } from "@/lib/api";
-import { MSG } from "@/lib/constants";
-import { type AppSettings, getSettings, type ThemeMode, updateSettings } from "@/lib/settings";
+import { type AppSettings, getSettings, saveSettings, type ThemeMode } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -22,9 +21,8 @@ function useDebouncedSave(delayMs: number) {
   return useCallback(
     (partial: Partial<AppSettings>) => {
       clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(async () => {
-        await updateSettings(partial);
-        chrome.runtime.sendMessage({ type: MSG.SETTINGS_CHANGED }).catch(() => {});
+      timerRef.current = setTimeout(() => {
+        saveSettings(partial);
       }, delayMs);
     },
     [delayMs],
@@ -45,19 +43,11 @@ export default function App() {
     });
   }, []);
 
-  const saveAndNotify = useCallback(async (partial: Partial<AppSettings>) => {
-    await updateSettings(partial);
-    chrome.runtime.sendMessage({ type: MSG.SETTINGS_CHANGED }).catch(() => {});
+  const handleToggle = useCallback(async (enabled: boolean) => {
+    setSettings((prev) => (prev ? { ...prev, server_enabled: enabled } : prev));
+    setConnectionStatus(enabled ? "disconnected" : "not_enabled");
+    await saveSettings({ server_enabled: enabled });
   }, []);
-
-  const handleToggle = useCallback(
-    async (enabled: boolean) => {
-      setSettings((prev) => (prev ? { ...prev, server_enabled: enabled } : prev));
-      setConnectionStatus(enabled ? "disconnected" : "not_enabled");
-      await saveAndNotify({ server_enabled: enabled });
-    },
-    [saveAndNotify],
-  );
 
   const handleUrlChange = useCallback(
     (url: string) => {
