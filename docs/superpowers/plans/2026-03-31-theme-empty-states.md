@@ -214,8 +214,22 @@ import { useTheme } from "@/lib/theme";
 Inside `App()`, right after `useLiveTabSync();`, add:
 
 ```ts
-useTheme();
+const { mode } = useTheme();
 ```
+
+Change the `<Toaster>` from:
+
+```tsx
+<Toaster position="bottom-center" theme="system" />
+```
+
+to:
+
+```tsx
+<Toaster position="bottom-center" theme={mode === "system" ? "system" : mode} />
+```
+
+This keeps the Toaster in sync with the app's explicit theme choice (otherwise selecting "dark" while OS is light would show light toasts).
 
 Change the grid class from:
 
