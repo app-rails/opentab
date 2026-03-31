@@ -4,9 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { checkHealth } from "@/lib/api";
 import { MSG } from "@/lib/constants";
-import { type AppSettings, getSettings, updateSettings } from "@/lib/settings";
+import { type AppSettings, type ThemeMode, getSettings, updateSettings } from "@/lib/settings";
+import { useTheme } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 type ConnectionStatus = "not_enabled" | "testing" | "connected" | "disconnected";
+
+const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "system", label: "System" },
+];
 
 function useDebouncedSave(delayMs: number) {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -27,6 +35,8 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("not_enabled");
   const debouncedSave = useDebouncedSave(500);
+
+  const { mode: themeMode, setTheme } = useTheme();
 
   useEffect(() => {
     getSettings().then((loaded) => {
@@ -65,6 +75,14 @@ export default function App() {
     setConnectionStatus(ok ? "connected" : "disconnected");
   }, [settings]);
 
+  const handleThemeChange = useCallback(
+    (theme: ThemeMode) => {
+      setSettings((prev) => (prev ? { ...prev, theme } : prev));
+      setTheme(theme);
+    },
+    [setTheme],
+  );
+
   if (!settings) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -86,6 +104,33 @@ export default function App() {
         <h2 className="mb-6 text-xl font-semibold">General</h2>
 
         <section className="max-w-md space-y-6">
+          {/* Appearance */}
+          <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+            Appearance
+          </h3>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Theme</label>
+            <div className="flex gap-1 rounded-lg border border-border p-1">
+              {THEME_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={cn(
+                    "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    themeMode === opt.value
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  )}
+                  onClick={() => handleThemeChange(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Server Sync */}
           <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Server Sync
           </h3>
