@@ -214,7 +214,7 @@ import { useTheme } from "@/lib/theme";
 Inside `App()`, right after `useLiveTabSync();`, add:
 
 ```ts
-const { mode } = useTheme();
+const { mode, cycleTheme, setTheme } = useTheme();
 ```
 
 Change the `<Toaster>` from:
@@ -230,6 +230,20 @@ to:
 ```
 
 This keeps the Toaster in sync with the app's explicit theme choice (otherwise selecting "dark" while OS is light would show light toasts).
+
+Pass theme props to `WorkspaceSidebar`. Change:
+
+```tsx
+<WorkspaceSidebar />
+```
+
+to:
+
+```tsx
+<WorkspaceSidebar themeMode={mode} onCycleTheme={cycleTheme} />
+```
+
+Also pass `mode` and `setTheme` to the Settings page if it's rendered here — but Settings is a separate HTML entry point, so it will call `useTheme()` itself (see Task 5).
 
 Change the grid class from:
 
@@ -283,7 +297,6 @@ import { WorkspaceItem } from "@/components/workspace/workspace-item";
 import type { Workspace } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
 import type { ThemeMode } from "@/lib/settings";
-import { useTheme } from "@/lib/theme";
 import { useAppStore } from "@/stores/app-store";
 
 const THEME_ICON: Record<ThemeMode, typeof Monitor> = {
@@ -326,7 +339,12 @@ function SortableWorkspaceItem({
   );
 }
 
-export function WorkspaceSidebar() {
+interface WorkspaceSidebarProps {
+  themeMode: ThemeMode;
+  onCycleTheme: () => void;
+}
+
+export function WorkspaceSidebar({ themeMode, onCycleTheme }: WorkspaceSidebarProps) {
   const workspaces = useAppStore((s) => s.workspaces);
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
   const setActiveWorkspace = useAppStore((s) => s.setActiveWorkspace);
@@ -334,8 +352,7 @@ export function WorkspaceSidebar() {
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Workspace | null>(null);
 
-  const { mode, cycleTheme } = useTheme();
-  const ThemeIcon = THEME_ICON[mode];
+  const ThemeIcon = THEME_ICON[themeMode];
 
   return (
     <aside className="flex h-full flex-col border-r border-border bg-sidebar">
@@ -398,8 +415,8 @@ export function WorkspaceSidebar() {
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={cycleTheme}
-          title={`Theme: ${mode}`}
+          onClick={onCycleTheme}
+          title={`Theme: ${themeMode}`}
         >
           <ThemeIcon className="size-4" />
         </Button>
@@ -448,7 +465,7 @@ import { Switch } from "@/components/ui/switch";
 import { checkHealth } from "@/lib/api";
 import { MSG } from "@/lib/constants";
 import { type AppSettings, type ThemeMode, getSettings, updateSettings } from "@/lib/settings";
-import { applyTheme } from "@/lib/theme";
+import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 type ConnectionStatus = "not_enabled" | "testing" | "connected" | "disconnected";
@@ -479,11 +496,13 @@ export default function App() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("not_enabled");
   const debouncedSave = useDebouncedSave(500);
 
+  // useTheme handles theme application, cross-tab sync, and OS preference watching
+  const { mode: themeMode, setTheme } = useTheme();
+
   useEffect(() => {
     getSettings().then((loaded) => {
       setSettings(loaded);
       setConnectionStatus(loaded.server_enabled ? "disconnected" : "not_enabled");
-      applyTheme(loaded.theme);
     });
   }, []);
 
@@ -518,12 +537,11 @@ export default function App() {
   }, [settings]);
 
   const handleThemeChange = useCallback(
-    async (theme: ThemeMode) => {
+    (theme: ThemeMode) => {
       setSettings((prev) => (prev ? { ...prev, theme } : prev));
-      applyTheme(theme);
-      await saveAndNotify({ theme });
+      setTheme(theme);  // persists + broadcasts + applies
     },
-    [saveAndNotify],
+    [setTheme],
   );
 
   if (!settings) {
@@ -561,7 +579,7 @@ export default function App() {
                   type="button"
                   className={cn(
                     "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                    settings.theme === opt.value
+                    themeMode === opt.value
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )}
