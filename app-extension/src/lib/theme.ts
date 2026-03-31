@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { MSG } from "./constants";
-import { type ThemeMode, getSettings, updateSettings } from "./settings";
+import { getSettings, type ThemeMode, updateSettings } from "./settings";
 
 function resolveEffective(mode: ThemeMode): "light" | "dark" {
   if (mode === "system") {

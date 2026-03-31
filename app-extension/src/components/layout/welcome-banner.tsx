@@ -24,8 +24,8 @@ export function WelcomeBanner() {
       <div className="flex-1 space-y-1">
         <p className="text-sm font-medium">Welcome to OpenTab</p>
         <p className="text-xs text-muted-foreground">
-          Organize your browser tabs into workspaces and collections. Drag tabs from the right
-          panel to get started.
+          Organize your browser tabs into workspaces and collections. Drag tabs from the right panel
+          to get started.
         </p>
       </div>
       <Button variant="ghost" size="icon-xs" onClick={handleDismiss} aria-label="Dismiss">

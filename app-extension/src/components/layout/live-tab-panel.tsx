@@ -31,16 +31,10 @@ export function LiveTabPanel() {
         </Button>
       </div>
       <div className="flex-1 space-y-0.5 overflow-auto">
-        {liveTabs.map((tab) =>
-          tab.id != null ? <LiveTabItem key={tab.id} tab={tab} /> : null,
-        )}
+        {liveTabs.map((tab) => (tab.id != null ? <LiveTabItem key={tab.id} tab={tab} /> : null))}
       </div>
       {savableTabs.length > 0 && (
-        <SaveTabsDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          tabs={savableTabs}
-        />
+        <SaveTabsDialog open={dialogOpen} onOpenChange={setDialogOpen} tabs={savableTabs} />
       )}
     </aside>
   );

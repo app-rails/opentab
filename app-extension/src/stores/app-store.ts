@@ -158,10 +158,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Live tabs
-  setLiveTabs: (tabs) => set({
-    liveTabs: tabs,
-    liveTabUrls: buildLiveTabUrls(tabs),
-  }),
+  setLiveTabs: (tabs) =>
+    set({
+      liveTabs: tabs,
+      liveTabUrls: buildLiveTabUrls(tabs),
+    }),
 
   addLiveTab: (tab) => {
     if (get().liveTabs.some((t) => t.id === tab.id)) return;

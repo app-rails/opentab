@@ -41,7 +41,7 @@ export default function App() {
   const isLoading = useAppStore((s) => s.isLoading);
 
   useLiveTabSync();
-  const { mode, cycleTheme, setTheme } = useTheme();
+  const { mode, cycleTheme } = useTheme();
 
   useEffect(() => {
     useAppStore
@@ -112,7 +112,7 @@ export default function App() {
     if (collectionId == null) return;
 
     const tab = data.tab;
-    if (!tab || !tab.url) return;
+    if (!tab?.url) return;
 
     useAppStore.getState().addTabToCollection(collectionId, {
       url: tab.url,
@@ -150,37 +150,39 @@ export default function App() {
 
   return (
     <>
-    <DndContext
-      sensors={sensors}
-      collisionDetection={customCollisionDetection}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <div className="grid h-screen grid-cols-[200px_1fr_280px] bg-background">
-        <WorkspaceSidebar themeMode={mode} onCycleTheme={cycleTheme} />
-        <CollectionPanel />
-        <LiveTabPanel />
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={customCollisionDetection}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div className="grid h-screen grid-cols-[200px_1fr_280px] bg-background">
+          <WorkspaceSidebar themeMode={mode} onCycleTheme={cycleTheme} />
+          <CollectionPanel />
+          <LiveTabPanel />
+        </div>
 
-      <DragOverlay>
-        {activeDragData?.type === DRAG_TYPES.LIVE_TAB && (
-          <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
-            <TabFavicon url={activeDragData.tab.favIconUrl} />
-            <span className="max-w-[200px] truncate">{activeDragData.tab.title || "New Tab"}</span>
-          </div>
-        )}
-        {activeDragData?.type === DRAG_TYPES.COLLECTION_TAB && (
-          <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
-            <TabFavicon url={activeDragData.tab.favIconUrl} />
-            <span className="max-w-[200px] truncate">
-              {activeDragData.tab.title || activeDragData.tab.url}
-            </span>
-          </div>
-        )}
-      </DragOverlay>
-    </DndContext>
-    <Toaster position="bottom-center" theme={mode === "system" ? "system" : mode} />
+        <DragOverlay>
+          {activeDragData?.type === DRAG_TYPES.LIVE_TAB && (
+            <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
+              <TabFavicon url={activeDragData.tab.favIconUrl} />
+              <span className="max-w-[200px] truncate">
+                {activeDragData.tab.title || "New Tab"}
+              </span>
+            </div>
+          )}
+          {activeDragData?.type === DRAG_TYPES.COLLECTION_TAB && (
+            <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
+              <TabFavicon url={activeDragData.tab.favIconUrl} />
+              <span className="max-w-[200px] truncate">
+                {activeDragData.tab.title || activeDragData.tab.url}
+              </span>
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
+      <Toaster position="bottom-center" theme={mode === "system" ? "system" : mode} />
     </>
   );
 }

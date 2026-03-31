@@ -20,17 +20,23 @@ export function CollectionPanel() {
 
   const canDelete = collections.length > 1;
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
-  const totalTabs = Array.from(tabsByCollection.values()).reduce((sum, tabs) => sum + tabs.length, 0);
+  const totalTabs = Array.from(tabsByCollection.values()).reduce(
+    (sum, tabs) => sum + tabs.length,
+    0,
+  );
 
   return (
     <main className="flex h-full flex-col overflow-auto">
       {/* Sticky topbar */}
       <div className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background/70 px-6 backdrop-blur-md">
-        <h2 className="text-lg font-semibold truncate">
-          {activeWorkspace?.name ?? "Workspace"}
-        </h2>
+        <h2 className="text-lg font-semibold truncate">{activeWorkspace?.name ?? "Workspace"}</h2>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon-xs" onClick={() => setCreateOpen(true)} title="Add collection">
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={() => setCreateOpen(true)}
+            title="Add collection"
+          >
             <Plus className="size-4" />
           </Button>
         </div>

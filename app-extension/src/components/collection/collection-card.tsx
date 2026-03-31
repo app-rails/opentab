@@ -11,12 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CollectionTab, TabCollection } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
 import { cn } from "@/lib/utils";
@@ -121,9 +116,7 @@ export function CollectionCard({
             }}
           >
             {collection.name}
-            <span className="text-xs font-normal text-muted-foreground">
-              {tabs.length}
-            </span>
+            <span className="text-xs font-normal text-muted-foreground">{tabs.length}</span>
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>

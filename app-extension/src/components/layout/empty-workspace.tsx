@@ -30,11 +30,7 @@ export function EmptyWorkspace() {
         Save Current Tabs
       </Button>
       {savableTabs.length > 0 && (
-        <SaveTabsDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          tabs={savableTabs}
-        />
+        <SaveTabsDialog open={dialogOpen} onOpenChange={setDialogOpen} tabs={savableTabs} />
       )}
     </div>
   );

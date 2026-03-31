@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { checkHealth } from "@/lib/api";
 import { MSG } from "@/lib/constants";
-import { type AppSettings, type ThemeMode, getSettings, updateSettings } from "@/lib/settings";
+import { type AppSettings, getSettings, type ThemeMode, updateSettings } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 ];
 
 function useDebouncedSave(delayMs: number) {
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   return useCallback(
     (partial: Partial<AppSettings>) => {
@@ -110,7 +110,7 @@ export default function App() {
           </h3>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Theme</label>
+            <span className="text-sm font-medium">Theme</span>
             <div className="flex gap-1 rounded-lg border border-border p-1">
               {THEME_OPTIONS.map((opt) => (
                 <button
