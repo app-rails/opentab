@@ -17,6 +17,8 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
           <button
             key={name}
             type="button"
+            aria-label={name}
+            aria-pressed={value === name}
             onClick={() => onChange(name)}
             className={cn(
               "flex size-8 items-center justify-center rounded-md transition-colors",

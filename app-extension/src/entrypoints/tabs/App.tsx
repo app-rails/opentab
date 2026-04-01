@@ -1,5 +1,6 @@
 import {
   type Active,
+  type Announcements,
   type CollisionDetection,
   closestCenter,
   DndContext,
@@ -140,11 +141,30 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-screen items-center justify-center bg-background" aria-live="polite">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     );
   }
+
+  const announcements: Announcements = {
+    onDragStart({ active }) {
+      const data = active.data.current as DragData | undefined;
+      return `Picked up ${data?.tab?.title ?? "item"}`;
+    },
+    onDragOver({ active, over }) {
+      const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+      return over ? `${title} is over drop target` : `${title} is no longer over a drop target`;
+    },
+    onDragEnd({ active, over }) {
+      const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+      return over ? `${title} was dropped` : `${title} was dropped outside a target`;
+    },
+    onDragCancel({ active }) {
+      const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+      return `Dragging ${title} was cancelled`;
+    },
+  };
 
   const activeDragData = activeDrag?.data.current as DragData | undefined;
 
@@ -156,6 +176,7 @@ export default function App() {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
+        accessibility={{ announcements }}
       >
         <div className="grid h-screen grid-cols-[200px_1fr_280px] bg-background">
           <WorkspaceSidebar themeMode={mode} onCycleTheme={cycleTheme} />

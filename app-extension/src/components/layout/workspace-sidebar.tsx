@@ -84,7 +84,7 @@ export function WorkspaceSidebar({ themeMode, onCycleTheme }: WorkspaceSidebarPr
       </div>
 
       {/* Workspace list */}
-      <div className="flex-1 space-y-0.5 overflow-auto px-2">
+      <div className="flex-1 space-y-0.5 overflow-auto px-2" data-workspace-list>
         <SortableContext
           items={workspaces.map((w) => w.id!)}
           strategy={verticalListSortingStrategy}
@@ -108,6 +108,11 @@ export function WorkspaceSidebar({ themeMode, onCycleTheme }: WorkspaceSidebarPr
         open={deleteTarget != null}
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
+        }}
+        onAfterDelete={() => {
+          const sidebar = document.querySelector('[data-workspace-list]');
+          const firstItem = sidebar?.querySelector<HTMLElement>('[role="button"]');
+          firstItem?.focus();
         }}
       />
 

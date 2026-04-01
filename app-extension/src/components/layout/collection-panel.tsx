@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CollectionCard } from "@/components/collection/collection-card";
 import { CreateCollectionDialog } from "@/components/collection/create-collection-dialog";
 import { DeleteCollectionDialog } from "@/components/collection/delete-collection-dialog";
@@ -18,6 +18,7 @@ export function CollectionPanel() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TabCollection | null>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
 
   const canDelete = collections.length > 1;
   const isEmpty =
@@ -31,6 +32,7 @@ export function CollectionPanel() {
         <h2 className="text-lg font-semibold truncate">{workspaceName}</h2>
         <div className="flex items-center gap-1">
           <Button
+            ref={addButtonRef}
             variant="ghost"
             size="icon-xs"
             onClick={() => setCreateOpen(true)}
@@ -69,6 +71,7 @@ export function CollectionPanel() {
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
+        onAfterDelete={() => addButtonRef.current?.focus()}
       />
     </main>
   );

@@ -16,6 +16,7 @@ interface DeleteWorkspaceDialogProps {
   workspaceName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAfterDelete?: () => void;
 }
 
 export function DeleteWorkspaceDialog({
@@ -23,6 +24,7 @@ export function DeleteWorkspaceDialog({
   workspaceName,
   open,
   onOpenChange,
+  onAfterDelete,
 }: DeleteWorkspaceDialogProps) {
   const deleteWorkspace = useAppStore((s) => s.deleteWorkspace);
 
@@ -30,6 +32,9 @@ export function DeleteWorkspaceDialog({
     if (workspaceId == null) return;
     await deleteWorkspace(workspaceId);
     onOpenChange(false);
+    if (onAfterDelete) {
+      setTimeout(() => onAfterDelete(), 0);
+    }
   }
 
   return (

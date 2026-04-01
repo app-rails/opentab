@@ -119,6 +119,8 @@ export function WorkspaceItem({
         <ContextMenuTrigger asChild>
           <PopoverAnchor asChild>
             <div
+              role="button"
+              tabIndex={0}
               className={cn(
                 "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
                 isActive
@@ -126,6 +128,12 @@ export function WorkspaceItem({
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50",
               )}
               onClick={onSelect}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelect();
+                }
+              }}
               onDoubleClick={(e) => {
                 e.stopPropagation();
                 startRename();

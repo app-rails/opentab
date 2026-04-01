@@ -77,7 +77,7 @@ export default function App() {
 
   if (!settings) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-screen items-center justify-center bg-background" aria-live="polite">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     );
