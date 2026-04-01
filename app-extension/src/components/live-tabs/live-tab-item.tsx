@@ -18,11 +18,13 @@ export const LiveTabItem = memo(function LiveTabItem({ tab }: LiveTabItemProps) 
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className="flex cursor-grab items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+      className="flex h-14 cursor-grab items-center gap-2 rounded-md border border-transparent p-2 text-sm hover:bg-accent"
       style={{ opacity: isDragging ? 0.5 : 1 }}
     >
-      <TabFavicon url={tab.favIconUrl} />
-      <span className="truncate">{tab.title || tab.url || "New Tab"}</span>
+      <TabFavicon url={tab.favIconUrl} size="md" />
+      <span className="flex-1 min-w-0 text-xs leading-tight line-clamp-2">
+        {tab.title || tab.url || "New Tab"}
+      </span>
     </div>
   );
 });
