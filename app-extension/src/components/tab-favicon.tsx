@@ -1,11 +1,14 @@
 interface TabFaviconProps {
   url?: string;
+  size?: "sm" | "md";
 }
 
-export function TabFavicon({ url }: TabFaviconProps) {
+export function TabFavicon({ url, size = "sm" }: TabFaviconProps) {
+  const sizeClass = size === "md" ? "size-8 rounded-md" : "size-4 rounded-sm";
+
   return url ? (
-    <img src={url} alt="" className="size-4 shrink-0 rounded-sm" />
+    <img src={url} alt="" className={`${sizeClass} shrink-0`} />
   ) : (
-    <div className="size-4 shrink-0 rounded-sm bg-muted" />
+    <div className={`${sizeClass} shrink-0 bg-muted`} />
   );
 }
