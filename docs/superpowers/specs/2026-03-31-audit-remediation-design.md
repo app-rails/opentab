@@ -202,16 +202,26 @@ White works for both modes since `bg-destructive` is always a saturated red.
 **`app-extension/src/components/collection/delete-collection-dialog.tsx:51`** and **`app-extension/src/components/workspace/delete-workspace-dialog.tsx:51`:**
 `text-white` → `text-destructive-foreground` (now that the token is defined)
 
+**`app-extension/src/assets/main.css`** — Define status color custom properties with per-mode values:
+```css
+/* :root (light) — darker for contrast against white backgrounds */
+--status-green: oklch(0.520 0.180 149.579);
+--status-yellow: oklch(0.600 0.180 86.047);
+--status-red: oklch(0.520 0.200 25.331);
+
+/* .dark — brighter for contrast against dark backgrounds */
+--status-green: oklch(0.723 0.219 149.579);
+--status-yellow: oklch(0.795 0.184 86.047);
+--status-red: oklch(0.637 0.237 25.331);
+```
+
 **`app-extension/src/components/collection/collection-tab-item.tsx:35`:**
-`bg-green-500` (open-tab indicator dot) → `bg-[oklch(0.723_0.219_149.579)]`. This is a status indicator ("tab is open in Chrome"), not a theme-dependent element. Keep it green via oklch rather than mapping to `bg-primary`, which could be any hue depending on theme.
+`bg-green-500` → `bg-[var(--status-green)]`. Status indicator, not theme-dependent — but needs per-mode contrast.
 
 **`app-extension/src/entrypoints/settings/App.tsx:181-183`** (StatusIndicator):
-Replace Tailwind palette colors with oklch equivalents that won't clash with theme overrides:
-- `bg-yellow-500` → `bg-[oklch(0.795_0.184_86.047)]`
-- `bg-green-500` → `bg-[oklch(0.723_0.219_149.579)]`
-- `bg-red-500` → `bg-[oklch(0.637_0.237_25.331)]`
-
-These are semantic status colors (green=good, red=bad, yellow=pending) that are inherently independent of theme mode.
+- `bg-yellow-500` → `bg-[var(--status-yellow)]`
+- `bg-green-500` → `bg-[var(--status-green)]`
+- `bg-red-500` → `bg-[var(--status-red)]`
 
 ---
 

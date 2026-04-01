@@ -33,6 +33,7 @@ All paths relative to `app-extension/src/`.
 | `lib/utils.ts` | Shared utilities | 3 |
 | `stores/app-store.ts` | Zustand store | 3, 6 |
 | `components/layout/collection-panel.tsx` | Collection panel + topbar | 2, 5 |
+| `components/layout/workspace-sidebar.tsx` | Sidebar workspace list | 2 |
 
 ---
 
@@ -463,27 +464,25 @@ Note: Use `focus-visible:opacity-100` on the button itself (not `focus-within` o
 In `tabs/App.tsx`, add an `accessibility` prop to `<DndContext>`. Add this object before the `return`:
 
 ```tsx
-const announcements = {
-  onDragStart({ active }: { active: Active }) {
+import type { Announcements } from "@dnd-kit/core";
+// (add to the existing imports at the top of the file)
+
+// Then before the return statement:
+const announcements: Announcements = {
+  onDragStart({ active }) {
     const data = active.data.current as DragData | undefined;
-    const title = data?.tab?.title ?? "item";
-    return `Picked up ${title}`;
+    return `Picked up ${data?.tab?.title ?? "item"}`;
   },
-  onDragOver({ active, over }: { active: Active; over: { id: string | number } | null }) {
-    const data = active.data.current as DragData | undefined;
-    const title = data?.tab?.title ?? "item";
-    if (over) return `${title} is over drop target`;
-    return `${title} is no longer over a drop target`;
+  onDragOver({ active, over }) {
+    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+    return over ? `${title} is over drop target` : `${title} is no longer over a drop target`;
   },
-  onDragEnd({ active, over }: { active: Active; over: { id: string | number } | null }) {
-    const data = active.data.current as DragData | undefined;
-    const title = data?.tab?.title ?? "item";
-    if (over) return `${title} was dropped`;
-    return `${title} was dropped outside a target`;
+  onDragEnd({ active, over }) {
+    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+    return over ? `${title} was dropped` : `${title} was dropped outside a target`;
   },
-  onDragCancel({ active }: { active: Active }) {
-    const data = active.data.current as DragData | undefined;
-    const title = data?.tab?.title ?? "item";
+  onDragCancel({ active }) {
+    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
     return `Dragging ${title} was cancelled`;
   },
 };
@@ -791,7 +790,29 @@ className="bg-destructive text-white hover:bg-destructive/90"
 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 ```
 
-- [ ] **Step 5: Replace bg-green-500 on open-tab indicator dot**
+- [ ] **Step 5: Define status color custom properties in :root and .dark**
+
+Status colors (green/yellow/red) need per-mode values for contrast against different backgrounds.
+In `main.css`, add after the `--destructive-foreground` line in `:root`:
+
+```css
+--status-green: oklch(0.520 0.180 149.579);
+--status-yellow: oklch(0.600 0.180 86.047);
+--status-red: oklch(0.520 0.200 25.331);
+```
+
+And in `.dark`:
+
+```css
+--status-green: oklch(0.723 0.219 149.579);
+--status-yellow: oklch(0.795 0.184 86.047);
+--status-red: oklch(0.637 0.237 25.331);
+```
+
+Light-mode values are darker (lower L) for contrast against white/light card backgrounds.
+Dark-mode values are brighter for contrast against dark backgrounds (oklch(0.145) / oklch(0.205)).
+
+- [ ] **Step 6: Replace bg-green-500 on open-tab indicator dot**
 
 In `collection-tab-item.tsx` line 35:
 
@@ -799,10 +820,10 @@ In `collection-tab-item.tsx` line 35:
 // OLD
 {isOpen && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-green-500" />}
 // NEW
-{isOpen && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-[oklch(0.723_0.219_149.579)]" />}
+{isOpen && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-[var(--status-green)]" />}
 ```
 
-- [ ] **Step 6: Replace hardcoded Tailwind colors in StatusIndicator**
+- [ ] **Step 7: Replace hardcoded Tailwind colors in StatusIndicator**
 
 In `settings/App.tsx`, replace the `config` object in `StatusIndicator` (lines 183-188):
 
@@ -817,27 +838,27 @@ const config = {
 // NEW
 const config = {
   not_enabled: { color: "bg-muted-foreground/40", text: "Not enabled" },
-  testing: { color: "bg-[oklch(0.795_0.184_86.047)]", text: "Testing..." },
-  connected: { color: "bg-[oklch(0.723_0.219_149.579)]", text: "Connected" },
-  disconnected: { color: "bg-[oklch(0.637_0.237_25.331)]", text: "Disconnected" },
+  testing: { color: "bg-[var(--status-yellow)]", text: "Testing..." },
+  connected: { color: "bg-[var(--status-green)]", text: "Connected" },
+  disconnected: { color: "bg-[var(--status-red)]", text: "Disconnected" },
 }[status];
 ```
 
-- [ ] **Step 7: Build and verify**
+- [ ] **Step 8: Build and verify**
 
 Run: `cd app-extension && pnpm build`
 Expected: Build succeeds with no errors.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add app-extension/src/assets/main.css app-extension/src/components/collection/delete-collection-dialog.tsx app-extension/src/components/workspace/delete-workspace-dialog.tsx app-extension/src/components/collection/collection-tab-item.tsx app-extension/src/entrypoints/settings/App.tsx
-git commit -m "fix(normalize): replace hardcoded colors with theme tokens and oklch values
+git commit -m "fix(normalize): replace hardcoded colors with theme tokens and CSS custom properties
 
-H4: define --destructive-foreground in :root and .dark
+H4: define --destructive-foreground in :root and .dark (was referenced but never defined)
 H4: text-white → text-destructive-foreground on delete buttons
-H4: bg-green-500 → oklch green for open-tab indicator (status, not theme)
-H4: Tailwind palette colors → oklch for StatusIndicator"
+H4: define --status-green/yellow/red with per-mode contrast values
+H4: replace bg-green-500 and Tailwind palette colors with status custom properties"
 ```
 
 ---
@@ -975,6 +996,26 @@ git commit -m "fix(adapt): responsive layouts for dashboard and settings
 M1: dashboard 3-col → 2-col below md, LiveTabPanel as overlay with toggle
 M2: settings 2-col → stacked below sm breakpoint"
 ```
+
+- [ ] **Step 6: Manual verification — mobile overlay DnD**
+
+**Known risk:** The mobile overlay LiveTabPanel uses `position: fixed` while CollectionPanel is in normal grid flow. Both are inside `<DndContext>`, and @dnd-kit uses `getBoundingClientRect` for collision detection. Mixed positioning contexts can cause unreliable coordinate mapping during drag.
+
+Test at a narrow viewport (<768px):
+1. Open the live panel overlay via the toggle button
+2. Attempt to drag a live tab from the overlay onto a collection in the grid
+3. Verify the tab drops correctly into the target collection
+
+If DnD collision detection fails, add `layoutMeasuring` configuration to `<DndContext>`:
+```tsx
+import { MeasuringStrategy } from "@dnd-kit/core";
+// ...
+<DndContext
+  measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+  // ... other props
+>
+```
+This forces fresh measurements on every pointer move, compensating for the mixed positioning.
 
 ---
 
