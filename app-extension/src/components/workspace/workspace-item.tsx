@@ -148,7 +148,7 @@ export function WorkspaceItem({
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <span className="flex-1 truncate">{workspace.name}</span>
+                <span className="flex-1 truncate" title="Double-click to rename">{workspace.name}</span>
               )}
 
               <DropdownMenu>

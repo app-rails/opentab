@@ -88,7 +88,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
         favIconUrl: t.favIconUrl,
       }));
     saveTabsAsCollection(trimmedName, selectedTabs);
-    toast.success(`已保存 ${selectedTabs.length} 个标签页到「${trimmedName}」`);
+    toast.success(`Saved ${selectedTabs.length} tab${selectedTabs.length === 1 ? "" : "s"} to "${trimmedName}"`);
     onOpenChange(false);
   }
 

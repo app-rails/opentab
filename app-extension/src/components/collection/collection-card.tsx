@@ -112,6 +112,7 @@ export function CollectionCard({
         ) : (
           <h3
             className="flex flex-1 items-center gap-1.5 text-sm font-medium"
+            title="Double-click to rename"
             onDoubleClick={() => {
               setRenameValue(collection.name);
               setIsRenaming(true);
@@ -132,7 +133,7 @@ export function CollectionCard({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>Created: {new Date(collection.createdAt).toLocaleString()}</p>
+                  <p>Created: {new Date(collection.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
