@@ -1,6 +1,6 @@
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { PanelLeft, Plus, Settings } from "lucide-react";
+import { ChevronLeft, PanelLeft, Plus, Settings } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
@@ -82,12 +82,25 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
   const [deleteTarget, setDeleteTarget] = useState<Workspace | null>(null);
 
   return (
-    <aside
-      className={cn(
-        "flex h-full flex-col border-r border-border bg-sidebar overflow-hidden transition-[width] duration-200 ease-linear",
-        collapsed ? "w-0 border-r-0" : "w-64",
+    <div className={cn("relative shrink-0", collapsed ? "w-3" : "")}>
+      {/* Expand toggle — always visible outside overflow-hidden */}
+      {collapsed && (
+        <button
+          type="button"
+          className="absolute top-3 -right-3 z-10 flex size-6 items-center justify-center rounded-full border bg-background shadow-sm hover:bg-accent"
+          onClick={onToggleCollapse}
+          aria-label="Expand sidebar"
+        >
+          <ChevronLeft className="size-3.5 rotate-180" />
+        </button>
       )}
-    >
+
+      <aside
+        className={cn(
+          "flex h-full flex-col border-r border-border bg-sidebar overflow-hidden transition-[width] duration-200 ease-linear",
+          collapsed ? "w-0 border-r-0" : "w-64",
+        )}
+      >
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <h1 className="text-lg font-semibold text-sidebar-foreground">OpenTab</h1>
@@ -182,5 +195,6 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
         </Button>
       </div>
     </aside>
+    </div>
   );
 }
