@@ -1292,7 +1292,7 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
   const displayTabs = sortReversed ? [...liveTabs].reverse() : liveTabs;
 
   return (
-    <div className="relative flex h-full">
+    <div className={cn("relative shrink-0", collapsed ? "w-3" : "")}>
       {/* Collapse toggle button — outside overflow-hidden so always visible */}
       <button
         type="button"
