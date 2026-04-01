@@ -1,4 +1,4 @@
-import { Ellipsis, ImagePlus, icons, Pencil, Trash2 } from "lucide-react";
+import { Ellipsis, ImagePlus, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
 import type { Workspace } from "@/lib/db";
-import { cn, toPascalCase } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { WORKSPACE_ICONS } from "@/lib/workspace-icons";
 import { useAppStore } from "@/stores/app-store";
 import { IconPicker } from "./icon-picker";
 
@@ -73,7 +74,7 @@ export function WorkspaceItem({
     setIsRenaming(false);
   }
 
-  const LucideIcon = icons[toPascalCase(workspace.icon) as keyof typeof icons] ?? icons.Folder;
+  const LucideIcon = WORKSPACE_ICONS[workspace.icon] ?? WORKSPACE_ICONS.folder;
 
   function openIconPicker() {
     setIconPopoverOpen(true);

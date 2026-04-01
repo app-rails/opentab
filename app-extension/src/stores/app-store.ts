@@ -557,9 +557,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       set({ liveTabUrls: optimisticUrls });
 
-      for (const tab of tabsToOpen) {
-        await chrome.tabs.create({ url: tab.url, active: false });
-      }
+      await Promise.all(tabsToOpen.map((tab) => chrome.tabs.create({ url: tab.url, active: false })));
     } catch (err) {
       console.error("[store] failed to restore collection:", err);
     }
