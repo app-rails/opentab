@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { PanelRight, Plus } from "lucide-react";
 import { useRef, useState } from "react";
 import { CollectionCard } from "@/components/collection/collection-card";
 import { CreateCollectionDialog } from "@/components/collection/create-collection-dialog";
@@ -9,7 +9,11 @@ import { Button } from "@/components/ui/button";
 import type { TabCollection } from "@/lib/db";
 import { useAppStore } from "@/stores/app-store";
 
-export function CollectionPanel() {
+interface CollectionPanelProps {
+  onToggleLivePanel?: () => void;
+}
+
+export function CollectionPanel({ onToggleLivePanel }: CollectionPanelProps) {
   const collections = useAppStore((s) => s.collections);
   const tabsByCollection = useAppStore((s) => s.tabsByCollection);
   const workspaceName = useAppStore(
@@ -31,6 +35,17 @@ export function CollectionPanel() {
       <div className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background/70 px-6 backdrop-blur-md">
         <h2 className="text-lg font-semibold truncate">{workspaceName}</h2>
         <div className="flex items-center gap-1">
+          {onToggleLivePanel && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="md:hidden"
+              onClick={onToggleLivePanel}
+              aria-label="Toggle live tabs panel"
+            >
+              <PanelRight className="size-4" />
+            </Button>
+          )}
           <Button
             ref={addButtonRef}
             variant="ghost"

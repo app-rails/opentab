@@ -84,7 +84,7 @@ export default function App() {
   }
 
   return (
-    <div className="grid h-screen grid-cols-[200px_1fr] bg-background text-foreground">
+    <div className="grid h-screen grid-cols-1 sm:grid-cols-[200px_1fr] bg-background text-foreground">
       {/* Left nav */}
       <nav className="border-r border-border p-4">
         <h1 className="mb-4 text-lg font-semibold">Settings</h1>

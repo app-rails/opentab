@@ -59,6 +59,7 @@ export default function App() {
   );
 
   const [activeDrag, setActiveDrag] = useState<Active | null>(null);
+  const [showLivePanel, setShowLivePanel] = useState(false);
 
   function handleDragStart(event: DragStartEvent) {
     setActiveDrag(event.active);
@@ -178,11 +179,26 @@ export default function App() {
         onDragCancel={handleDragCancel}
         accessibility={{ announcements }}
       >
-        <div className="grid h-screen grid-cols-[200px_1fr_280px] bg-background">
+        <div className="grid h-screen grid-cols-[200px_1fr] md:grid-cols-[200px_1fr_280px] bg-background">
           <WorkspaceSidebar themeMode={mode} onCycleTheme={cycleTheme} />
-          <CollectionPanel />
-          <LiveTabPanel />
+          <CollectionPanel onToggleLivePanel={() => setShowLivePanel((v) => !v)} />
+          <div className="hidden md:flex">
+            <LiveTabPanel />
+          </div>
         </div>
+
+        {/* Mobile overlay panel */}
+        {showLivePanel && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/20 md:hidden"
+              onClick={() => setShowLivePanel(false)}
+            />
+            <div className="fixed inset-y-0 right-0 z-50 w-[280px] bg-background border-l shadow-lg md:hidden">
+              <LiveTabPanel />
+            </div>
+          </>
+        )}
 
         <DragOverlay>
           {activeDragData &&
