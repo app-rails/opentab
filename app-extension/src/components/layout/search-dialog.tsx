@@ -1,8 +1,8 @@
 import { Search } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TabFavicon } from "@/components/tab-favicon";
-import { db } from "@/lib/db";
 import type { CollectionTab } from "@/lib/db";
+import { db } from "@/lib/db";
 
 interface SearchResult extends CollectionTab {
   workspaceName?: string;
@@ -29,9 +29,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     const lower = q.toLowerCase();
     const allTabs = await db.collectionTabs.toArray();
     const matched = allTabs.filter(
-      (t) =>
-        t.title.toLowerCase().includes(lower) ||
-        t.url.toLowerCase().includes(lower),
+      (t) => t.title.toLowerCase().includes(lower) || t.url.toLowerCase().includes(lower),
     );
 
     // Enrich with collection and workspace names
@@ -98,9 +96,11 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
   return (
     <>
       {/* Backdrop */}
-      <div
+      <button
+        type="button"
         className="fixed inset-0 z-50 bg-black/50"
         onClick={() => onOpenChange(false)}
+        aria-label="Close search"
       />
       {/* Dialog */}
       <div className="fixed left-1/2 top-[20%] z-50 w-full max-w-lg -translate-x-1/2 rounded-xl border bg-popover shadow-lg">

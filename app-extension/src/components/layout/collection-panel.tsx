@@ -1,11 +1,10 @@
 import { EllipsisVertical, Pencil, Plus, Trash2, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { AboutPage } from "@/components/layout/about-page";
-import { SearchDialog } from "@/components/layout/search-dialog";
 import { CollectionCard } from "@/components/collection/collection-card";
 import { CreateCollectionDialog } from "@/components/collection/create-collection-dialog";
 import { DeleteCollectionDialog } from "@/components/collection/delete-collection-dialog";
-import { DeleteWorkspaceDialog } from "@/components/workspace/delete-workspace-dialog";
+import { AboutPage } from "@/components/layout/about-page";
+import { SearchDialog } from "@/components/layout/search-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { DeleteWorkspaceDialog } from "@/components/workspace/delete-workspace-dialog";
 import type { TabCollection } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
@@ -95,12 +95,13 @@ export function CollectionPanel({
             className="h-8 w-48 text-lg font-semibold"
           />
         ) : (
-          <p
+          <button
+            type="button"
             className="text-lg font-semibold truncate hover:bg-accent px-1 rounded cursor-pointer"
             onClick={startRename}
           >
             {workspaceName}
-          </p>
+          </button>
         )}
 
         {/* Right: action buttons */}

@@ -31,10 +31,7 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
         aria-label={collapsed ? "Expand panel" : "Collapse panel"}
       >
         <ChevronRight
-          className={cn(
-            "size-3.5 transition-transform duration-200",
-            !collapsed && "rotate-180",
-          )}
+          className={cn("size-3.5 transition-transform duration-200", !collapsed && "rotate-180")}
         />
       </button>
 
@@ -48,9 +45,7 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
         <div className="flex h-14 items-center justify-between border-b border-border px-4">
           <h2 className="text-sm font-medium text-muted-foreground ml-1">
             Tabs
-            <span className="ml-1 text-xs">
-              ({liveTabs.length})
-            </span>
+            <span className="ml-1 text-xs">({liveTabs.length})</span>
           </h2>
           <div className="flex items-center gap-1">
             <Button

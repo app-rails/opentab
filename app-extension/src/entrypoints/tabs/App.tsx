@@ -257,10 +257,7 @@ export default function App() {
         accessibility={{ announcements }}
       >
         <div className="flex h-screen bg-background">
-          <WorkspaceSidebar
-            collapsed={sidebarCollapsed}
-            onToggleCollapse={toggleSidebar}
-          />
+          <WorkspaceSidebar collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
           <div className="flex-1 min-w-0">
             <CollectionPanel
               isZenMode={isZenMode}
@@ -269,10 +266,7 @@ export default function App() {
               onSearchOpenChange={setSearchOpen}
             />
           </div>
-          <LiveTabPanel
-            collapsed={rightPanelCollapsed}
-            onToggleCollapse={toggleRightPanel}
-          />
+          <LiveTabPanel collapsed={rightPanelCollapsed} onToggleCollapse={toggleRightPanel} />
         </div>
 
         <DragOverlay>

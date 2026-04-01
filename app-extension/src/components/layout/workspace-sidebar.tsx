@@ -13,7 +13,8 @@ import { useAppStore } from "@/stores/app-store";
 
 function GoogleIcon() {
   return (
-    <svg className="size-4" viewBox="0 0 24 24">
+    <svg className="size-4" viewBox="0 0 24 24" aria-hidden="true">
+      <title>Google</title>
       <path
         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
         fill="#4285F4"
@@ -101,100 +102,100 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
           collapsed ? "w-0 border-r-0" : "w-64",
         )}
       >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-2">
-        <h1 className="text-lg font-semibold text-sidebar-foreground">OpenTab</h1>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={onToggleCollapse}
-          aria-label="Toggle sidebar"
-        >
-          <PanelLeft className="size-4" />
-        </Button>
-      </div>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <h1 className="text-lg font-semibold text-sidebar-foreground">OpenTab</h1>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={onToggleCollapse}
+            aria-label="Toggle sidebar"
+          >
+            <PanelLeft className="size-4" />
+          </Button>
+        </div>
 
-      {/* Separator */}
-      <div className="mx-2 h-[1px] bg-sidebar-border" />
+        {/* Separator */}
+        <div className="mx-2 h-[1px] bg-sidebar-border" />
 
-      {/* Spaces header */}
-      <div className="relative mb-1 mt-3 flex items-center px-4">
-        <h2 className="text-xs font-medium uppercase tracking-wide text-sidebar-foreground/70">
-          Spaces
-        </h2>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="absolute right-2"
-          onClick={() => setCreateOpen(true)}
-        >
-          <Plus className="size-4" />
-        </Button>
-      </div>
+        {/* Spaces header */}
+        <div className="relative mb-1 mt-3 flex items-center px-4">
+          <h2 className="text-xs font-medium uppercase tracking-wide text-sidebar-foreground/70">
+            Spaces
+          </h2>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="absolute right-2"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="size-4" />
+          </Button>
+        </div>
 
-      {/* Workspace list */}
-      <div className="flex-1 space-y-0.5 overflow-auto px-2" data-workspace-list>
-        <SortableContext
-          items={workspaces.map((w) => w.id!)}
-          strategy={verticalListSortingStrategy}
-        >
-          {workspaces.map((ws) => (
-            <SortableWorkspaceItem
-              key={ws.id}
-              workspace={ws}
-              isActive={ws.id === activeWorkspaceId}
-              onSelect={() => ws.id != null && setActiveWorkspace(ws.id)}
-              onRequestDelete={() => setDeleteTarget(ws)}
-            />
-          ))}
-        </SortableContext>
-      </div>
+        {/* Workspace list */}
+        <div className="flex-1 space-y-0.5 overflow-auto px-2" data-workspace-list>
+          <SortableContext
+            items={workspaces.map((w) => w.id!)}
+            strategy={verticalListSortingStrategy}
+          >
+            {workspaces.map((ws) => (
+              <SortableWorkspaceItem
+                key={ws.id}
+                workspace={ws}
+                isActive={ws.id === activeWorkspaceId}
+                onSelect={() => ws.id != null && setActiveWorkspace(ws.id)}
+                onRequestDelete={() => setDeleteTarget(ws)}
+              />
+            ))}
+          </SortableContext>
+        </div>
 
-      <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <DeleteWorkspaceDialog
-        workspaceId={deleteTarget?.id ?? null}
-        workspaceName={deleteTarget?.name ?? ""}
-        open={deleteTarget != null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-        onAfterDelete={() => {
-          const sidebar = document.querySelector("[data-workspace-list]");
-          const firstItem = sidebar?.querySelector<HTMLElement>('[role="button"]');
-          firstItem?.focus();
-        }}
-      />
-
-      {/* Footer separator */}
-      <div className="mx-2 h-[1px] bg-sidebar-border" />
-
-      {/* Footer */}
-      <div className="flex flex-col gap-0.5 px-2 py-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2 text-sm text-sidebar-foreground/70"
-          onClick={() => {
-            // TODO: Wire to actual Google auth flow
-            console.log("Sign in with Google");
+        <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
+        <DeleteWorkspaceDialog
+          workspaceId={deleteTarget?.id ?? null}
+          workspaceName={deleteTarget?.name ?? ""}
+          open={deleteTarget != null}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null);
           }}
-        >
-          <GoogleIcon />
-          Sign in with Google
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2 text-sm text-sidebar-foreground/70"
-          onClick={() => {
-            chrome.tabs.create({ url: chrome.runtime.getURL("/settings.html") });
+          onAfterDelete={() => {
+            const sidebar = document.querySelector("[data-workspace-list]");
+            const firstItem = sidebar?.querySelector<HTMLElement>('[role="button"]');
+            firstItem?.focus();
           }}
-        >
-          <Settings className="size-4" />
-          Settings
-        </Button>
-      </div>
-    </aside>
+        />
+
+        {/* Footer separator */}
+        <div className="mx-2 h-[1px] bg-sidebar-border" />
+
+        {/* Footer */}
+        <div className="flex flex-col gap-0.5 px-2 py-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-sm text-sidebar-foreground/70"
+            onClick={() => {
+              // TODO: Wire to actual Google auth flow
+              console.log("Sign in with Google");
+            }}
+          >
+            <GoogleIcon />
+            Sign in with Google
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-sm text-sidebar-foreground/70"
+            onClick={() => {
+              chrome.tabs.create({ url: chrome.runtime.getURL("/settings.html") });
+            }}
+          >
+            <Settings className="size-4" />
+            Settings
+          </Button>
+        </div>
+      </aside>
     </div>
   );
 }

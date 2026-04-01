@@ -81,13 +81,7 @@ export function CollectionCard({
   }
 
   return (
-    <div
-      ref={setNodeRef}
-      className={cn(
-        "transition-colors",
-        isOver && "bg-primary/5",
-      )}
-    >
+    <div ref={setNodeRef} className={cn("transition-colors", isOver && "bg-primary/5")}>
       {/* Header */}
       <div className="group flex items-center gap-1 px-4 pt-2 pb-3 border-b border-border">
         {/* Left group */}
@@ -131,7 +125,12 @@ export function CollectionCard({
         </button>
 
         {/* Spacer — click to collapse */}
-        <div className="flex-1 h-8 cursor-pointer" onClick={() => setCollapsed(!collapsed)} />
+        <button
+          type="button"
+          className="flex-1 h-8 cursor-pointer"
+          onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? "Expand collection" : "Collapse collection"}
+        />
 
         {/* Right group — hover visible */}
         {!isRenaming && (
@@ -142,7 +141,12 @@ export function CollectionCard({
               </Button>
             )}
             {canDelete && (
-              <Button variant="ghost" size="icon-xs" onClick={onRequestDelete} title="Delete collection">
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={onRequestDelete}
+                title="Delete collection"
+              >
                 <Trash2 className="size-3.5 text-muted-foreground" />
               </Button>
             )}

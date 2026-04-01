@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { EllipsisVertical, ExternalLink, Copy, Trash2 } from "lucide-react";
+import { Copy, EllipsisVertical, ExternalLink, Trash2 } from "lucide-react";
 import { TabFavicon } from "@/components/tab-favicon";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,10 +46,7 @@ export function CollectionTabItem({ tab, onRemove }: CollectionTabItemProps) {
       className="group flex h-14 items-center gap-2 rounded-md border border-border bg-card p-2 text-sm hover:bg-accent"
     >
       <TabFavicon url={tab.favIconUrl} size="md" />
-      <span
-        className="ml-0.5 flex-1 min-w-0 text-xs leading-tight line-clamp-2"
-        title={tab.url}
-      >
+      <span className="ml-0.5 flex-1 min-w-0 text-xs leading-tight line-clamp-2" title={tab.url}>
         {tab.title || tab.url}
       </span>
       <DropdownMenu>
@@ -64,17 +61,30 @@ export function CollectionTabItem({ tab, onRemove }: CollectionTabItemProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpen(); }}>
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpen();
+            }}
+          >
             <ExternalLink className="mr-2 size-4" />
             Open
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyUrl(); }}>
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopyUrl();
+            }}
+          >
             <Copy className="mr-2 size-4" />
             Copy URL
           </DropdownMenuItem>
           <DropdownMenuItem
             className="text-destructive"
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
           >
             <Trash2 className="mr-2 size-4" />
             Remove
