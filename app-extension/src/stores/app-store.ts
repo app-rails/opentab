@@ -146,7 +146,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setActiveWorkspace: (id) => {
     if (get().activeWorkspaceId === id) return;
-    set({ activeWorkspaceId: id, collections: [], tabsByCollection: new Map() });
+    set({ activeWorkspaceId: id });
     loadCollections(id)
       .then(async (collections) => {
         if (get().activeWorkspaceId !== id) return;
@@ -154,7 +154,12 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (get().activeWorkspaceId !== id) return;
         set({ collections, tabsByCollection });
       })
-      .catch((err) => console.error("[store] failed to load collections:", err));
+      .catch((err) => {
+        console.error("[store] failed to load collections:", err);
+        if (get().activeWorkspaceId === id) {
+          set({ collections: [], tabsByCollection: new Map() });
+        }
+      });
   },
 
   // Live tabs
