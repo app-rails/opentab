@@ -156,8 +156,7 @@ export function CollectionTabItem({ tab, onRemove }: CollectionTabItemProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className="group flex h-14 cursor-pointer items-center gap-2 rounded-md border border-border bg-card p-2 text-sm hover:bg-accent"
-      onClick={handleOpen}
+      className="group flex h-14 items-center gap-2 rounded-md border border-border bg-card p-2 text-sm hover:bg-accent"
     >
       <TabFavicon url={tab.favIconUrl} size="md" />
       <span
@@ -1761,7 +1760,7 @@ git commit -m "chore: final cleanup after TabTab UI replica"
 | 6. Right Panel | Task 10 (live tab panel) | Covered |
 | 7. Zen Mode | Task 11 (App.tsx) + Task 9 (zen button) | Covered |
 | 8. About / Welcome Page | Task 6 (about page) | Covered |
-| 9. Sidebar Space Item | No change needed — WorkspaceItem already has the right structure | Covered |
+| 9. Sidebar Space Item | Out of scope — WorkspaceItem simplification (remove dual dropdown+context menu, switch to EllipsisVertical, single-click rename from menu) deferred to follow-up task | Deferred |
 | 10. Live Tab Item | Task 4 (live tab item) | Covered |
 | 11. Settings Page | No changes needed | Covered |
 | 12. Data Model Changes | Task 2 (settings keys) | Covered |
