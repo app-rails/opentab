@@ -16,6 +16,7 @@ interface DeleteCollectionDialogProps {
   collectionName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAfterDelete?: () => void;
 }
 
 export function DeleteCollectionDialog({
@@ -23,6 +24,7 @@ export function DeleteCollectionDialog({
   collectionName,
   open,
   onOpenChange,
+  onAfterDelete,
 }: DeleteCollectionDialogProps) {
   const deleteCollection = useAppStore((s) => s.deleteCollection);
 
@@ -30,6 +32,9 @@ export function DeleteCollectionDialog({
     if (collectionId == null) return;
     deleteCollection(collectionId);
     onOpenChange(false);
+    if (onAfterDelete) {
+      setTimeout(() => onAfterDelete(), 0);
+    }
   }
 
   return (
@@ -48,7 +53,7 @@ export function DeleteCollectionDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            className="bg-destructive text-white hover:bg-destructive/90"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={handleDelete}
           >
             Delete

@@ -1,6 +1,6 @@
-import { icons } from "lucide-react";
 import { WORKSPACE_ICON_OPTIONS } from "@/lib/constants";
-import { cn, toPascalCase } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { WORKSPACE_ICONS } from "@/lib/workspace-icons";
 
 interface IconPickerProps {
   value: string;
@@ -11,12 +11,14 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
   return (
     <div className="grid grid-cols-6 gap-2">
       {WORKSPACE_ICON_OPTIONS.map((name) => {
-        const Icon = icons[toPascalCase(name) as keyof typeof icons];
+        const Icon = WORKSPACE_ICONS[name];
         if (!Icon) return null;
         return (
           <button
             key={name}
             type="button"
+            aria-label={name}
+            aria-pressed={value === name}
             onClick={() => onChange(name)}
             className={cn(
               "flex size-8 items-center justify-center rounded-md transition-colors",

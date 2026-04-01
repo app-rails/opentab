@@ -1,5 +1,6 @@
 import {
   type Active,
+  type Announcements,
   type CollisionDetection,
   closestCenter,
   DndContext,
@@ -13,7 +14,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import { CollectionPanel } from "@/components/layout/collection-panel";
 import { LiveTabPanel } from "@/components/layout/live-tab-panel";
@@ -21,11 +22,22 @@ import { WorkspaceSidebar } from "@/components/layout/workspace-sidebar";
 import { TabFavicon } from "@/components/tab-favicon";
 import { useLiveTabSync } from "@/hooks/use-live-tab-sync";
 import { DRAG_TYPES, type DragData } from "@/lib/dnd-types";
+import { getSettings, saveSettings } from "@/lib/settings";
+import { useTheme } from "@/lib/theme";
 import { computeOrderBetween } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
 function getDragType(active: Active): string | undefined {
   return (active.data.current as DragData | undefined)?.type;
+}
+
+function getDragTitle(active: Active): string {
+  const data = active.data.current as DragData | undefined;
+  if (!data) return "item";
+  if (data.type === DRAG_TYPES.LIVE_TAB || data.type === DRAG_TYPES.COLLECTION_TAB) {
+    return data.tab.title || "item";
+  }
+  return "item";
 }
 
 const customCollisionDetection: CollisionDetection = (args) => {
@@ -36,11 +48,54 @@ const customCollisionDetection: CollisionDetection = (args) => {
   return closestCenter(args);
 };
 
+const announcements: Announcements = {
+  onDragStart({ active }) {
+    return `Picked up ${getDragTitle(active)}`;
+  },
+  onDragOver({ active, over }) {
+    const title = getDragTitle(active);
+    return over ? `${title} is over drop target` : `${title} is no longer over a drop target`;
+  },
+  onDragEnd({ active, over }) {
+    const title = getDragTitle(active);
+    return over ? `${title} was dropped` : `${title} was dropped outside a target`;
+  },
+  onDragCancel({ active }) {
+    return `Dragging ${getDragTitle(active)} was cancelled`;
+  },
+};
+
 export default function App() {
   const isLoading = useAppStore((s) => s.isLoading);
 
   useLiveTabSync();
+  const { mode } = useTheme();
 
+  // Layout state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [isZenMode, setIsZenMode] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Pre-zen state (to restore on zen exit)
+  const [preZenSidebar, setPreZenSidebar] = useState(false);
+  const [preZenPanel, setPreZenPanel] = useState(false);
+
+  // Load persisted collapse states; collapse both on small viewports
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setSidebarCollapsed(true);
+      setRightPanelCollapsed(true);
+    } else {
+      getSettings().then((s) => {
+        setSidebarCollapsed(s.sidebar_collapsed);
+        setRightPanelCollapsed(s.right_panel_collapsed);
+      });
+    }
+  }, []);
+
+  // Initialize store
   useEffect(() => {
     useAppStore
       .getState()
@@ -49,6 +104,51 @@ export default function App() {
         console.error("Failed to initialize app store:", err);
       });
   }, []);
+
+  // ⌘J / Ctrl+J shortcut
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "j") {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      if (!isZenMode) saveSettings({ sidebar_collapsed: next });
+      return next;
+    });
+  }, [isZenMode]);
+
+  const toggleRightPanel = useCallback(() => {
+    setRightPanelCollapsed((prev) => {
+      const next = !prev;
+      if (!isZenMode) saveSettings({ right_panel_collapsed: next });
+      return next;
+    });
+  }, [isZenMode]);
+
+  const toggleZenMode = useCallback(() => {
+    setIsZenMode((prev) => {
+      if (!prev) {
+        // Entering zen: save current states, collapse both
+        setPreZenSidebar(sidebarCollapsed);
+        setPreZenPanel(rightPanelCollapsed);
+        setSidebarCollapsed(true);
+        setRightPanelCollapsed(true);
+      } else {
+        // Exiting zen: restore previous states
+        setSidebarCollapsed(preZenSidebar);
+        setRightPanelCollapsed(preZenPanel);
+      }
+      return !prev;
+    });
+  }, [sidebarCollapsed, rightPanelCollapsed, preZenSidebar, preZenPanel]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -110,7 +210,7 @@ export default function App() {
     if (collectionId == null) return;
 
     const tab = data.tab;
-    if (!tab || !tab.url) return;
+    if (!tab?.url) return;
 
     useAppStore.getState().addTabToCollection(collectionId, {
       url: tab.url,
@@ -138,7 +238,7 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-screen items-center justify-center bg-background" aria-live="polite">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     );
@@ -148,37 +248,44 @@ export default function App() {
 
   return (
     <>
-    <DndContext
-      sensors={sensors}
-      collisionDetection={customCollisionDetection}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <div className="grid h-screen grid-cols-[240px_1fr_320px] bg-background">
-        <WorkspaceSidebar />
-        <CollectionPanel />
-        <LiveTabPanel />
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={customCollisionDetection}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+        accessibility={{ announcements }}
+      >
+        <div className="flex h-screen bg-background">
+          <WorkspaceSidebar collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
+          <div className="flex-1 min-w-0">
+            <CollectionPanel
+              isZenMode={isZenMode}
+              onToggleZenMode={toggleZenMode}
+              searchOpen={searchOpen}
+              onSearchOpenChange={setSearchOpen}
+            />
+          </div>
+          <LiveTabPanel collapsed={rightPanelCollapsed} onToggleCollapse={toggleRightPanel} />
+        </div>
 
-      <DragOverlay>
-        {activeDragData?.type === DRAG_TYPES.LIVE_TAB && (
-          <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
-            <TabFavicon url={activeDragData.tab.favIconUrl} />
-            <span className="max-w-[200px] truncate">{activeDragData.tab.title || "New Tab"}</span>
-          </div>
-        )}
-        {activeDragData?.type === DRAG_TYPES.COLLECTION_TAB && (
-          <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
-            <TabFavicon url={activeDragData.tab.favIconUrl} />
-            <span className="max-w-[200px] truncate">
-              {activeDragData.tab.title || activeDragData.tab.url}
-            </span>
-          </div>
-        )}
-      </DragOverlay>
-    </DndContext>
-    <Toaster position="bottom-center" theme="system" />
+        <DragOverlay>
+          {activeDragData &&
+            (activeDragData.type === DRAG_TYPES.LIVE_TAB ||
+              activeDragData.type === DRAG_TYPES.COLLECTION_TAB) && (
+              <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
+                <TabFavicon url={activeDragData.tab.favIconUrl} />
+                <span className="max-w-[200px] truncate">
+                  {activeDragData.tab.title ||
+                    (activeDragData.type === DRAG_TYPES.LIVE_TAB
+                      ? "New Tab"
+                      : activeDragData.tab.url)}
+                </span>
+              </div>
+            )}
+        </DragOverlay>
+      </DndContext>
+      <Toaster position="bottom-center" theme={mode === "system" ? "system" : mode} />
     </>
   );
 }

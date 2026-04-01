@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { TabFavicon } from "@/components/tab-favicon";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -10,10 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { TabFavicon } from "@/components/tab-favicon";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
 import { useAppStore } from "@/stores/app-store";
-import { toast } from "sonner";
 
 function formatTimestamp(): string {
   const now = new Date();
@@ -30,7 +30,9 @@ interface SaveTabsDialogProps {
 export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps) {
   const saveTabsAsCollection = useAppStore((s) => s.saveTabsAsCollection);
   const [name, setName] = useState(() => formatTimestamp());
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set(tabs.map((t) => t.id!)));
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(
+    () => new Set(tabs.map((t) => t.id!)),
+  );
 
   // Reset state when dialog opens
   const handleOpenChange = (nextOpen: boolean) => {
@@ -53,7 +55,8 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
   const allSelected = selectedIds.size === tabs.length;
   const noneSelected = selectedIds.size === 0;
   const trimmedName = name.trim();
-  const canSave = trimmedName.length > 0 && trimmedName.length <= WORKSPACE_NAME_MAX_LENGTH && !noneSelected;
+  const canSave =
+    trimmedName.length > 0 && trimmedName.length <= WORKSPACE_NAME_MAX_LENGTH && !noneSelected;
 
   function toggleTab(tabId: number) {
     setSelectedIds((prev) => {
@@ -85,7 +88,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
         favIconUrl: t.favIconUrl,
       }));
     saveTabsAsCollection(trimmedName, selectedTabs);
-    toast.success(`已保存 ${selectedTabs.length} 个标签页到「${trimmedName}」`);
+    toast.success(`Saved ${selectedTabs.length} tab${selectedTabs.length === 1 ? "" : "s"} to "${trimmedName}"`);
     onOpenChange(false);
   }
 
@@ -135,7 +138,9 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
             >
               {allSelected ? "Deselect all" : "Select all"}
             </button>
-            <span>{selectedIds.size} of {tabs.length} selected</span>
+            <span>
+              {selectedIds.size} of {tabs.length} selected
+            </span>
           </div>
         </div>
 
