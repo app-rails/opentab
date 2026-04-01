@@ -1,5 +1,6 @@
 import {
   type Active,
+  type Announcements,
   type CollisionDetection,
   closestCenter,
   DndContext,
@@ -21,6 +22,7 @@ import { WorkspaceSidebar } from "@/components/layout/workspace-sidebar";
 import { TabFavicon } from "@/components/tab-favicon";
 import { useLiveTabSync } from "@/hooks/use-live-tab-sync";
 import { DRAG_TYPES, type DragData } from "@/lib/dnd-types";
+import { useTheme } from "@/lib/theme";
 import { computeOrderBetween } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
@@ -36,10 +38,30 @@ const customCollisionDetection: CollisionDetection = (args) => {
   return closestCenter(args);
 };
 
+const announcements: Announcements = {
+  onDragStart({ active }) {
+    const data = active.data.current as DragData | undefined;
+    return `Picked up ${data?.tab?.title ?? "item"}`;
+  },
+  onDragOver({ active, over }) {
+    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+    return over ? `${title} is over drop target` : `${title} is no longer over a drop target`;
+  },
+  onDragEnd({ active, over }) {
+    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+    return over ? `${title} was dropped` : `${title} was dropped outside a target`;
+  },
+  onDragCancel({ active }) {
+    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+    return `Dragging ${title} was cancelled`;
+  },
+};
+
 export default function App() {
   const isLoading = useAppStore((s) => s.isLoading);
 
   useLiveTabSync();
+  const { mode, cycleTheme } = useTheme();
 
   useEffect(() => {
     useAppStore
@@ -56,6 +78,7 @@ export default function App() {
   );
 
   const [activeDrag, setActiveDrag] = useState<Active | null>(null);
+  const [showLivePanel, setShowLivePanel] = useState(false);
 
   function handleDragStart(event: DragStartEvent) {
     setActiveDrag(event.active);
@@ -110,7 +133,7 @@ export default function App() {
     if (collectionId == null) return;
 
     const tab = data.tab;
-    if (!tab || !tab.url) return;
+    if (!tab?.url) return;
 
     useAppStore.getState().addTabToCollection(collectionId, {
       url: tab.url,
@@ -138,7 +161,7 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-screen items-center justify-center bg-background" aria-live="polite">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     );
@@ -148,37 +171,52 @@ export default function App() {
 
   return (
     <>
-    <DndContext
-      sensors={sensors}
-      collisionDetection={customCollisionDetection}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <div className="grid h-screen grid-cols-[240px_1fr_320px] bg-background">
-        <WorkspaceSidebar />
-        <CollectionPanel />
-        <LiveTabPanel />
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={customCollisionDetection}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+        accessibility={{ announcements }}
+      >
+        <div className="grid h-screen grid-cols-[200px_1fr] md:grid-cols-[200px_1fr_280px] bg-background">
+          <WorkspaceSidebar themeMode={mode} onCycleTheme={cycleTheme} />
+          <CollectionPanel onToggleLivePanel={() => setShowLivePanel((v) => !v)} />
+          <div className="hidden md:flex">
+            <LiveTabPanel />
+          </div>
+        </div>
 
-      <DragOverlay>
-        {activeDragData?.type === DRAG_TYPES.LIVE_TAB && (
-          <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
-            <TabFavicon url={activeDragData.tab.favIconUrl} />
-            <span className="max-w-[200px] truncate">{activeDragData.tab.title || "New Tab"}</span>
-          </div>
+        {/* Mobile overlay panel */}
+        {showLivePanel && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/20 md:hidden"
+              onClick={() => setShowLivePanel(false)}
+            />
+            <div className="fixed inset-y-0 right-0 z-50 w-[280px] bg-background border-l shadow-lg md:hidden">
+              <LiveTabPanel />
+            </div>
+          </>
         )}
-        {activeDragData?.type === DRAG_TYPES.COLLECTION_TAB && (
-          <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
-            <TabFavicon url={activeDragData.tab.favIconUrl} />
-            <span className="max-w-[200px] truncate">
-              {activeDragData.tab.title || activeDragData.tab.url}
-            </span>
-          </div>
-        )}
-      </DragOverlay>
-    </DndContext>
-    <Toaster position="bottom-center" theme="system" />
+
+        <DragOverlay>
+          {activeDragData &&
+            (activeDragData.type === DRAG_TYPES.LIVE_TAB ||
+              activeDragData.type === DRAG_TYPES.COLLECTION_TAB) && (
+              <div className="flex items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
+                <TabFavicon url={activeDragData.tab.favIconUrl} />
+                <span className="max-w-[200px] truncate">
+                  {activeDragData.tab.title ||
+                    (activeDragData.type === DRAG_TYPES.LIVE_TAB
+                      ? "New Tab"
+                      : activeDragData.tab.url)}
+                </span>
+              </div>
+            )}
+        </DragOverlay>
+      </DndContext>
+      <Toaster position="bottom-center" theme={mode === "system" ? "system" : mode} />
     </>
   );
 }

@@ -30,19 +30,17 @@ export function CollectionTabItem({ tab, isOpen, onRemove }: CollectionTabItemPr
       style={style}
       {...attributes}
       {...listeners}
-      className="group relative flex cursor-grab items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-accent"
+      className="group relative flex h-[3rem] cursor-grab items-center gap-2 rounded-md border border-border bg-card p-2 text-sm hover:bg-accent"
     >
-      {isOpen && (
-        <span className="absolute right-1 top-1 size-1.5 rounded-full bg-green-500" />
-      )}
+      {isOpen && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-[var(--status-green)]" />}
       <TabFavicon url={tab.favIconUrl} />
-      <span className="flex-1 truncate" title={tab.url}>
+      <span className="flex-1 truncate text-xs" title={tab.url}>
         {tab.title || tab.url}
       </span>
       <Button
         variant="ghost"
         size="icon-xs"
-        className="shrink-0 opacity-0 group-hover:opacity-100"
+        className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
         onClick={(e) => {
           e.stopPropagation();
           onRemove();

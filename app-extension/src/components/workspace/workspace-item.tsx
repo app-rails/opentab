@@ -1,4 +1,4 @@
-import { Ellipsis, ImagePlus, icons, Pencil, Trash2 } from "lucide-react";
+import { Ellipsis, ImagePlus, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
 import type { Workspace } from "@/lib/db";
-import { cn, toPascalCase } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { WORKSPACE_ICONS } from "@/lib/workspace-icons";
 import { useAppStore } from "@/stores/app-store";
 import { IconPicker } from "./icon-picker";
 
@@ -73,7 +74,7 @@ export function WorkspaceItem({
     setIsRenaming(false);
   }
 
-  const LucideIcon = icons[toPascalCase(workspace.icon) as keyof typeof icons] ?? icons.Folder;
+  const LucideIcon = WORKSPACE_ICONS[workspace.icon] ?? WORKSPACE_ICONS.folder;
 
   function openIconPicker() {
     setIconPopoverOpen(true);
@@ -119,6 +120,8 @@ export function WorkspaceItem({
         <ContextMenuTrigger asChild>
           <PopoverAnchor asChild>
             <div
+              role="button"
+              tabIndex={0}
               className={cn(
                 "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
                 isActive
@@ -126,6 +129,12 @@ export function WorkspaceItem({
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50",
               )}
               onClick={onSelect}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelect();
+                }
+              }}
               onDoubleClick={(e) => {
                 e.stopPropagation();
                 startRename();
@@ -148,7 +157,7 @@ export function WorkspaceItem({
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <span className="flex-1 truncate">{workspace.name}</span>
+                <span className="flex-1 truncate" title="Double-click to rename">{workspace.name}</span>
               )}
 
               <DropdownMenu>

@@ -1,6 +1,6 @@
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { ExternalLink, Info, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { rectSortingStrategy, SortableContext } from "@dnd-kit/sortable";
+import { ChevronRight, ExternalLink, Info, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,14 +11,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CollectionTab, TabCollection } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
+import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 import { AddTabInline } from "./add-tab-inline";
 import { CollectionTabItem } from "./collection-tab-item";
@@ -44,6 +40,7 @@ export function CollectionCard({
 
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(collection.name);
+  const [collapsed, setCollapsed] = useState(false);
 
   const { setNodeRef, isOver } = useDroppable({
     id: `collection-drop-${collection.id}`,
@@ -81,12 +78,25 @@ export function CollectionCard({
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-lg border p-3 transition-colors ${
-        isOver ? "border-primary bg-primary/5" : "border-border"
-      }`}
+      className={cn(
+        "rounded-lg border p-3 transition-colors",
+        isOver ? "border-primary bg-primary/5" : "border-border",
+      )}
     >
       {/* Header */}
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2 flex items-center gap-1">
+        <button
+          type="button"
+          className="flex items-center gap-1 p-0.5 text-muted-foreground hover:text-foreground"
+          onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? "Expand collection" : "Collapse collection"}
+          aria-expanded={!collapsed}
+        >
+          <ChevronRight
+            className={cn("size-3.5 transition-transform", !collapsed && "rotate-90")}
+          />
+        </button>
+
         {isRenaming ? (
           <Input
             autoFocus
@@ -102,15 +112,14 @@ export function CollectionCard({
         ) : (
           <h3
             className="flex flex-1 items-center gap-1.5 text-sm font-medium"
+            title="Double-click to rename"
             onDoubleClick={() => {
               setRenameValue(collection.name);
               setIsRenaming(true);
             }}
           >
             {collection.name}
-            <span className="text-xs font-normal text-muted-foreground">
-              {tabs.length}
-            </span>
+            <span className="text-xs font-normal text-muted-foreground">{tabs.length}</span>
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -124,7 +133,7 @@ export function CollectionCard({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>Created: {new Date(collection.createdAt).toLocaleString()}</p>
+                  <p>Created: {new Date(collection.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -140,7 +149,7 @@ export function CollectionCard({
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-xs">
+                <Button variant="ghost" size="icon-xs" aria-label="More actions">
                   <MoreHorizontal className="size-3.5" />
                 </Button>
               </DropdownMenuTrigger>
@@ -169,31 +178,40 @@ export function CollectionCard({
         )}
       </div>
 
-      {/* Tab list */}
-      <SortableContext
-        items={tabs.map((t) => `col-tab-${t.id}`)}
-        strategy={verticalListSortingStrategy}
-      >
-        <div className="space-y-0.5">
-          {tabs.map((tab) => (
-            <CollectionTabItem
-              key={tab.id}
-              tab={tab}
-              isOpen={liveTabUrls.has(tab.url)}
-              onRemove={() => {
-                if (tab.id != null && collection.id != null) {
-                  removeTabFromCollection(tab.id, collection.id);
-                }
-              }}
-            />
-          ))}
-        </div>
-      </SortableContext>
+      {/* Content — collapsible */}
+      {!collapsed && (
+        <>
+          <SortableContext
+            items={tabs.map((t) => `col-tab-${t.id}`)}
+            strategy={rectSortingStrategy}
+          >
+            {tabs.length > 0 ? (
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
+                {tabs.map((tab) => (
+                  <CollectionTabItem
+                    key={tab.id}
+                    tab={tab}
+                    isOpen={liveTabUrls.has(tab.url)}
+                    onRemove={() => {
+                      if (tab.id != null && collection.id != null) {
+                        removeTabFromCollection(tab.id, collection.id);
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="py-2 text-center text-xs text-muted-foreground/70">
+                Drag tabs here or add a URL
+              </p>
+            )}
+          </SortableContext>
 
-      {/* Add URL inline */}
-      <div className="mt-1">
-        <AddTabInline onAdd={handleAddUrl} />
-      </div>
+          <div className="mt-1">
+            <AddTabInline onAdd={handleAddUrl} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

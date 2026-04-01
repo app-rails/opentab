@@ -10,13 +10,6 @@ export function compareByOrder<T extends { order: string }>(a: T, b: T): number 
   return a.order < b.order ? -1 : a.order > b.order ? 1 : 0;
 }
 
-export function toPascalCase(str: string): string {
-  return str
-    .split("-")
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join("");
-}
-
 export function computeOrderBetween<T extends { order: string }>(
   items: T[],
   oldIndex: number,

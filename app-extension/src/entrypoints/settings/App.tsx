@@ -3,20 +3,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { checkHealth } from "@/lib/api";
-import { MSG } from "@/lib/constants";
-import { type AppSettings, getSettings, updateSettings } from "@/lib/settings";
+import { type AppSettings, getSettings, saveSettings, type ThemeMode } from "@/lib/settings";
+import { useTheme } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 type ConnectionStatus = "not_enabled" | "testing" | "connected" | "disconnected";
 
+const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "system", label: "System" },
+];
+
 function useDebouncedSave(delayMs: number) {
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   return useCallback(
     (partial: Partial<AppSettings>) => {
       clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(async () => {
-        await updateSettings(partial);
-        chrome.runtime.sendMessage({ type: MSG.SETTINGS_CHANGED }).catch(() => {});
+      timerRef.current = setTimeout(() => {
+        void saveSettings(partial).catch((error) => {
+          console.error("Failed to save settings:", error);
+        });
       }, delayMs);
     },
     [delayMs],
@@ -28,6 +36,8 @@ export default function App() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("not_enabled");
   const debouncedSave = useDebouncedSave(500);
 
+  const { mode: themeMode, setTheme } = useTheme();
+
   useEffect(() => {
     getSettings().then((loaded) => {
       setSettings(loaded);
@@ -35,19 +45,11 @@ export default function App() {
     });
   }, []);
 
-  const saveAndNotify = useCallback(async (partial: Partial<AppSettings>) => {
-    await updateSettings(partial);
-    chrome.runtime.sendMessage({ type: MSG.SETTINGS_CHANGED }).catch(() => {});
+  const handleToggle = useCallback(async (enabled: boolean) => {
+    setSettings((prev) => (prev ? { ...prev, server_enabled: enabled } : prev));
+    setConnectionStatus(enabled ? "disconnected" : "not_enabled");
+    await saveSettings({ server_enabled: enabled });
   }, []);
-
-  const handleToggle = useCallback(
-    async (enabled: boolean) => {
-      setSettings((prev) => (prev ? { ...prev, server_enabled: enabled } : prev));
-      setConnectionStatus(enabled ? "disconnected" : "not_enabled");
-      await saveAndNotify({ server_enabled: enabled });
-    },
-    [saveAndNotify],
-  );
 
   const handleUrlChange = useCallback(
     (url: string) => {
@@ -65,16 +67,24 @@ export default function App() {
     setConnectionStatus(ok ? "connected" : "disconnected");
   }, [settings]);
 
+  const handleThemeChange = useCallback(
+    (theme: ThemeMode) => {
+      setSettings((prev) => (prev ? { ...prev, theme } : prev));
+      setTheme(theme);
+    },
+    [setTheme],
+  );
+
   if (!settings) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-screen items-center justify-center bg-background" aria-live="polite">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="grid h-screen grid-cols-[200px_1fr] bg-background text-foreground">
+    <div className="grid h-screen grid-cols-1 sm:grid-cols-[200px_1fr] bg-background text-foreground">
       {/* Left nav */}
       <nav className="border-r border-border p-4">
         <h1 className="mb-4 text-lg font-semibold">Settings</h1>
@@ -86,6 +96,35 @@ export default function App() {
         <h2 className="mb-6 text-xl font-semibold">General</h2>
 
         <section className="max-w-md space-y-6">
+          {/* Appearance */}
+          <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+            Appearance
+          </h3>
+
+          <div className="space-y-2">
+            <span className="text-sm font-medium">Theme</span>
+            <div className="flex gap-1 rounded-lg border border-border p-1" role="radiogroup" aria-label="Theme">
+              {THEME_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={themeMode === opt.value}
+                  className={cn(
+                    "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    themeMode === opt.value
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  )}
+                  onClick={() => handleThemeChange(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Server Sync */}
           <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Server Sync
           </h3>
@@ -143,9 +182,9 @@ export default function App() {
 function StatusIndicator({ status }: { status: ConnectionStatus }) {
   const config = {
     not_enabled: { color: "bg-muted-foreground/40", text: "Not enabled" },
-    testing: { color: "bg-yellow-500", text: "Testing..." },
-    connected: { color: "bg-green-500", text: "Connected" },
-    disconnected: { color: "bg-red-500", text: "Disconnected" },
+    testing: { color: "bg-[var(--status-yellow)]", text: "Testing..." },
+    connected: { color: "bg-[var(--status-green)]", text: "Connected" },
+    disconnected: { color: "bg-[var(--status-red)]", text: "Disconnected" },
   }[status];
 
   return (

@@ -1,45 +1,82 @@
-import { Plus } from "lucide-react";
-import { useState } from "react";
+import { PanelRight, Plus } from "lucide-react";
+import { useRef, useState } from "react";
 import { CollectionCard } from "@/components/collection/collection-card";
 import { CreateCollectionDialog } from "@/components/collection/create-collection-dialog";
 import { DeleteCollectionDialog } from "@/components/collection/delete-collection-dialog";
+import { EmptyWorkspace } from "@/components/layout/empty-workspace";
+import { WelcomeBanner } from "@/components/layout/welcome-banner";
 import { Button } from "@/components/ui/button";
 import type { TabCollection } from "@/lib/db";
 import { useAppStore } from "@/stores/app-store";
 
-export function CollectionPanel() {
+interface CollectionPanelProps {
+  onToggleLivePanel?: () => void;
+}
+
+export function CollectionPanel({ onToggleLivePanel }: CollectionPanelProps) {
   const collections = useAppStore((s) => s.collections);
   const tabsByCollection = useAppStore((s) => s.tabsByCollection);
+  const workspaceName = useAppStore(
+    (s) => s.workspaces.find((w) => w.id === s.activeWorkspaceId)?.name ?? "Workspace",
+  );
 
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TabCollection | null>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
 
   const canDelete = collections.length > 1;
+  const isEmpty =
+    collections.length <= 1 &&
+    (collections[0]?.id == null || (tabsByCollection.get(collections[0].id)?.length ?? 0) === 0);
 
   return (
-    <main className="flex h-full flex-col overflow-auto p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Tab Collections</h2>
-        <Button variant="ghost" size="icon-xs" onClick={() => setCreateOpen(true)}>
-          <Plus className="size-4" />
-        </Button>
+    <main className="flex h-full flex-col overflow-auto">
+      {/* Sticky topbar */}
+      <div className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background/70 px-6 backdrop-blur-md">
+        <h2 className="text-lg font-semibold truncate">{workspaceName}</h2>
+        <div className="flex items-center gap-1">
+          {onToggleLivePanel && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="md:hidden"
+              onClick={onToggleLivePanel}
+              aria-label="Toggle live tabs panel"
+            >
+              <PanelRight className="size-4" />
+            </Button>
+          )}
+          <Button
+            ref={addButtonRef}
+            variant="ghost"
+            size="icon-xs"
+            onClick={() => setCreateOpen(true)}
+            title="Add collection"
+          >
+            <Plus className="size-4" />
+          </Button>
+        </div>
       </div>
 
-      {collections.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No collections yet.</p>
-      ) : (
-        <div className="space-y-4">
-          {collections.map((col) => (
-            <CollectionCard
-              key={col.id}
-              collection={col}
-              tabs={tabsByCollection.get(col.id!) ?? []}
-              canDelete={canDelete && col.name !== "Unsorted"}
-              onRequestDelete={() => setDeleteTarget(col)}
-            />
-          ))}
-        </div>
-      )}
+      <div className="flex-1 p-6">
+        {isEmpty && <WelcomeBanner />}
+
+        {isEmpty ? (
+          <EmptyWorkspace />
+        ) : (
+          <div className="mt-2 space-y-4">
+            {collections.map((col) => (
+              <CollectionCard
+                key={col.id}
+                collection={col}
+                tabs={tabsByCollection.get(col.id!) ?? []}
+                canDelete={canDelete && col.name !== "Unsorted"}
+                onRequestDelete={() => setDeleteTarget(col)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       <CreateCollectionDialog open={createOpen} onOpenChange={setCreateOpen} />
       <DeleteCollectionDialog
@@ -49,6 +86,7 @@ export function CollectionPanel() {
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
+        onAfterDelete={() => addButtonRef.current?.focus()}
       />
     </main>
   );

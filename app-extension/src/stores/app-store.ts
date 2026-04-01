@@ -146,7 +146,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setActiveWorkspace: (id) => {
     if (get().activeWorkspaceId === id) return;
-    set({ activeWorkspaceId: id, collections: [], tabsByCollection: new Map() });
+    set({ activeWorkspaceId: id });
     loadCollections(id)
       .then(async (collections) => {
         if (get().activeWorkspaceId !== id) return;
@@ -154,14 +154,20 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (get().activeWorkspaceId !== id) return;
         set({ collections, tabsByCollection });
       })
-      .catch((err) => console.error("[store] failed to load collections:", err));
+      .catch((err) => {
+        console.error("[store] failed to load collections:", err);
+        if (get().activeWorkspaceId === id) {
+          set({ collections: [], tabsByCollection: new Map() });
+        }
+      });
   },
 
   // Live tabs
-  setLiveTabs: (tabs) => set({
-    liveTabs: tabs,
-    liveTabUrls: buildLiveTabUrls(tabs),
-  }),
+  setLiveTabs: (tabs) =>
+    set({
+      liveTabs: tabs,
+      liveTabUrls: buildLiveTabUrls(tabs),
+    }),
 
   addLiveTab: (tab) => {
     if (get().liveTabs.some((t) => t.id === tab.id)) return;
@@ -556,9 +562,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       set({ liveTabUrls: optimisticUrls });
 
-      for (const tab of tabsToOpen) {
-        await chrome.tabs.create({ url: tab.url, active: false });
-      }
+      await Promise.all(tabsToOpen.map((tab) => chrome.tabs.create({ url: tab.url, active: false })));
     } catch (err) {
       console.error("[store] failed to restore collection:", err);
     }

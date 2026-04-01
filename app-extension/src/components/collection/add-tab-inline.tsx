@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface AddTabInlineProps {
   onAdd: (url: string) => void;
@@ -10,6 +11,7 @@ interface AddTabInlineProps {
 export function AddTabInline({ onAdd }: AddTabInlineProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [url, setUrl] = useState("");
+  const [error, setError] = useState("");
 
   function handleSubmit() {
     const trimmed = url.trim();
@@ -21,11 +23,13 @@ export function AddTabInline({ onAdd }: AddTabInlineProps) {
     try {
       new URL(finalUrl);
     } catch {
-      return; // Invalid URL, ignore
+      setError("Please enter a valid URL");
+      return;
     }
 
     onAdd(finalUrl);
     setUrl("");
+    setError("");
     setIsOpen(false);
   }
 
@@ -44,24 +48,34 @@ export function AddTabInline({ onAdd }: AddTabInlineProps) {
   }
 
   return (
-    <div className="flex gap-1 px-1">
-      <Input
-        autoFocus
-        placeholder="https://example.com"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleSubmit();
-          if (e.key === "Escape") {
-            setUrl("");
-            setIsOpen(false);
-          }
-        }}
-        onBlur={() => {
-          if (!url.trim()) setIsOpen(false);
-        }}
-        className="h-7 text-xs"
-      />
+    <div className="space-y-1 px-1">
+      <div className="flex gap-1">
+        <Input
+          autoFocus
+          placeholder="https://example.com"
+          value={url}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            if (error) setError("");
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSubmit();
+            if (e.key === "Escape") {
+              setUrl("");
+              setError("");
+              setIsOpen(false);
+            }
+          }}
+          onBlur={() => {
+            if (!url.trim()) {
+              setError("");
+              setIsOpen(false);
+            }
+          }}
+          className={cn("h-7 text-xs", error && "border-destructive")}
+        />
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }
