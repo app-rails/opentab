@@ -31,6 +31,15 @@ function getDragType(active: Active): string | undefined {
   return (active.data.current as DragData | undefined)?.type;
 }
 
+function getDragTitle(active: Active): string {
+  const data = active.data.current as DragData | undefined;
+  if (!data) return "item";
+  if (data.type === DRAG_TYPES.LIVE_TAB || data.type === DRAG_TYPES.COLLECTION_TAB) {
+    return data.tab.title || "item";
+  }
+  return "item";
+}
+
 const customCollisionDetection: CollisionDetection = (args) => {
   const activeType = getDragType(args.active);
   if (activeType === DRAG_TYPES.LIVE_TAB) {
@@ -41,20 +50,18 @@ const customCollisionDetection: CollisionDetection = (args) => {
 
 const announcements: Announcements = {
   onDragStart({ active }) {
-    const data = active.data.current as DragData | undefined;
-    return `Picked up ${data?.tab?.title ?? "item"}`;
+    return `Picked up ${getDragTitle(active)}`;
   },
   onDragOver({ active, over }) {
-    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+    const title = getDragTitle(active);
     return over ? `${title} is over drop target` : `${title} is no longer over a drop target`;
   },
   onDragEnd({ active, over }) {
-    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+    const title = getDragTitle(active);
     return over ? `${title} was dropped` : `${title} was dropped outside a target`;
   },
   onDragCancel({ active }) {
-    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
-    return `Dragging ${title} was cancelled`;
+    return `Dragging ${getDragTitle(active)} was cancelled`;
   },
 };
 
