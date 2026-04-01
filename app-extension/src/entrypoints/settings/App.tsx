@@ -182,9 +182,9 @@ export default function App() {
 function StatusIndicator({ status }: { status: ConnectionStatus }) {
   const config = {
     not_enabled: { color: "bg-muted-foreground/40", text: "Not enabled" },
-    testing: { color: "bg-yellow-500", text: "Testing..." },
-    connected: { color: "bg-green-500", text: "Connected" },
-    disconnected: { color: "bg-red-500", text: "Disconnected" },
+    testing: { color: "bg-[var(--status-yellow)]", text: "Testing..." },
+    connected: { color: "bg-[var(--status-green)]", text: "Connected" },
+    disconnected: { color: "bg-[var(--status-red)]", text: "Disconnected" },
   }[status];
 
   return (

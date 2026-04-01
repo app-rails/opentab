@@ -32,7 +32,7 @@ export function CollectionTabItem({ tab, isOpen, onRemove }: CollectionTabItemPr
       {...listeners}
       className="group relative flex h-[3rem] cursor-grab items-center gap-2 rounded-md border border-border bg-card p-2 text-sm hover:bg-accent"
     >
-      {isOpen && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-green-500" />}
+      {isOpen && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-[var(--status-green)]" />}
       <TabFavicon url={tab.favIconUrl} />
       <span className="flex-1 truncate text-xs" title={tab.url}>
         {tab.title || tab.url}
