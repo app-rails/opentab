@@ -1,5 +1,11 @@
 import { Search } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { TabFavicon } from "@/components/tab-favicon";
 import type { CollectionTab } from "@/lib/db";
 import { db } from "@/lib/db";
@@ -27,10 +33,17 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     }
 
     const lower = q.toLowerCase();
-    const allTabs = await db.collectionTabs.toArray();
-    const matched = allTabs.filter(
-      (t) => t.title.toLowerCase().includes(lower) || t.url.toLowerCase().includes(lower),
-    );
+    // Use Dexie .filter() with .limit() to avoid loading entire table into JS
+    const matched = await db.collectionTabs
+      .filter((t) => t.title.toLowerCase().includes(lower) || t.url.toLowerCase().includes(lower))
+      .limit(50)
+      .toArray();
+
+    if (matched.length === 0) {
+      setResults([]);
+      setSelectedIndex(0);
+      return;
+    }
 
     // Enrich with collection and workspace names
     const collectionIds = [...new Set(matched.map((t) => t.collectionId))];
@@ -38,7 +51,8 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     const collectionMap = new Map(collections.map((c) => [c.id, c]));
 
     const workspaceIds = [...new Set(collections.map((c) => c.workspaceId))];
-    const workspaces = await db.workspaces.where("id").anyOf(workspaceIds).toArray();
+    const workspaces =
+      workspaceIds.length > 0 ? await db.workspaces.where("id").anyOf(workspaceIds).toArray() : [];
     const workspaceMap = new Map(workspaces.map((w) => [w.id, w]));
 
     const enriched: SearchResult[] = matched.map((tab) => {
@@ -58,7 +72,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
       return aTitle - bTitle;
     });
 
-    setResults(enriched.slice(0, 50));
+    setResults(enriched);
     setSelectedIndex(0);
   }, []);
 
@@ -91,6 +105,26 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     }
   }
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Focus trap: keep Tab cycling within the dialog
+  function handleDialogKeyDown(e: ReactKeyboardEvent) {
+    if (e.key !== "Tab") return;
+    const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'input, button, [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusable?.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
   if (!open) return null;
 
   return (
@@ -103,7 +137,14 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
         aria-label="Close search"
       />
       {/* Dialog */}
-      <div className="fixed left-1/2 top-[20%] z-50 w-full max-w-lg -translate-x-1/2 rounded-xl border bg-popover shadow-lg">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search saved tabs"
+        onKeyDown={handleDialogKeyDown}
+        className="fixed left-1/2 top-[20%] z-50 w-full max-w-lg -translate-x-1/2 rounded-xl border bg-popover shadow-lg"
+      >
         {/* Search input */}
         <div className="flex items-center gap-2 border-b px-4 py-3">
           <Search className="size-4 text-muted-foreground" />

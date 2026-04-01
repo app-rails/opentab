@@ -34,7 +34,9 @@ export function CollectionTabItem({ tab, onRemove }: CollectionTabItemProps) {
   }
 
   function handleCopyUrl() {
-    navigator.clipboard.writeText(tab.url);
+    void navigator.clipboard.writeText(tab.url).catch(() => {
+      // Silently fail — clipboard API may be blocked in extension context
+    });
   }
 
   return (

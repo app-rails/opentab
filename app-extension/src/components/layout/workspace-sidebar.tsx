@@ -175,9 +175,9 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
             variant="ghost"
             size="sm"
             className="w-full justify-start gap-2 text-sm text-sidebar-foreground/70"
+            disabled
             onClick={() => {
               // TODO: Wire to actual Google auth flow
-              console.log("Sign in with Google");
             }}
           >
             <GoogleIcon />
