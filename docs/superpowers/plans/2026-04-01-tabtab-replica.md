@@ -126,6 +126,7 @@ import { DRAG_TYPES } from "@/lib/dnd-types";
 
 interface CollectionTabItemProps {
   tab: CollectionTab;
+  isOpen?: boolean; // kept optional for backward compat until collection-card is updated
   onRemove: () => void;
 }
 
@@ -519,7 +520,15 @@ git commit -m "feat: rewrite CollectionCard as section-based collapsible layout"
 - [ ] **Step 1: Create about-page.tsx**
 
 ```tsx
-import { ExternalLink, Github } from "lucide-react";
+import { ExternalLink } from "lucide-react";
+
+function GithubIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+    </svg>
+  );
+}
 
 export function AboutPage() {
   const version = (() => {
@@ -594,7 +603,7 @@ export function AboutPage() {
           rel="noopener noreferrer"
           className="text-foreground hover:text-foreground/80"
         >
-          <Github className="size-5" />
+          <GithubIcon className="size-5" />
         </a>
       </div>
     </div>
@@ -1016,13 +1025,14 @@ git commit -m "feat: rewrite sidebar with collapsible layout, PanelLeft toggle, 
 Replace the entire file with:
 
 ```tsx
-import { EllipsisVertical, ImagePlus, Pencil, Plus, Trash2, Zap } from "lucide-react";
+import { EllipsisVertical, Pencil, Plus, Trash2, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AboutPage } from "@/components/layout/about-page";
 import { SearchDialog } from "@/components/layout/search-dialog";
 import { CollectionCard } from "@/components/collection/collection-card";
 import { CreateCollectionDialog } from "@/components/collection/create-collection-dialog";
 import { DeleteCollectionDialog } from "@/components/collection/delete-collection-dialog";
+import { DeleteWorkspaceDialog } from "@/components/workspace/delete-workspace-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -1058,6 +1068,7 @@ export function CollectionPanel({
 
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TabCollection | null>(null);
+  const [deleteWorkspaceOpen, setDeleteWorkspaceOpen] = useState(false);
   const addButtonRef = useRef<HTMLButtonElement>(null);
 
   // Inline rename state
@@ -1169,14 +1180,6 @@ export function CollectionPanel({
                 <Pencil className="mr-2 size-4" />
                 Rename Space
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  // Icon picker is on workspace-item; just inform user
-                }}
-              >
-                <ImagePlus className="mr-2 size-4" />
-                Change Icon
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 disabled={activeWorkspace?.isDefault}
@@ -1185,6 +1188,9 @@ export function CollectionPanel({
                     ? "text-muted-foreground"
                     : "text-destructive focus:text-destructive"
                 }
+                onClick={() => {
+                  if (!activeWorkspace?.isDefault) setDeleteWorkspaceOpen(true);
+                }}
               >
                 <Trash2 className="mr-2 size-4" />
                 Delete Space
@@ -1224,6 +1230,13 @@ export function CollectionPanel({
         onAfterDelete={() => addButtonRef.current?.focus()}
       />
       <SearchDialog open={searchOpen} onOpenChange={onSearchOpenChange} />
+      <DeleteWorkspaceDialog
+        workspaceId={activeWorkspace?.id ?? null}
+        workspaceName={activeWorkspace?.name ?? ""}
+        open={deleteWorkspaceOpen}
+        onOpenChange={setDeleteWorkspaceOpen}
+        onAfterDelete={() => addButtonRef.current?.focus()}
+      />
     </main>
   );
 }
@@ -1279,13 +1292,8 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
   const displayTabs = sortReversed ? [...liveTabs].reverse() : liveTabs;
 
   return (
-    <aside
-      className={cn(
-        "relative flex h-full flex-col border-l border-border bg-background overflow-hidden transition-all duration-300 ease-in-out",
-        collapsed ? "w-0 border-l-0" : "w-64",
-      )}
-    >
-      {/* Collapse toggle button — always visible */}
+    <div className="relative flex h-full">
+      {/* Collapse toggle button — outside overflow-hidden so always visible */}
       <button
         type="button"
         className="absolute top-3 -left-3 z-10 flex size-6 items-center justify-center rounded-full border bg-background shadow-sm hover:bg-accent"
@@ -1299,6 +1307,13 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
           )}
         />
       </button>
+
+      <aside
+        className={cn(
+          "flex h-full flex-col border-l border-border bg-background overflow-hidden transition-all duration-300 ease-in-out",
+          collapsed ? "w-0 border-l-0" : "w-64",
+        )}
+      >
 
       {/* Header */}
       <div className="flex h-14 items-center justify-between border-b border-border px-4">
@@ -1344,7 +1359,8 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
       {savableTabs.length > 0 && (
         <SaveTabsDialog open={dialogOpen} onOpenChange={setDialogOpen} tabs={savableTabs} />
       )}
-    </aside>
+      </aside>
+    </div>
   );
 }
 ```
@@ -1453,12 +1469,18 @@ export default function App() {
   const [preZenSidebar, setPreZenSidebar] = useState(false);
   const [preZenPanel, setPreZenPanel] = useState(false);
 
-  // Load persisted collapse states
+  // Load persisted collapse states; collapse both on small viewports
   useEffect(() => {
-    getSettings().then((s) => {
-      setSidebarCollapsed(s.sidebar_collapsed);
-      setRightPanelCollapsed(s.right_panel_collapsed);
-    });
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setSidebarCollapsed(true);
+      setRightPanelCollapsed(true);
+    } else {
+      getSettings().then((s) => {
+        setSidebarCollapsed(s.sidebar_collapsed);
+        setRightPanelCollapsed(s.right_panel_collapsed);
+      });
+    }
   }, []);
 
   // Initialize store
@@ -1486,18 +1508,18 @@ export default function App() {
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => {
       const next = !prev;
-      saveSettings({ sidebar_collapsed: next });
+      if (!isZenMode) saveSettings({ sidebar_collapsed: next });
       return next;
     });
-  }, []);
+  }, [isZenMode]);
 
   const toggleRightPanel = useCallback(() => {
     setRightPanelCollapsed((prev) => {
       const next = !prev;
-      saveSettings({ right_panel_collapsed: next });
+      if (!isZenMode) saveSettings({ right_panel_collapsed: next });
       return next;
     });
-  }, []);
+  }, [isZenMode]);
 
   const toggleZenMode = useCallback(() => {
     setIsZenMode((prev) => {
