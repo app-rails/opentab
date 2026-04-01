@@ -38,6 +38,25 @@ const customCollisionDetection: CollisionDetection = (args) => {
   return closestCenter(args);
 };
 
+const announcements: Announcements = {
+  onDragStart({ active }) {
+    const data = active.data.current as DragData | undefined;
+    return `Picked up ${data?.tab?.title ?? "item"}`;
+  },
+  onDragOver({ active, over }) {
+    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+    return over ? `${title} is over drop target` : `${title} is no longer over a drop target`;
+  },
+  onDragEnd({ active, over }) {
+    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+    return over ? `${title} was dropped` : `${title} was dropped outside a target`;
+  },
+  onDragCancel({ active }) {
+    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+    return `Dragging ${title} was cancelled`;
+  },
+};
+
 export default function App() {
   const isLoading = useAppStore((s) => s.isLoading);
 
@@ -147,25 +166,6 @@ export default function App() {
       </div>
     );
   }
-
-  const announcements: Announcements = {
-    onDragStart({ active }) {
-      const data = active.data.current as DragData | undefined;
-      return `Picked up ${data?.tab?.title ?? "item"}`;
-    },
-    onDragOver({ active, over }) {
-      const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
-      return over ? `${title} is over drop target` : `${title} is no longer over a drop target`;
-    },
-    onDragEnd({ active, over }) {
-      const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
-      return over ? `${title} was dropped` : `${title} was dropped outside a target`;
-    },
-    onDragCancel({ active }) {
-      const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
-      return `Dragging ${title} was cancelled`;
-    },
-  };
 
   const activeDragData = activeDrag?.data.current as DragData | undefined;
 
