@@ -1,6 +1,6 @@
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronLeft, PanelLeft, Plus, Settings } from "lucide-react";
+import { ChevronLeft, Monitor, Moon, PanelLeft, Plus, Settings, Sun } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
@@ -8,8 +8,12 @@ import { DeleteWorkspaceDialog } from "@/components/workspace/delete-workspace-d
 import { WorkspaceItem } from "@/components/workspace/workspace-item";
 import type { Workspace } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
+import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
+
+const THEME_ICON = { light: Sun, dark: Moon, system: Monitor } as const;
+const THEME_LABEL = { light: "Light", dark: "Dark", system: "System" } as const;
 
 function SortableWorkspaceItem({
   workspace,
@@ -58,8 +62,10 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
   const setActiveWorkspace = useAppStore((s) => s.setActiveWorkspace);
 
+  const { mode, cycleTheme } = useTheme();
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Workspace | null>(null);
+  const ThemeIcon = THEME_ICON[mode];
 
   return (
     <div className={cn("relative shrink-0", collapsed ? "w-3" : "")}>
@@ -150,17 +156,26 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
         <div className="mx-2 h-[1px] bg-sidebar-border" />
 
         {/* Footer */}
-        <div className="flex flex-col gap-0.5 px-2 py-2">
+        <div className="flex items-center gap-0.5 px-2 py-2">
           <Button
             variant="ghost"
             size="sm"
-            className="w-full justify-start gap-2 text-sm text-sidebar-foreground/70"
+            className="flex-1 justify-start gap-2 text-sm text-sidebar-foreground/70"
             onClick={() => {
               chrome.tabs.create({ url: chrome.runtime.getURL("/settings.html") });
             }}
           >
             <Settings className="size-4" />
             Settings
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={cycleTheme}
+            aria-label={`Theme: ${THEME_LABEL[mode]}`}
+            title={`Theme: ${THEME_LABEL[mode]}`}
+          >
+            <ThemeIcon className="size-4 text-sidebar-foreground/70" />
           </Button>
         </div>
       </aside>
