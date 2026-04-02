@@ -67,7 +67,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Icon</label>
+            <span className="text-sm font-medium">Icon</span>
             <IconPicker value={icon} onChange={setIcon} />
           </div>
         </div>

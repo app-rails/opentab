@@ -9,9 +9,9 @@ import {
   type WorkspaceIconName,
 } from "@/lib/constants";
 import type { CollectionTab, TabCollection, Workspace } from "@/lib/db";
-import type { ViewMode } from "@/lib/view-mode";
 import { db } from "@/lib/db";
 import { compareByOrder } from "@/lib/utils";
+import type { ViewMode } from "@/lib/view-mode";
 
 function loadCollections(workspaceId: number) {
   return db.tabCollections
@@ -55,7 +55,7 @@ function buildLiveTabUrls(tabs: chrome.tabs.Tab[]): Set<string> {
   return new Set(tabs.map((t) => t.url).filter((u): u is string => u != null));
 }
 
-async function resolveAccountId(): Promise<string> {
+export async function resolveAccountId(): Promise<string> {
   const authState = await getAuthState();
   if (authState?.mode === "online") return authState.accountId;
   if (authState?.mode === "offline") return authState.localUuid;
@@ -214,12 +214,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     const lastOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : null;
     const newOrder = generateKeyBetween(lastOrder, null);
 
+    const now = Date.now();
     const workspace: Workspace = {
       accountId: await resolveAccountId(),
       name: validName,
       icon: validatedIcon(icon),
       order: newOrder,
-      createdAt: Date.now(),
+      createdAt: now,
+      updatedAt: now,
     };
     const id = await db.workspaces.add(workspace);
     workspace.id = id as number;
@@ -238,16 +240,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = workspaces.find((w) => w.id === id);
     if (!prev) return;
 
-    // Optimistic update
+    const now = Date.now();
     set({
-      workspaces: workspaces.map((w) => (w.id === id ? { ...w, name: validName } : w)),
+      workspaces: workspaces.map((w) =>
+        w.id === id ? { ...w, name: validName, updatedAt: now } : w,
+      ),
     });
 
     try {
-      await db.workspaces.update(id, { name: validName });
+      await db.workspaces.update(id, { name: validName, updatedAt: now });
     } catch (err) {
       console.error("[store] failed to rename workspace:", err);
-      // Revert
       set({ workspaces: workspaces.map((w) => (w.id === id ? prev : w)) });
     }
   },
@@ -258,13 +261,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = workspaces.find((w) => w.id === id);
     if (!prev) return;
 
-    // Optimistic update
+    const now = Date.now();
     set({
-      workspaces: workspaces.map((w) => (w.id === id ? { ...w, icon: validIcon } : w)),
+      workspaces: workspaces.map((w) =>
+        w.id === id ? { ...w, icon: validIcon, updatedAt: now } : w,
+      ),
     });
 
     try {
-      await db.workspaces.update(id, { icon: validIcon });
+      await db.workspaces.update(id, { icon: validIcon, updatedAt: now });
     } catch (err) {
       console.error("[store] failed to change workspace icon:", err);
       set({ workspaces: workspaces.map((w) => (w.id === id ? prev : w)) });
@@ -277,13 +282,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!prev) return;
     if (prev.viewMode === mode) return;
 
-    // Optimistic update
+    const now = Date.now();
     set({
-      workspaces: workspaces.map((w) => (w.id === id ? { ...w, viewMode: mode } : w)),
+      workspaces: workspaces.map((w) =>
+        w.id === id ? { ...w, viewMode: mode, updatedAt: now } : w,
+      ),
     });
 
     try {
-      await db.workspaces.update(id, { viewMode: mode });
+      await db.workspaces.update(id, { viewMode: mode, updatedAt: now });
     } catch (err) {
       console.error("[store] failed to set workspace view mode:", err);
       set({ workspaces: workspaces.map((w) => (w.id === id ? prev : w)) });
@@ -330,13 +337,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = workspaces.find((w) => w.id === id);
     if (!prev) return;
 
+    const now = Date.now();
     const updated = workspaces
-      .map((w) => (w.id === id ? { ...w, order: newOrder } : w))
+      .map((w) => (w.id === id ? { ...w, order: newOrder, updatedAt: now } : w))
       .sort(compareByOrder);
     set({ workspaces: updated });
 
     try {
-      await db.workspaces.update(id, { order: newOrder });
+      await db.workspaces.update(id, { order: newOrder, updatedAt: now });
     } catch (err) {
       console.error("[store] failed to reorder workspace:", err);
       set({ workspaces: [...workspaces].sort(compareByOrder) });
@@ -354,11 +362,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const lastOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : null;
     const newOrder = generateKeyBetween(lastOrder, null);
 
+    const now = Date.now();
     const collection: TabCollection = {
       workspaceId: activeWorkspaceId,
       name: validName,
       order: newOrder,
-      createdAt: Date.now(),
+      createdAt: now,
+      updatedAt: now,
     };
     const id = await db.tabCollections.add(collection);
     collection.id = id as number;
@@ -379,12 +389,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = collections.find((c) => c.id === id);
     if (!prev) return;
 
+    const now = Date.now();
     set({
-      collections: collections.map((c) => (c.id === id ? { ...c, name: validName } : c)),
+      collections: collections.map((c) =>
+        c.id === id ? { ...c, name: validName, updatedAt: now } : c,
+      ),
     });
 
     try {
-      await db.tabCollections.update(id, { name: validName });
+      await db.tabCollections.update(id, { name: validName, updatedAt: now });
     } catch (err) {
       console.error("[store] failed to rename collection:", err);
       set({ collections: collections.map((c) => (c.id === id ? prev : c)) });
@@ -420,13 +433,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = collections.find((c) => c.id === id);
     if (!prev) return;
 
+    const now = Date.now();
     const updated = collections
-      .map((c) => (c.id === id ? { ...c, order: newOrder } : c))
+      .map((c) => (c.id === id ? { ...c, order: newOrder, updatedAt: now } : c))
       .sort(compareByOrder);
     set({ collections: updated });
 
     try {
-      await db.tabCollections.update(id, { order: newOrder });
+      await db.tabCollections.update(id, { order: newOrder, updatedAt: now });
     } catch (err) {
       console.error("[store] failed to reorder collection:", err);
       set({ collections: [...collections].sort(compareByOrder) });
@@ -443,13 +457,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     const lastOrder = existingTabs.length > 0 ? existingTabs[existingTabs.length - 1].order : null;
     const newOrder = generateKeyBetween(lastOrder, null);
 
+    const now = Date.now();
     const newTab: CollectionTab = {
       collectionId,
       url: tab.url,
       title: tab.title,
       favIconUrl: tab.favIconUrl,
       order: newOrder,
-      createdAt: Date.now(),
+      createdAt: now,
+      updatedAt: now,
     };
     const id = await db.collectionTabs.add(newTab);
     newTab.id = id as number;
@@ -460,19 +476,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   removeTabFromCollection: async (tabId, collectionId) => {
-    const { tabsByCollection } = get();
+    const { tabsByCollection, collections } = get();
     const prevTabs = tabsByCollection.get(collectionId);
     if (!prevTabs) return;
 
+    const now = Date.now();
     const newMap = new Map(tabsByCollection);
     newMap.set(
       collectionId,
       prevTabs.filter((t) => t.id !== tabId),
     );
-    set({ tabsByCollection: newMap });
+    set({
+      tabsByCollection: newMap,
+      collections: collections.map((c) => (c.id === collectionId ? { ...c, updatedAt: now } : c)),
+    });
 
     try {
       await db.collectionTabs.delete(tabId);
+      await db.tabCollections.update(collectionId, { updatedAt: now });
     } catch (err) {
       console.error("[store] failed to remove tab:", err);
       const revertMap = new Map(get().tabsByCollection);
@@ -486,8 +507,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prevTabs = tabsByCollection.get(collectionId);
     if (!prevTabs) return;
 
+    const now = Date.now();
     const updated = prevTabs
-      .map((t) => (t.id === tabId ? { ...t, order: newOrder } : t))
+      .map((t) => (t.id === tabId ? { ...t, order: newOrder, updatedAt: now } : t))
       .sort(compareByOrder);
 
     const newMap = new Map(tabsByCollection);
@@ -495,7 +517,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ tabsByCollection: newMap });
 
     try {
-      await db.collectionTabs.update(tabId, { order: newOrder });
+      await db.collectionTabs.update(tabId, { order: newOrder, updatedAt: now });
     } catch (err) {
       console.error("[store] failed to reorder tab:", err);
       const revertMap = new Map(get().tabsByCollection);
@@ -514,11 +536,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const lastCollectionOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : null;
     const collectionOrder = generateKeyBetween(lastCollectionOrder, null);
 
+    const now = Date.now();
     const collection: TabCollection = {
       workspaceId: activeWorkspaceId,
       name: validName,
       order: collectionOrder,
-      createdAt: Date.now(),
+      createdAt: now,
+      updatedAt: now,
     };
 
     const collectionTabs: CollectionTab[] = [];
@@ -531,7 +555,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         title: tab.title,
         favIconUrl: tab.favIconUrl,
         order: tabOrder,
-        createdAt: Date.now(),
+        createdAt: now,
+        updatedAt: now,
       });
       prevTabOrder = tabOrder;
     }
@@ -585,7 +610,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       set({ liveTabUrls: optimisticUrls });
 
-      await Promise.all(tabsToOpen.map((tab) => chrome.tabs.create({ url: tab.url, active: false })));
+      await Promise.all(
+        tabsToOpen.map((tab) => chrome.tabs.create({ url: tab.url, active: false })),
+      );
     } catch (err) {
       console.error("[store] failed to restore collection:", err);
     }

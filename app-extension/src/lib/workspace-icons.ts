@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   Book,
   Briefcase,
@@ -24,7 +25,6 @@ import {
   Wallet,
   Zap,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 export const WORKSPACE_ICONS: Record<string, LucideIcon> = {
   folder: Folder,

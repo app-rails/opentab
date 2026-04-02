@@ -26,7 +26,14 @@ const VIEW_MODE_OPTIONS: { mode: ViewMode; label: string; btnClass: string; icon
     label: "Default view",
     btnClass: "rounded-r-none",
     icon: (
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg
+        aria-hidden="true"
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
         <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
         <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
         <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
@@ -39,7 +46,14 @@ const VIEW_MODE_OPTIONS: { mode: ViewMode; label: string; btnClass: string; icon
     label: "Compact view",
     btnClass: "rounded-none border-x border-border",
     icon: (
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg
+        aria-hidden="true"
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
         <rect x="1" y="1" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" />
         <rect x="9" y="1" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" />
         <rect x="1" y="7" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" />
@@ -52,10 +66,41 @@ const VIEW_MODE_OPTIONS: { mode: ViewMode; label: string; btnClass: string; icon
     label: "List view",
     btnClass: "rounded-l-none",
     icon: (
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <line x1="1" y1="3" x2="15" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="1" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="1" y1="13" x2="15" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <svg
+        aria-hidden="true"
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <line
+          x1="1"
+          y1="3"
+          x2="15"
+          y2="3"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        <line
+          x1="1"
+          y1="8"
+          x2="15"
+          y2="8"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        <line
+          x1="1"
+          y1="13"
+          x2="15"
+          y2="13"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
       </svg>
     ),
   },
@@ -192,7 +237,9 @@ export function CollectionPanel({
                 variant="ghost"
                 size="icon-xs"
                 className={cn(btnClass, viewMode === mode && "bg-accent")}
-                onClick={() => activeWorkspace?.id != null && setWorkspaceViewMode(activeWorkspace.id, mode)}
+                onClick={() =>
+                  activeWorkspace?.id != null && setWorkspaceViewMode(activeWorkspace.id, mode)
+                }
                 title={label}
                 aria-label={label}
               >

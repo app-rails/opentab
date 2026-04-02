@@ -101,9 +101,7 @@ export function WorkspaceItem({
           onClick={onRequestDelete}
           disabled={isLastWorkspace}
           className={cn(
-            isLastWorkspace
-              ? "text-muted-foreground"
-              : "text-destructive focus:text-destructive",
+            isLastWorkspace ? "text-muted-foreground" : "text-destructive focus:text-destructive",
           )}
         >
           <Trash2 className="mr-2 size-4" />
@@ -121,22 +119,15 @@ export function WorkspaceItem({
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <PopoverAnchor asChild>
-            <div
-              role="button"
-              tabIndex={0}
+            <button
+              type="button"
               className={cn(
-                "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+                "group flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
                 isActive
                   ? "bg-sidebar-accent text-sidebar-accent-foreground border border-sidebar-accent-foreground/10"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50",
               )}
               onClick={onSelect}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onSelect();
-                }
-              }}
               onDoubleClick={(e) => {
                 e.stopPropagation();
                 startRename();
@@ -159,7 +150,9 @@ export function WorkspaceItem({
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <span className="flex-1 truncate" title="Double-click to rename">{workspace.name}</span>
+                <span className="flex-1 truncate" title="Double-click to rename">
+                  {workspace.name}
+                </span>
               )}
 
               <DropdownMenu>
@@ -177,7 +170,7 @@ export function WorkspaceItem({
                   {renderMenuItems(DropdownMenuItem, DropdownMenuSeparator)}
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
+            </button>
           </PopoverAnchor>
         </ContextMenuTrigger>
         <ContextMenuContent>

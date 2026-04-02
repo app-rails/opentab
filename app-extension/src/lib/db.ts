@@ -17,6 +17,7 @@ export interface Workspace {
   order: string;
   viewMode?: ViewMode;
   createdAt: number;
+  updatedAt: number;
 }
 
 export interface TabCollection {
@@ -25,6 +26,7 @@ export interface TabCollection {
   name: string;
   order: string;
   createdAt: number;
+  updatedAt: number;
 }
 
 export interface CollectionTab {
@@ -35,11 +37,18 @@ export interface CollectionTab {
   favIconUrl?: string;
   order: string;
   createdAt: number;
+  updatedAt: number;
 }
 
 export interface Setting {
   key: string;
   value: string;
+}
+
+export interface ImportSession {
+  id?: number;
+  data: string;
+  createdAt: number;
 }
 
 const db = new Dexie("OpenTabDB") as Dexie & {
@@ -48,6 +57,7 @@ const db = new Dexie("OpenTabDB") as Dexie & {
   tabCollections: EntityTable<TabCollection, "id">;
   collectionTabs: EntityTable<CollectionTab, "id">;
   settings: EntityTable<Setting, "key">;
+  importSessions: EntityTable<ImportSession, "id">;
 };
 
 db.version(1).stores({
@@ -112,6 +122,24 @@ db.version(2)
         const nk = generateKeyBetween(pk, null);
         await tx.table("collectionTabs").update(t.id, { order: nk });
         pk = nk;
+      }
+    }
+  });
+
+db.version(3)
+  .stores({
+    accounts: "++id, accountId",
+    workspaces: "++id, accountId, order",
+    tabCollections: "++id, workspaceId, [workspaceId+order]",
+    collectionTabs: "++id, collectionId, [collectionId+order]",
+    settings: "key",
+    importSessions: "++id, createdAt",
+  })
+  .upgrade(async (tx) => {
+    for (const tableName of ["workspaces", "tabCollections", "collectionTabs"]) {
+      const records = await tx.table(tableName).toArray();
+      for (const r of records) {
+        await tx.table(tableName).update(r.id, { updatedAt: r.createdAt });
       }
     }
   });

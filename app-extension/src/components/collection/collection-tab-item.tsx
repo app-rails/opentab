@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { CollectionTab } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
-import type { ViewMode } from "@/lib/view-mode";
 import { cn } from "@/lib/utils";
+import type { ViewMode } from "@/lib/view-mode";
 
 interface CollectionTabItemProps {
   tab: CollectionTab;

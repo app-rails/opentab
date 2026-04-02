@@ -9,7 +9,7 @@ export default defineConfig({
   srcDir: "src",
   modules: ["@wxt-dev/module-react"],
   manifest: {
-    permissions: ["storage", "alarms", "tabs"],
+    permissions: ["storage", "alarms", "tabs", "downloads"],
     action: {},
   },
   vite: () => ({

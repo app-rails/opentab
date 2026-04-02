@@ -40,6 +40,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
   };
 
   // Reset selections when dialog opens
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally only reset on open change, tabs sync handled separately
   useEffect(() => {
     if (open) {
       setName(formatTimestamp());
@@ -93,7 +94,9 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
         favIconUrl: t.favIconUrl,
       }));
     saveTabsAsCollection(trimmedName, selectedTabs);
-    toast.success(`Saved ${selectedTabs.length} tab${selectedTabs.length === 1 ? "" : "s"} to "${trimmedName}"`);
+    toast.success(
+      `Saved ${selectedTabs.length} tab${selectedTabs.length === 1 ? "" : "s"} to "${trimmedName}"`,
+    );
     onOpenChange(false);
   }
 
@@ -121,6 +124,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
 
           <div className="max-h-[280px] space-y-0.5 overflow-auto rounded-md border p-2">
             {tabs.map((tab) => (
+              // biome-ignore lint/a11y/noLabelWithoutControl: label wraps Radix Checkbox which renders input internally
               <label
                 key={tab.id}
                 className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
