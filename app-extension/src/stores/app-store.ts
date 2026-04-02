@@ -9,6 +9,7 @@ import {
   type WorkspaceIconName,
 } from "@/lib/constants";
 import type { CollectionTab, TabCollection, Workspace } from "@/lib/db";
+import type { ViewMode } from "@/lib/view-mode";
 import { db } from "@/lib/db";
 import { compareByOrder } from "@/lib/utils";
 
@@ -77,6 +78,7 @@ interface AppState {
   createWorkspace: (name: string, icon: string) => Promise<void>;
   renameWorkspace: (id: number, name: string) => Promise<void>;
   changeWorkspaceIcon: (id: number, icon: string) => Promise<void>;
+  setWorkspaceViewMode: (id: number, mode: ViewMode) => Promise<void>;
   deleteWorkspace: (id: number) => Promise<void>;
   reorderWorkspace: (id: number, newOrder: string) => Promise<void>;
 
@@ -261,6 +263,24 @@ export const useAppStore = create<AppState>((set, get) => ({
       await db.workspaces.update(id, { icon: validIcon });
     } catch (err) {
       console.error("[store] failed to change workspace icon:", err);
+      set({ workspaces: workspaces.map((w) => (w.id === id ? prev : w)) });
+    }
+  },
+
+  setWorkspaceViewMode: async (id, mode) => {
+    const { workspaces } = get();
+    const prev = workspaces.find((w) => w.id === id);
+    if (!prev) return;
+
+    // Optimistic update
+    set({
+      workspaces: workspaces.map((w) => (w.id === id ? { ...w, viewMode: mode } : w)),
+    });
+
+    try {
+      await db.workspaces.update(id, { viewMode: mode });
+    } catch (err) {
+      console.error("[store] failed to set workspace view mode:", err);
       set({ workspaces: workspaces.map((w) => (w.id === id ? prev : w)) });
     }
   },
