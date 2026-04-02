@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from "dexie";
 import { generateKeyBetween } from "fractional-indexing";
+import type { ViewMode } from "@/lib/view-mode";
 
 export interface Account {
   id?: number;
@@ -15,6 +16,7 @@ export interface Workspace {
   icon: string;
   isDefault: boolean;
   order: string;
+  viewMode?: ViewMode;
   createdAt: number;
 }
 
