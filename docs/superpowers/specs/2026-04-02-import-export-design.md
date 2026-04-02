@@ -91,7 +91,7 @@ interface ImportSession {
 The import page reads the session by ID from the URL query param, then deletes it after loading. Stale sessions (>1 hour old) can be cleaned up on page load.
 
 ### Write Operations
-All 12 mutations in `app-store.ts` must set `updatedAt: Date.now()`:
+All 14 mutations in `app-store.ts` must set `updatedAt: Date.now()`:
 
 **Create operations** (`updatedAt = createdAt = Date.now()`):
 - `createWorkspace`
