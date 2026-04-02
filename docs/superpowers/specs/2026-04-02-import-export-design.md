@@ -60,7 +60,11 @@ Add `updatedAt: number` to `Workspace`, `TabCollection`, and `CollectionTab` int
 New Dexie version (3):
 ```typescript
 db.version(3)
-  .stores({ /* same indexes, no new indexes needed for updatedAt */ })
+  .stores({
+    // existing indexes unchanged
+    // add importSessions table for data transfer to import page
+    importSessions: "++id",
+  })
   .upgrade(async (tx) => {
     // Set updatedAt = createdAt for all existing records
     for (const table of ['workspaces', 'tabCollections', 'collectionTabs']) {
@@ -71,6 +75,20 @@ db.version(3)
     }
   });
 ```
+
+### `importSessions` Table Schema
+
+Temporary storage for passing parsed import data to the import page:
+
+```typescript
+interface ImportSession {
+  id?: number
+  data: string      // JSON-stringified ImportData
+  createdAt: number  // for stale session cleanup
+}
+```
+
+The import page reads the session by ID from the URL query param, then deletes it after loading. Stale sessions (>1 hour old) can be cleaned up on page load.
 
 ### Write Operations
 All 12 mutations in `app-store.ts` must set `updatedAt: Date.now()`:
@@ -88,10 +106,12 @@ All 12 mutations in `app-store.ts` must set `updatedAt: Date.now()`:
 - `reorderWorkspace`
 - `renameCollection`
 - `reorderCollection`
+- `reorderTabInCollection`
 
-**Delete operations** (no `updatedAt` needed):
+**Delete operations** (no `updatedAt` on deleted record; bump parent collection's `updatedAt`):
 - `deleteWorkspace`
 - `deleteCollection`
+- `removeTabFromCollection`
 
 ---
 
