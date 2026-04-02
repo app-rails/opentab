@@ -101,10 +101,12 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
           tabCount += colPlan.allTabs.length;
         } else {
           // Merge into existing collection
+          let merged = false;
+
           if (colPlan.toAdd.length > 0) {
             await addTabsToCollection(colPlan.existingCollectionId, colPlan.toAdd);
             tabCount += colPlan.toAdd.length;
-            collectionCount++;
+            merged = true;
           }
 
           // Delete extra existing tabs user chose to remove
@@ -113,26 +115,27 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
             .map((t) => t.id);
           if (toDeleteIds.length > 0) {
             await db.collectionTabs.bulkDelete(toDeleteIds);
+            merged = true;
           }
 
           // Apply metadata updates (newer title/favIconUrl from import)
-          for (const update of colPlan.metadataUpdates) {
-            await db.collectionTabs.update(update.existingTabId, {
-              title: update.title,
-              favIconUrl: update.favIconUrl,
-              updatedAt: Date.now(),
-            });
+          if (colPlan.metadataUpdates.length > 0) {
+            for (const update of colPlan.metadataUpdates) {
+              await db.collectionTabs.update(update.existingTabId, {
+                title: update.title,
+                favIconUrl: update.favIconUrl,
+                updatedAt: Date.now(),
+              });
+            }
+            merged = true;
           }
 
-          // Bump collection updatedAt
-          if (
-            colPlan.toAdd.length > 0 ||
-            toDeleteIds.length > 0 ||
-            colPlan.metadataUpdates.length > 0
-          ) {
+          // Bump collection updatedAt and count
+          if (merged) {
             await db.tabCollections.update(colPlan.existingCollectionId, {
               updatedAt: Date.now(),
             });
+            collectionCount++;
           }
         }
       }

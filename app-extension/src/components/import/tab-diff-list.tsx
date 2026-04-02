@@ -9,9 +9,9 @@ export function NewTabList({ tabs }: NewTabListProps) {
   if (tabs.length === 0) return null;
   return (
     <div className="space-y-1">
-      {tabs.map((tab, i) => (
+      {tabs.map((tab, index) => (
         <div
-          key={`${tab.url}-${i}`}
+          key={`${tab.url}::${tab.title}::${index.toString()}`}
           className="flex items-center gap-2 rounded-md bg-green-500/10 px-3 py-1.5 text-sm"
         >
           <span className="font-medium text-green-700 dark:text-green-400">+</span>

@@ -10,8 +10,8 @@ export function detectFormat(json: unknown): ImportSource | null {
     return "tabtab";
   }
 
-  // OpenTab: has version (number) + workspaces (array)
-  if (typeof obj.version === "number" && Array.isArray(obj.workspaces)) {
+  // OpenTab: has version === 1 + workspaces (array)
+  if (obj.version === 1 && Array.isArray(obj.workspaces)) {
     return "opentab";
   }
 

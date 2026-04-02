@@ -62,21 +62,15 @@ export function ImportTree({
                 const displayStatus = col.status === "conflict" ? colPlan.strategy : col.status;
 
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={col.name}
                     className={cn(
-                      "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1",
+                      "flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left",
                       isSelected && "bg-accent",
                       col.status === "same" && "opacity-50",
                     )}
                     onClick={() => onSelectCollection({ wsIndex: wi, colIndex: ci })}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        onSelectCollection({ wsIndex: wi, colIndex: ci });
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
                   >
                     <Checkbox
                       checked={colPlan.selected}
@@ -85,7 +79,7 @@ export function ImportTree({
                     />
                     <span className="flex-1 truncate text-sm">{col.name}</span>
                     {statusBadge(displayStatus)}
-                  </div>
+                  </button>
                 );
               })}
             </div>
