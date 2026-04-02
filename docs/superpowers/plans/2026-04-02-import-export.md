@@ -337,6 +337,8 @@ Also update the optimistic collection state:
     });
 ```
 
+**Note on delete operations:** `deleteWorkspace` and `deleteCollection` remove records entirely — no `updatedAt` is needed on deleted records. `deleteCollection` does not bump the parent workspace's `updatedAt` since workspace-level timestamps are not currently used for diff detection (diff matches by name, not timestamp). If future sync requires this, it can be added later.
+
 - [ ] **Step 13: Export `resolveAccountId`**
 
 Change `resolveAccountId` from a module-private function to an exported function. Change:
@@ -408,7 +410,7 @@ export interface DiffResult {
   workspaces: WorkspaceDiff[];
 }
 
-export type WorkspaceStatus = "new" | "conflict";
+export type WorkspaceStatus = "new" | "same" | "conflict";
 export type CollectionStatus = "new" | "same" | "conflict";
 export type MergeStrategy = "merge" | "new" | "skip";
 export type ExtraTabDecision = "keep" | "delete";
@@ -860,7 +862,7 @@ export async function computeDiff(importData: ImportData): Promise<DiffResult> {
     workspaceDiffs.push({
       name: importWs.name,
       icon: importWs.icon,
-      status: collectionDiffs.some((c) => c.status !== "same") ? "conflict" : "conflict",
+      status: collectionDiffs.some((c) => c.status !== "same") ? "conflict" : "same",
       existingWorkspaceId: existingWs.id,
       collections: collectionDiffs,
     });
@@ -1601,7 +1603,7 @@ function buildInitialPlan(diff: DiffResult): ImportPlan {
     workspaces: diff.workspaces.map<WorkspaceImportPlan>((ws) => ({
       name: ws.name,
       icon: ws.icon,
-      selected: ws.collections.some((c) => c.status !== "same"),
+      selected: ws.status !== "same",
       existingWorkspaceId: ws.existingWorkspaceId,
       collections: ws.collections.map<CollectionImportPlan>((col) => ({
         name: col.name,
@@ -1972,7 +1974,10 @@ export function ImportTree({
         return (
           <div key={ws.name}>
             {/* Workspace node */}
-            <div className="flex items-center gap-2 rounded-md px-2 py-1.5">
+            <div className={cn(
+              "flex items-center gap-2 rounded-md px-2 py-1.5",
+              ws.status === "same" && "opacity-50",
+            )}>
               <Checkbox
                 checked={wsPlan.selected}
                 onCheckedChange={() => onToggleWorkspace(wi)}
@@ -2009,10 +2014,7 @@ export function ImportTree({
                   >
                     <Checkbox
                       checked={colPlan.selected}
-                      onCheckedChange={(e) => {
-                        e.stopPropagation?.();
-                        onToggleCollection(wi, ci);
-                      }}
+                      onCheckedChange={() => onToggleCollection(wi, ci)}
                       onClick={(e) => e.stopPropagation()}
                     />
                     <span className="flex-1 truncate text-sm">{col.name}</span>
