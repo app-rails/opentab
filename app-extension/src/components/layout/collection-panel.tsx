@@ -1,5 +1,5 @@
 import { EllipsisVertical, Pencil, Plus, Trash2, Zap } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { CollectionCard } from "@/components/collection/collection-card";
 import { CreateCollectionDialog } from "@/components/collection/create-collection-dialog";
 import { DeleteCollectionDialog } from "@/components/collection/delete-collection-dialog";
@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
 
-const VIEW_MODE_OPTIONS: { mode: ViewMode; label: string; btnClass: string; icon: React.ReactNode }[] = [
+const VIEW_MODE_OPTIONS: { mode: ViewMode; label: string; btnClass: string; icon: ReactNode }[] = [
   {
     mode: "default",
     label: "Default view",
