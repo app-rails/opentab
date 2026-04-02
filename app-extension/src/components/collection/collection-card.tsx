@@ -30,7 +30,6 @@ interface CollectionCardProps {
   collection: TabCollection;
   tabs: CollectionTab[];
   viewMode: ViewMode;
-  canDelete: boolean;
   onRequestDelete: () => void;
 }
 
@@ -38,7 +37,6 @@ export function CollectionCard({
   collection,
   tabs,
   viewMode,
-  canDelete,
   onRequestDelete,
 }: CollectionCardProps) {
   const renameCollection = useAppStore((s) => s.renameCollection);
@@ -143,16 +141,14 @@ export function CollectionCard({
                 <ExternalLink className="size-3.5 text-muted-foreground" />
               </Button>
             )}
-            {canDelete && (
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={onRequestDelete}
-                title="Delete collection"
-              >
-                <Trash2 className="size-3.5 text-muted-foreground" />
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={onRequestDelete}
+              title="Delete collection"
+            >
+              <Trash2 className="size-3.5 text-muted-foreground" />
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon-xs" aria-label="More actions">
@@ -171,8 +167,7 @@ export function CollectionCard({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  disabled={!canDelete}
-                  className={canDelete ? "text-destructive" : "text-muted-foreground"}
+                  className="text-destructive"
                   onClick={onRequestDelete}
                 >
                   <Trash2 className="mr-2 size-4" />

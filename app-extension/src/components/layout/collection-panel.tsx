@@ -114,7 +114,6 @@ export function CollectionPanel({
     setIsRenaming(false);
   }
 
-  const canDelete = collections.length > 1;
   const isEmpty =
     collections.length <= 1 &&
     (collections[0]?.id == null || (tabsByCollection.get(collections[0].id)?.length ?? 0) === 0);
@@ -247,7 +246,6 @@ export function CollectionPanel({
                 collection={col}
                 tabs={tabsByCollection.get(col.id!) ?? []}
                 viewMode={viewMode}
-                canDelete={canDelete && col.name !== "Unsorted"}
                 onRequestDelete={() => setDeleteTarget(col)}
               />
             ))}

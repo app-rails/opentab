@@ -22,14 +22,14 @@ export async function seedDefaultData(): Promise<void> {
   const now = Date.now();
   const firstOrder = generateKeyBetween(null, null);
 
-  await db.transaction("rw", [db.accounts, db.workspaces, db.tabCollections], async () => {
+  await db.transaction("rw", [db.accounts, db.workspaces], async () => {
     await db.accounts.add({
       accountId,
       mode: authState?.mode ?? "offline",
       createdAt: now,
     });
 
-    const workspaceId = await db.workspaces.add({
+    await db.workspaces.add({
       accountId,
       name: "Default",
       icon: DEFAULT_ICON,
@@ -37,14 +37,7 @@ export async function seedDefaultData(): Promise<void> {
       order: firstOrder,
       createdAt: now,
     });
-
-    await db.tabCollections.add({
-      workspaceId: workspaceId as number,
-      name: "Unsorted",
-      order: firstOrder,
-      createdAt: now,
-    });
   });
 
-  console.log("[db] default workspace and collection created for account:", accountId);
+  console.log("[db] default workspace created for account:", accountId);
 }

@@ -389,10 +389,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   deleteCollection: async (id) => {
     const { collections } = get();
-    if (collections.length <= 1) return;
     const collection = collections.find((c) => c.id === id);
     if (!collection) return;
-    if (collection.name === "Unsorted") return;
 
     try {
       await db.transaction("rw", [db.tabCollections, db.collectionTabs], async () => {
