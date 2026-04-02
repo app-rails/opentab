@@ -56,10 +56,16 @@ export async function exportAllData(): Promise<void> {
     type: "application/json",
   });
   const url = URL.createObjectURL(blob);
-  await chrome.downloads.download({
+  const downloadId = await chrome.downloads.download({
     url,
     filename: `opentab-backup-${new Date().toISOString().slice(0, 10)}.json`,
     saveAs: true,
   });
-  URL.revokeObjectURL(url);
+  // Revoke after download completes or fails, not immediately
+  chrome.downloads.onChanged.addListener(function listener(delta) {
+    if (delta.id === downloadId && delta.state?.current !== "in_progress") {
+      URL.revokeObjectURL(url);
+      chrome.downloads.onChanged.removeListener(listener);
+    }
+  });
 }

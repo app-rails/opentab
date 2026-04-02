@@ -20,6 +20,23 @@ import type {
 
 type PageState = "loading" | "error" | "preview" | "importing" | "done";
 
+/** Immutably update a single collection inside a plan */
+function updateCollection(
+  plan: ImportPlan,
+  wsIndex: number,
+  colIndex: number,
+  updater: (col: CollectionImportPlan) => CollectionImportPlan,
+): ImportPlan {
+  return {
+    ...plan,
+    workspaces: plan.workspaces.map((w, wi) =>
+      wi === wsIndex
+        ? { ...w, collections: w.collections.map((c, ci) => (ci === colIndex ? updater(c) : c)) }
+        : w,
+    ),
+  };
+}
+
 function buildInitialPlan(diff: DiffResult): ImportPlan {
   return {
     workspaces: diff.workspaces.map<WorkspaceImportPlan>((ws) => ({
@@ -73,8 +90,9 @@ export default function App() {
         }
 
         await db.importSessions.delete(sessionId);
+        // Fire-and-forget: clean stale sessions without blocking import load
         const oneHourAgo = Date.now() - 60 * 60 * 1000;
-        await db.importSessions.where("createdAt").below(oneHourAgo).delete();
+        db.importSessions.where("createdAt").below(oneHourAgo).delete();
 
         const importData: ImportData = JSON.parse(session.data);
         const diffResult = await computeDiff(importData);
@@ -125,18 +143,15 @@ export default function App() {
   const handleToggleCollection = useCallback((wsIndex: number, colIndex: number) => {
     setPlan((prev) => {
       if (!prev) return prev;
+      const updated = updateCollection(prev, wsIndex, colIndex, (c) => ({
+        ...c,
+        selected: !c.selected,
+      }));
+      // Also ensure parent workspace is selected
       return {
-        ...prev,
-        workspaces: prev.workspaces.map((w, wi) =>
-          wi === wsIndex
-            ? {
-                ...w,
-                collections: w.collections.map((c, ci) =>
-                  ci === colIndex ? { ...c, selected: !c.selected } : c,
-                ),
-                selected: true,
-              }
-            : w,
+        ...updated,
+        workspaces: updated.workspaces.map((w, wi) =>
+          wi === wsIndex ? { ...w, selected: true } : w,
         ),
       };
     });
@@ -144,81 +159,37 @@ export default function App() {
 
   const handleStrategyChange = useCallback(
     (wsIndex: number, colIndex: number, strategy: MergeStrategy) => {
-      setPlan((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          workspaces: prev.workspaces.map((w, wi) =>
-            wi === wsIndex
-              ? {
-                  ...w,
-                  collections: w.collections.map((c, ci) =>
-                    ci === colIndex ? { ...c, strategy } : c,
-                  ),
-                }
-              : w,
-          ),
-        };
-      });
+      setPlan((prev) =>
+        prev ? updateCollection(prev, wsIndex, colIndex, (c) => ({ ...c, strategy })) : prev,
+      );
     },
     [],
   );
 
   const handleExtraTabDecision = useCallback(
     (wsIndex: number, colIndex: number, tabId: number, decision: ExtraTabDecision) => {
-      setPlan((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          workspaces: prev.workspaces.map((w, wi) =>
-            wi === wsIndex
-              ? {
-                  ...w,
-                  collections: w.collections.map((c, ci) =>
-                    ci === colIndex
-                      ? {
-                          ...c,
-                          extraExisting: c.extraExisting.map((t) =>
-                            t.id === tabId ? { ...t, decision } : t,
-                          ),
-                        }
-                      : c,
-                  ),
-                }
-              : w,
-          ),
-        };
-      });
+      setPlan((prev) =>
+        prev
+          ? updateCollection(prev, wsIndex, colIndex, (c) => ({
+              ...c,
+              extraExisting: c.extraExisting.map((t) => (t.id === tabId ? { ...t, decision } : t)),
+            }))
+          : prev,
+      );
     },
     [],
   );
 
   const handleBatchExtraDecision = useCallback(
     (wsIndex: number, colIndex: number, decision: ExtraTabDecision) => {
-      setPlan((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          workspaces: prev.workspaces.map((w, wi) =>
-            wi === wsIndex
-              ? {
-                  ...w,
-                  collections: w.collections.map((c, ci) =>
-                    ci === colIndex
-                      ? {
-                          ...c,
-                          extraExisting: c.extraExisting.map((t) => ({
-                            ...t,
-                            decision,
-                          })),
-                        }
-                      : c,
-                  ),
-                }
-              : w,
-          ),
-        };
-      });
+      setPlan((prev) =>
+        prev
+          ? updateCollection(prev, wsIndex, colIndex, (c) => ({
+              ...c,
+              extraExisting: c.extraExisting.map((t) => ({ ...t, decision })),
+            }))
+          : prev,
+      );
     },
     [],
   );
