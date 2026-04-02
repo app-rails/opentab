@@ -10,6 +10,7 @@ export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: {
     permissions: ["storage", "alarms", "tabs"],
+    action: {},
   },
   vite: () => ({
     plugins: [tailwindcss()],
