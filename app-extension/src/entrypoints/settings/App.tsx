@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Upload } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { checkHealth } from "@/lib/api";
+import { db } from "@/lib/db";
 import { exportAllData } from "@/lib/export";
 import { detectFormat } from "@/lib/import/detect";
 import { parseOpenTab } from "@/lib/import/parse-opentab";
 import { parseTabTab } from "@/lib/import/parse-tabtab";
-import { db } from "@/lib/db";
 import { type AppSettings, getSettings, saveSettings, type ThemeMode } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -161,9 +161,7 @@ export default function App() {
             type="button"
             className={cn(
               "w-full rounded-md px-3 py-1.5 text-left text-sm font-medium transition-colors",
-              activePanel === "general"
-                ? "bg-accent"
-                : "text-muted-foreground hover:bg-accent/50",
+              activePanel === "general" ? "bg-accent" : "text-muted-foreground hover:bg-accent/50",
             )}
             onClick={() => setActivePanel("general")}
           >

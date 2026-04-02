@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { toast, Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
+import { ImportDetail } from "@/components/import/import-detail";
+import { ImportSummaryBar } from "@/components/import/import-summary-bar";
+import { ImportTree } from "@/components/import/import-tree";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { computeDiff } from "@/lib/import/diff";
@@ -14,9 +17,6 @@ import type {
   MergeStrategy,
   WorkspaceImportPlan,
 } from "@/lib/import/types";
-import { ImportTree } from "@/components/import/import-tree";
-import { ImportDetail } from "@/components/import/import-detail";
-import { ImportSummaryBar } from "@/components/import/import-summary-bar";
 
 type PageState = "loading" | "error" | "preview" | "importing" | "done";
 
@@ -295,14 +295,10 @@ export default function App() {
             <ImportDetail
               wsDiff={diff.workspaces[selectedCollection.wsIndex]}
               colDiff={
-                diff.workspaces[selectedCollection.wsIndex].collections[
-                  selectedCollection.colIndex
-                ]
+                diff.workspaces[selectedCollection.wsIndex].collections[selectedCollection.colIndex]
               }
               colPlan={
-                plan.workspaces[selectedCollection.wsIndex].collections[
-                  selectedCollection.colIndex
-                ]
+                plan.workspaces[selectedCollection.wsIndex].collections[selectedCollection.colIndex]
               }
               wsIndex={selectedCollection.wsIndex}
               colIndex={selectedCollection.colIndex}
@@ -316,7 +312,11 @@ export default function App() {
         </div>
       </div>
 
-      <ImportSummaryBar plan={plan} isImporting={pageState === "importing"} onImport={handleImport} />
+      <ImportSummaryBar
+        plan={plan}
+        isImporting={pageState === "importing"}
+        onImport={handleImport}
+      />
     </div>
   );
 }

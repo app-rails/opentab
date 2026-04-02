@@ -9,9 +9,9 @@ import {
   type WorkspaceIconName,
 } from "@/lib/constants";
 import type { CollectionTab, TabCollection, Workspace } from "@/lib/db";
-import type { ViewMode } from "@/lib/view-mode";
 import { db } from "@/lib/db";
 import { compareByOrder } from "@/lib/utils";
+import type { ViewMode } from "@/lib/view-mode";
 
 function loadCollections(workspaceId: number) {
   return db.tabCollections
@@ -242,7 +242,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const now = Date.now();
     set({
-      workspaces: workspaces.map((w) => (w.id === id ? { ...w, name: validName, updatedAt: now } : w)),
+      workspaces: workspaces.map((w) =>
+        w.id === id ? { ...w, name: validName, updatedAt: now } : w,
+      ),
     });
 
     try {
@@ -261,7 +263,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const now = Date.now();
     set({
-      workspaces: workspaces.map((w) => (w.id === id ? { ...w, icon: validIcon, updatedAt: now } : w)),
+      workspaces: workspaces.map((w) =>
+        w.id === id ? { ...w, icon: validIcon, updatedAt: now } : w,
+      ),
     });
 
     try {
@@ -280,7 +284,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const now = Date.now();
     set({
-      workspaces: workspaces.map((w) => (w.id === id ? { ...w, viewMode: mode, updatedAt: now } : w)),
+      workspaces: workspaces.map((w) =>
+        w.id === id ? { ...w, viewMode: mode, updatedAt: now } : w,
+      ),
     });
 
     try {
@@ -385,7 +391,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const now = Date.now();
     set({
-      collections: collections.map((c) => (c.id === id ? { ...c, name: validName, updatedAt: now } : c)),
+      collections: collections.map((c) =>
+        c.id === id ? { ...c, name: validName, updatedAt: now } : c,
+      ),
     });
 
     try {
@@ -602,7 +610,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       set({ liveTabUrls: optimisticUrls });
 
-      await Promise.all(tabsToOpen.map((tab) => chrome.tabs.create({ url: tab.url, active: false })));
+      await Promise.all(
+        tabsToOpen.map((tab) => chrome.tabs.create({ url: tab.url, active: false })),
+      );
     } catch (err) {
       console.error("[store] failed to restore collection:", err);
     }

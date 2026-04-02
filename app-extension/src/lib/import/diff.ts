@@ -1,6 +1,6 @@
+import Dexie from "dexie";
 import type { CollectionTab, TabCollection, Workspace } from "@/lib/db";
 import { db } from "@/lib/db";
-import Dexie from "dexie";
 import type {
   CollectionDiff,
   DiffResult,

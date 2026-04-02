@@ -20,11 +20,7 @@ interface ImportDetailProps {
     tabId: number,
     decision: ExtraTabDecision,
   ) => void;
-  onBatchExtraDecision: (
-    wsIndex: number,
-    colIndex: number,
-    decision: ExtraTabDecision,
-  ) => void;
+  onBatchExtraDecision: (wsIndex: number, colIndex: number, decision: ExtraTabDecision) => void;
 }
 
 export function ImportDetail({
@@ -61,9 +57,7 @@ export function ImportDetail({
           <select
             className="rounded border border-border bg-background px-3 py-1 text-sm"
             value={colPlan.strategy}
-            onChange={(e) =>
-              onStrategyChange(wsIndex, colIndex, e.target.value as MergeStrategy)
-            }
+            onChange={(e) => onStrategyChange(wsIndex, colIndex, e.target.value as MergeStrategy)}
           >
             <option value="merge">Merge</option>
             <option value="new">Create New</option>
@@ -74,9 +68,7 @@ export function ImportDetail({
 
       <div className="flex gap-3 text-sm">
         {colDiff.toAdd.length > 0 && (
-          <span className="text-green-700 dark:text-green-400">
-            +{colDiff.toAdd.length} new
-          </span>
+          <span className="text-green-700 dark:text-green-400">+{colDiff.toAdd.length} new</span>
         )}
         {colDiff.extraExisting.length > 0 && (
           <span className="text-amber-700 dark:text-amber-400">
@@ -114,9 +106,7 @@ export function ImportDetail({
                 onDecision={(tabId, decision) =>
                   onExtraTabDecision(wsIndex, colIndex, tabId, decision)
                 }
-                onBatchDecision={(decision) =>
-                  onBatchExtraDecision(wsIndex, colIndex, decision)
-                }
+                onBatchDecision={(decision) => onBatchExtraDecision(wsIndex, colIndex, decision)}
               />
             </>
           )}

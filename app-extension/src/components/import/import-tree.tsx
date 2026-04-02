@@ -1,6 +1,6 @@
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
 import type { DiffResult, ImportPlan } from "@/lib/import/types";
+import { cn } from "@/lib/utils";
 
 function statusBadge(status: string) {
   const styles: Record<string, string> = {
@@ -49,10 +49,7 @@ export function ImportTree({
                 ws.status === "same" && "opacity-50",
               )}
             >
-              <Checkbox
-                checked={wsPlan.selected}
-                onCheckedChange={() => onToggleWorkspace(wi)}
-              />
+              <Checkbox checked={wsPlan.selected} onCheckedChange={() => onToggleWorkspace(wi)} />
               <span className="flex-1 truncate text-sm font-medium">{ws.name}</span>
               {statusBadge(ws.status)}
             </div>
@@ -62,8 +59,7 @@ export function ImportTree({
                 const colPlan = wsPlan.collections[ci];
                 const isSelected =
                   selectedCollection?.wsIndex === wi && selectedCollection?.colIndex === ci;
-                const displayStatus =
-                  col.status === "conflict" ? colPlan.strategy : col.status;
+                const displayStatus = col.status === "conflict" ? colPlan.strategy : col.status;
 
                 return (
                   <div
