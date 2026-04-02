@@ -1,5 +1,9 @@
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, rectSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  rectSortingStrategy,
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import {
   ChevronRight,
   EllipsisVertical,
@@ -166,10 +170,7 @@ export function CollectionCard({
                   Rename
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={onRequestDelete}
-                >
+                <DropdownMenuItem className="text-destructive" onClick={onRequestDelete}>
                   <Trash2 className="mr-2 size-4" />
                   Delete
                 </DropdownMenuItem>
@@ -187,7 +188,14 @@ export function CollectionCard({
             strategy={viewMode === "list" ? verticalListSortingStrategy : rectSortingStrategy}
           >
             {tabs.length > 0 ? (
-              <div className={cn("grid gap-2", viewMode === "list" ? "grid-cols-1" : "grid-cols-[repeat(auto-fill,minmax(280px,1fr))]")}>
+              <div
+                className={cn(
+                  "grid gap-2",
+                  viewMode === "list"
+                    ? "grid-cols-1"
+                    : "grid-cols-[repeat(auto-fill,minmax(280px,1fr))]",
+                )}
+              >
                 {tabs.map((tab) => (
                   <CollectionTabItem
                     key={tab.id}

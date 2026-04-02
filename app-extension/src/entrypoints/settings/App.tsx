@@ -187,6 +187,7 @@ export default function App() {
                   aria-label="Theme"
                 >
                   {THEME_OPTIONS.map((opt) => (
+                    // biome-ignore lint/a11y/useSemanticElements: styled radio group using button+role is intentional
                     <button
                       key={opt.value}
                       type="button"
