@@ -1,5 +1,5 @@
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, rectSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import {
   ChevronRight,
   EllipsisVertical,
@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import type { CollectionTab, TabCollection } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
 import { cn } from "@/lib/utils";
+import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
 import { AddTabInline } from "./add-tab-inline";
 import { CollectionTabItem } from "./collection-tab-item";
@@ -28,6 +29,7 @@ import { CollectionTabItem } from "./collection-tab-item";
 interface CollectionCardProps {
   collection: TabCollection;
   tabs: CollectionTab[];
+  viewMode: ViewMode;
   canDelete: boolean;
   onRequestDelete: () => void;
 }
@@ -35,6 +37,7 @@ interface CollectionCardProps {
 export function CollectionCard({
   collection,
   tabs,
+  viewMode,
   canDelete,
   onRequestDelete,
 }: CollectionCardProps) {
@@ -186,14 +189,15 @@ export function CollectionCard({
         <div className="px-4 py-3">
           <SortableContext
             items={tabs.map((t) => `col-tab-${t.id}`)}
-            strategy={verticalListSortingStrategy}
+            strategy={viewMode === "list" ? verticalListSortingStrategy : rectSortingStrategy}
           >
             {tabs.length > 0 ? (
-              <div className="space-y-2">
+              <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
                 {tabs.map((tab) => (
                   <CollectionTabItem
                     key={tab.id}
                     tab={tab}
+                    viewMode={viewMode}
                     onRemove={() => {
                       if (tab.id != null && collection.id != null) {
                         removeTabFromCollection(tab.id, collection.id);
