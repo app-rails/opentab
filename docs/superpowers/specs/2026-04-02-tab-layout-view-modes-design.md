@@ -60,6 +60,11 @@ Default value: `"default"` (when field is undefined/missing, treat as default).
 ### Store Integration
 
 - Add a `setWorkspaceViewMode(workspaceId, mode)` action to the app store
+- Follow the same optimistic-update-with-rollback pattern used by `renameWorkspace` and `changeWorkspaceIcon`:
+  1. Save previous state
+  2. Update in-memory `workspaces` array immediately (optimistic)
+  3. Persist to Dexie via `db.workspaces.update(id, { viewMode })`
+  4. On failure, rollback in-memory state
 - The `CollectionPanel` reads the current workspace's `viewMode` and passes it to `CollectionCard`
 - No global settings change needed — this lives on the workspace record
 
@@ -75,6 +80,7 @@ Default value: `"default"` (when field is undefined/missing, treat as default).
 
 - Accept `viewMode` prop
 - Change the tab items container from `space-y-2` (vertical list) to the appropriate CSS Grid layout based on `viewMode`
+- **Switch DnD sorting strategy**: all three modes use CSS Grid with `auto-fill`, so replace `verticalListSortingStrategy` with `rectSortingStrategy` from `@dnd-kit/sortable`. `rectSortingStrategy` handles multi-column grid reordering correctly — using `verticalListSortingStrategy` with a grid layout will cause tabs to sort to wrong positions.
 - Render `CollectionTabItem` with the correct variant
 
 ### `collection-tab-item.tsx`
@@ -87,7 +93,8 @@ Default value: `"default"` (when field is undefined/missing, treat as default).
 
 ### `tab-favicon.tsx`
 
-- May need a new size variant for the compact mode's 22px favicon, or use inline sizing
+- Add a `"compact"` size variant to the size union type: `size-[22px] rounded-[5px]`
+- This keeps the component's sizing centralized rather than using ad-hoc inline overrides
 
 ## Migration
 
