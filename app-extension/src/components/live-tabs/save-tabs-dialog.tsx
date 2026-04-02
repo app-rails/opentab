@@ -94,7 +94,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="overflow-hidden sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>Save as Collection</DialogTitle>
           <DialogDescription>
@@ -118,7 +118,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
             {tabs.map((tab) => (
               <label
                 key={tab.id}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+                className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
               >
                 <Checkbox
                   checked={selectedIds.has(tab.id!)}
