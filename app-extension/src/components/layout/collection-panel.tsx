@@ -79,6 +79,7 @@ export function CollectionPanel({
   const activeWorkspace = useAppStore(
     (s) => s.workspaces.find((w) => w.id === s.activeWorkspaceId) ?? null,
   );
+  const workspaceCount = useAppStore((s) => s.workspaces.length);
   const renameWorkspace = useAppStore((s) => s.renameWorkspace);
   const setWorkspaceViewMode = useAppStore((s) => s.setWorkspaceViewMode);
   const viewMode: ViewMode = activeWorkspace?.viewMode ?? "default";
@@ -214,14 +215,14 @@ export function CollectionPanel({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                disabled={activeWorkspace?.isDefault}
+                disabled={workspaceCount <= 1}
                 className={
-                  activeWorkspace?.isDefault
+                  workspaceCount <= 1
                     ? "text-muted-foreground"
                     : "text-destructive focus:text-destructive"
                 }
                 onClick={() => {
-                  if (!activeWorkspace?.isDefault) setDeleteWorkspaceOpen(true);
+                  if (workspaceCount > 1) setDeleteWorkspaceOpen(true);
                 }}
               >
                 <Trash2 className="mr-2 size-4" />

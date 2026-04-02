@@ -1,7 +1,6 @@
 import { attemptRegistration, initializeAuth } from "@/lib/auth-manager";
 import { getAuthState, setAuthState } from "@/lib/auth-storage";
 import { MSG } from "@/lib/constants";
-import { seedDefaultData } from "@/lib/db-init";
 import { getSettings } from "@/lib/settings";
 
 const AUTH_RETRY_ALARM = "opentab-auth-retry";
@@ -35,13 +34,6 @@ export default defineBackground(() => {
       console.log("[bg] server disabled — clearing retry alarm and setting offline mode");
       await browser.alarms.clear(AUTH_RETRY_ALARM);
       await setOfflineMode();
-    }
-
-    try {
-      console.log("[bg] ensuring default database data exists");
-      await seedDefaultData();
-    } catch (error) {
-      console.error("[bg] failed to seed default data:", error);
     }
   });
 
