@@ -20,13 +20,12 @@ interface CollectionTabItemProps {
   onRemove: () => void;
 }
 
+const BASE_STYLE = "flex items-center border border-border bg-card text-sm hover:bg-accent";
+
 const containerStyles: Record<ViewMode, string> = {
-  default:
-    "flex h-14 items-center gap-2 rounded-md border border-border bg-card p-2 text-sm hover:bg-accent",
-  compact:
-    "flex h-[38px] items-center gap-2.5 rounded-lg border border-border bg-card px-3 text-sm hover:bg-accent",
-  list:
-    "flex h-[38px] items-center rounded-lg border border-border bg-card px-5 text-sm hover:bg-accent",
+  default: `${BASE_STYLE} h-14 gap-2 rounded-md p-2`,
+  compact: `${BASE_STYLE} h-[38px] gap-2.5 rounded-lg px-3`,
+  list: `${BASE_STYLE} h-[38px] rounded-lg px-5`,
 };
 
 export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItemProps) {

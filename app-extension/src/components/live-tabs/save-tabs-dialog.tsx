@@ -36,10 +36,6 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
 
   // Reset state when dialog opens
   const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
-      setName(formatTimestamp());
-      setSelectedIds(new Set(tabs.map((t) => t.id!)));
-    }
     onOpenChange(nextOpen);
   };
 

@@ -187,7 +187,7 @@ export function CollectionCard({
             strategy={viewMode === "list" ? verticalListSortingStrategy : rectSortingStrategy}
           >
             {tabs.length > 0 ? (
-              <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
+              <div className={cn("grid gap-2", viewMode === "list" ? "grid-cols-1" : "grid-cols-[repeat(auto-fill,minmax(280px,1fr))]")}>
                 {tabs.map((tab) => (
                   <CollectionTabItem
                     key={tab.id}
