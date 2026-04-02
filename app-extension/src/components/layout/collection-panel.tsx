@@ -114,9 +114,7 @@ export function CollectionPanel({
     setIsRenaming(false);
   }
 
-  const isEmpty =
-    collections.length <= 1 &&
-    (collections[0]?.id == null || (tabsByCollection.get(collections[0].id)?.length ?? 0) === 0);
+  const isEmpty = collections.length === 0;
 
   const workspaceName = activeWorkspace?.name ?? "Workspace";
 
