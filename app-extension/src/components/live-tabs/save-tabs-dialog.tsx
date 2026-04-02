@@ -43,14 +43,23 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
     onOpenChange(nextOpen);
   };
 
-  // Sync selectedIds when live tabs change (e.g. user closes a tab while dialog is open)
+  // Reset selections when dialog opens
   useEffect(() => {
+    if (open) {
+      setName(formatTimestamp());
+      setSelectedIds(new Set(tabs.map((t) => t.id!)));
+    }
+  }, [open]);
+
+  // Sync selectedIds when live tabs change while dialog is open (e.g. user closes a tab)
+  useEffect(() => {
+    if (!open) return;
     setSelectedIds((prev) => {
       const validIds = new Set(tabs.map((t) => t.id!));
       const next = new Set([...prev].filter((id) => validIds.has(id)));
       return next.size === prev.size ? prev : next;
     });
-  }, [tabs]);
+  }, [tabs, open]);
 
   const allSelected = selectedIds.size === tabs.length;
   const noneSelected = selectedIds.size === 0;
