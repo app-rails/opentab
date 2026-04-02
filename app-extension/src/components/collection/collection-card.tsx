@@ -1,6 +1,13 @@
 import { useDroppable } from "@dnd-kit/core";
-import { rectSortingStrategy, SortableContext } from "@dnd-kit/sortable";
-import { ChevronRight, ExternalLink, Info, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  ChevronRight,
+  EllipsisVertical,
+  ExternalLink,
+  GripVertical,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +18,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CollectionTab, TabCollection } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
 import { cn } from "@/lib/utils";
@@ -36,7 +42,6 @@ export function CollectionCard({
   const removeTabFromCollection = useAppStore((s) => s.removeTabFromCollection);
   const addTabToCollection = useAppStore((s) => s.addTabToCollection);
   const restoreCollection = useAppStore((s) => s.restoreCollection);
-  const liveTabUrls = useAppStore((s) => s.liveTabUrls);
 
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(collection.name);
@@ -76,26 +81,11 @@ export function CollectionCard({
   }
 
   return (
-    <div
-      ref={setNodeRef}
-      className={cn(
-        "rounded-lg border p-3 transition-colors",
-        isOver ? "border-primary bg-primary/5" : "border-border",
-      )}
-    >
+    <div ref={setNodeRef} className={cn("transition-colors", isOver && "bg-primary/5")}>
       {/* Header */}
-      <div className="mb-2 flex items-center gap-1">
-        <button
-          type="button"
-          className="flex items-center gap-1 p-0.5 text-muted-foreground hover:text-foreground"
-          onClick={() => setCollapsed(!collapsed)}
-          aria-label={collapsed ? "Expand collection" : "Collapse collection"}
-          aria-expanded={!collapsed}
-        >
-          <ChevronRight
-            className={cn("size-3.5 transition-transform", !collapsed && "rotate-90")}
-          />
-        </button>
+      <div className="group flex items-center gap-1 px-4 pt-2 pb-3 border-b border-border">
+        {/* Left group */}
+        <GripVertical className="size-4 shrink-0 cursor-grab text-muted-foreground/50 active:cursor-grabbing" />
 
         {isRenaming ? (
           <Input
@@ -110,47 +100,60 @@ export function CollectionCard({
             className="h-6 text-sm font-medium"
           />
         ) : (
-          <h3
-            className="flex flex-1 items-center gap-1.5 text-sm font-medium"
-            title="Double-click to rename"
-            onDoubleClick={() => {
+          <button
+            type="button"
+            className="text-sm font-medium hover:bg-accent px-1 rounded cursor-pointer"
+            onClick={() => {
               setRenameValue(collection.name);
               setIsRenaming(true);
             }}
           >
             {collection.name}
-            <span className="text-xs font-normal text-muted-foreground">{tabs.length}</span>
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label="Collection info"
-                    className="p-0"
-                  >
-                    <Info className="size-3 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>Created: {new Date(collection.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </h3>
+          </button>
         )}
 
+        <button
+          type="button"
+          className="flex items-center p-0.5 text-muted-foreground hover:text-foreground"
+          onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? "Expand collection" : "Collapse collection"}
+          aria-expanded={!collapsed}
+        >
+          <ChevronRight
+            className={cn("size-3.5 transition-transform duration-200", !collapsed && "rotate-90")}
+          />
+        </button>
+
+        {/* Spacer — click to collapse */}
+        <button
+          type="button"
+          className="flex-1 h-8 cursor-pointer"
+          onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? "Expand collection" : "Collapse collection"}
+        />
+
+        {/* Right group — hover visible */}
         {!isRenaming && (
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             {tabs.length > 0 && (
               <Button variant="ghost" size="icon-xs" onClick={handleOpenAll} title="Open all tabs">
-                <ExternalLink className="size-3.5" />
+                <ExternalLink className="size-3.5 text-muted-foreground" />
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={onRequestDelete}
+                title="Delete collection"
+              >
+                <Trash2 className="size-3.5 text-muted-foreground" />
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon-xs" aria-label="More actions">
-                  <MoreHorizontal className="size-3.5" />
+                  <EllipsisVertical className="size-3.5 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -180,18 +183,17 @@ export function CollectionCard({
 
       {/* Content — collapsible */}
       {!collapsed && (
-        <>
+        <div className="px-4 py-3">
           <SortableContext
             items={tabs.map((t) => `col-tab-${t.id}`)}
-            strategy={rectSortingStrategy}
+            strategy={verticalListSortingStrategy}
           >
             {tabs.length > 0 ? (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
+              <div className="space-y-2">
                 {tabs.map((tab) => (
                   <CollectionTabItem
                     key={tab.id}
                     tab={tab}
-                    isOpen={liveTabUrls.has(tab.url)}
                     onRemove={() => {
                       if (tab.id != null && collection.id != null) {
                         removeTabFromCollection(tab.id, collection.id);
@@ -207,10 +209,10 @@ export function CollectionCard({
             )}
           </SortableContext>
 
-          <div className="mt-1">
+          <div className="mt-2">
             <AddTabInline onAdd={handleAddUrl} />
           </div>
-        </>
+        </div>
       )}
     </div>
   );

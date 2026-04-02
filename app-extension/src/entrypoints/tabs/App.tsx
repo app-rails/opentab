@@ -14,7 +14,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import { CollectionPanel } from "@/components/layout/collection-panel";
 import { LiveTabPanel } from "@/components/layout/live-tab-panel";
@@ -22,12 +22,22 @@ import { WorkspaceSidebar } from "@/components/layout/workspace-sidebar";
 import { TabFavicon } from "@/components/tab-favicon";
 import { useLiveTabSync } from "@/hooks/use-live-tab-sync";
 import { DRAG_TYPES, type DragData } from "@/lib/dnd-types";
+import { getSettings, saveSettings } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
 import { computeOrderBetween } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
 function getDragType(active: Active): string | undefined {
   return (active.data.current as DragData | undefined)?.type;
+}
+
+function getDragTitle(active: Active): string {
+  const data = active.data.current as DragData | undefined;
+  if (!data) return "item";
+  if (data.type === DRAG_TYPES.LIVE_TAB || data.type === DRAG_TYPES.COLLECTION_TAB) {
+    return data.tab.title || "item";
+  }
+  return "item";
 }
 
 const customCollisionDetection: CollisionDetection = (args) => {
@@ -40,20 +50,18 @@ const customCollisionDetection: CollisionDetection = (args) => {
 
 const announcements: Announcements = {
   onDragStart({ active }) {
-    const data = active.data.current as DragData | undefined;
-    return `Picked up ${data?.tab?.title ?? "item"}`;
+    return `Picked up ${getDragTitle(active)}`;
   },
   onDragOver({ active, over }) {
-    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+    const title = getDragTitle(active);
     return over ? `${title} is over drop target` : `${title} is no longer over a drop target`;
   },
   onDragEnd({ active, over }) {
-    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
+    const title = getDragTitle(active);
     return over ? `${title} was dropped` : `${title} was dropped outside a target`;
   },
   onDragCancel({ active }) {
-    const title = (active.data.current as DragData | undefined)?.tab?.title ?? "item";
-    return `Dragging ${title} was cancelled`;
+    return `Dragging ${getDragTitle(active)} was cancelled`;
   },
 };
 
@@ -61,8 +69,33 @@ export default function App() {
   const isLoading = useAppStore((s) => s.isLoading);
 
   useLiveTabSync();
-  const { mode, cycleTheme } = useTheme();
+  const { mode } = useTheme();
 
+  // Layout state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [isZenMode, setIsZenMode] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Pre-zen state (to restore on zen exit)
+  const [preZenSidebar, setPreZenSidebar] = useState(false);
+  const [preZenPanel, setPreZenPanel] = useState(false);
+
+  // Load persisted collapse states; collapse both on small viewports
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setSidebarCollapsed(true);
+      setRightPanelCollapsed(true);
+    } else {
+      getSettings().then((s) => {
+        setSidebarCollapsed(s.sidebar_collapsed);
+        setRightPanelCollapsed(s.right_panel_collapsed);
+      });
+    }
+  }, []);
+
+  // Initialize store
   useEffect(() => {
     useAppStore
       .getState()
@@ -72,13 +105,57 @@ export default function App() {
       });
   }, []);
 
+  // ⌘J / Ctrl+J shortcut
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "j") {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      if (!isZenMode) saveSettings({ sidebar_collapsed: next });
+      return next;
+    });
+  }, [isZenMode]);
+
+  const toggleRightPanel = useCallback(() => {
+    setRightPanelCollapsed((prev) => {
+      const next = !prev;
+      if (!isZenMode) saveSettings({ right_panel_collapsed: next });
+      return next;
+    });
+  }, [isZenMode]);
+
+  const toggleZenMode = useCallback(() => {
+    setIsZenMode((prev) => {
+      if (!prev) {
+        // Entering zen: save current states, collapse both
+        setPreZenSidebar(sidebarCollapsed);
+        setPreZenPanel(rightPanelCollapsed);
+        setSidebarCollapsed(true);
+        setRightPanelCollapsed(true);
+      } else {
+        // Exiting zen: restore previous states
+        setSidebarCollapsed(preZenSidebar);
+        setRightPanelCollapsed(preZenPanel);
+      }
+      return !prev;
+    });
+  }, [sidebarCollapsed, rightPanelCollapsed, preZenSidebar, preZenPanel]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const [activeDrag, setActiveDrag] = useState<Active | null>(null);
-  const [showLivePanel, setShowLivePanel] = useState(false);
 
   function handleDragStart(event: DragStartEvent) {
     setActiveDrag(event.active);
@@ -179,26 +256,18 @@ export default function App() {
         onDragCancel={handleDragCancel}
         accessibility={{ announcements }}
       >
-        <div className="grid h-screen grid-cols-[200px_1fr] md:grid-cols-[200px_1fr_280px] bg-background">
-          <WorkspaceSidebar themeMode={mode} onCycleTheme={cycleTheme} />
-          <CollectionPanel onToggleLivePanel={() => setShowLivePanel((v) => !v)} />
-          <div className="hidden md:flex">
-            <LiveTabPanel />
-          </div>
-        </div>
-
-        {/* Mobile overlay panel */}
-        {showLivePanel && (
-          <>
-            <div
-              className="fixed inset-0 z-40 bg-black/20 md:hidden"
-              onClick={() => setShowLivePanel(false)}
+        <div className="flex h-screen bg-background">
+          <WorkspaceSidebar collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
+          <div className="flex-1 min-w-0">
+            <CollectionPanel
+              isZenMode={isZenMode}
+              onToggleZenMode={toggleZenMode}
+              searchOpen={searchOpen}
+              onSearchOpenChange={setSearchOpen}
             />
-            <div className="fixed inset-y-0 right-0 z-50 w-[280px] bg-background border-l shadow-lg md:hidden">
-              <LiveTabPanel />
-            </div>
-          </>
-        )}
+          </div>
+          <LiveTabPanel collapsed={rightPanelCollapsed} onToggleCollapse={toggleRightPanel} />
+        </div>
 
         <DragOverlay>
           {activeDragData &&

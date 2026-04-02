@@ -8,6 +8,8 @@ export interface AppSettings {
   server_url: string;
   theme: ThemeMode;
   welcome_dismissed: boolean;
+  sidebar_collapsed: boolean;
+  right_panel_collapsed: boolean;
 }
 
 const DEFAULTS: AppSettings = {
@@ -15,6 +17,8 @@ const DEFAULTS: AppSettings = {
   server_url: "http://localhost:3001",
   theme: "system",
   welcome_dismissed: false,
+  sidebar_collapsed: false,
+  right_panel_collapsed: false,
 };
 
 const KEYS = Object.keys(DEFAULTS) as (keyof AppSettings)[];
