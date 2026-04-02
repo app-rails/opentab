@@ -202,9 +202,9 @@ export function CollectionCard({
                 ))}
               </div>
             ) : (
-              <p className="py-2 text-center text-xs text-muted-foreground/70">
-                Drag tabs here or add a URL
-              </p>
+              <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground/70">
+                Drag tabs here
+              </div>
             )}
           </SortableContext>
 
