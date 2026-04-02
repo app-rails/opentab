@@ -1,5 +1,5 @@
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, rectSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import {
   ChevronRight,
   EllipsisVertical,
@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import type { CollectionTab, TabCollection } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
 import { cn } from "@/lib/utils";
+import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
 import { AddTabInline } from "./add-tab-inline";
 import { CollectionTabItem } from "./collection-tab-item";
@@ -28,14 +29,14 @@ import { CollectionTabItem } from "./collection-tab-item";
 interface CollectionCardProps {
   collection: TabCollection;
   tabs: CollectionTab[];
-  canDelete: boolean;
+  viewMode: ViewMode;
   onRequestDelete: () => void;
 }
 
 export function CollectionCard({
   collection,
   tabs,
-  canDelete,
+  viewMode,
   onRequestDelete,
 }: CollectionCardProps) {
   const renameCollection = useAppStore((s) => s.renameCollection);
@@ -140,16 +141,14 @@ export function CollectionCard({
                 <ExternalLink className="size-3.5 text-muted-foreground" />
               </Button>
             )}
-            {canDelete && (
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={onRequestDelete}
-                title="Delete collection"
-              >
-                <Trash2 className="size-3.5 text-muted-foreground" />
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={onRequestDelete}
+              title="Delete collection"
+            >
+              <Trash2 className="size-3.5 text-muted-foreground" />
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon-xs" aria-label="More actions">
@@ -168,8 +167,7 @@ export function CollectionCard({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  disabled={!canDelete}
-                  className={canDelete ? "text-destructive" : "text-muted-foreground"}
+                  className="text-destructive"
                   onClick={onRequestDelete}
                 >
                   <Trash2 className="mr-2 size-4" />
@@ -186,14 +184,15 @@ export function CollectionCard({
         <div className="px-4 py-3">
           <SortableContext
             items={tabs.map((t) => `col-tab-${t.id}`)}
-            strategy={verticalListSortingStrategy}
+            strategy={viewMode === "list" ? verticalListSortingStrategy : rectSortingStrategy}
           >
             {tabs.length > 0 ? (
-              <div className="space-y-2">
+              <div className={cn("grid gap-2", viewMode === "list" ? "grid-cols-1" : "grid-cols-[repeat(auto-fill,minmax(280px,1fr))]")}>
                 {tabs.map((tab) => (
                   <CollectionTabItem
                     key={tab.id}
                     tab={tab}
+                    viewMode={viewMode}
                     onRemove={() => {
                       if (tab.id != null && collection.id != null) {
                         removeTabFromCollection(tab.id, collection.id);
@@ -203,9 +202,9 @@ export function CollectionCard({
                 ))}
               </div>
             ) : (
-              <p className="py-2 text-center text-xs text-muted-foreground/70">
-                Drag tabs here or add a URL
-              </p>
+              <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground/70">
+                Drag tabs here
+              </div>
             )}
           </SortableContext>
 

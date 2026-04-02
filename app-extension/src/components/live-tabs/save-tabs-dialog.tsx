@@ -36,21 +36,26 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
 
   // Reset state when dialog opens
   const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
-      setName(formatTimestamp());
-      setSelectedIds(new Set(tabs.map((t) => t.id!)));
-    }
     onOpenChange(nextOpen);
   };
 
-  // Sync selectedIds when live tabs change (e.g. user closes a tab while dialog is open)
+  // Reset selections when dialog opens
   useEffect(() => {
+    if (open) {
+      setName(formatTimestamp());
+      setSelectedIds(new Set(tabs.map((t) => t.id!)));
+    }
+  }, [open]);
+
+  // Sync selectedIds when live tabs change while dialog is open (e.g. user closes a tab)
+  useEffect(() => {
+    if (!open) return;
     setSelectedIds((prev) => {
       const validIds = new Set(tabs.map((t) => t.id!));
       const next = new Set([...prev].filter((id) => validIds.has(id)));
       return next.size === prev.size ? prev : next;
     });
-  }, [tabs]);
+  }, [tabs, open]);
 
   const allSelected = selectedIds.size === tabs.length;
   const noneSelected = selectedIds.size === 0;
@@ -94,7 +99,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="overflow-hidden sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>Save as Collection</DialogTitle>
           <DialogDescription>
@@ -118,7 +123,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
             {tabs.map((tab) => (
               <label
                 key={tab.id}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+                className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
               >
                 <Checkbox
                   checked={selectedIds.has(tab.id!)}

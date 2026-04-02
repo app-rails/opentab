@@ -1,5 +1,5 @@
 import { EllipsisVertical, Pencil, Plus, Trash2, Zap } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { CollectionCard } from "@/components/collection/collection-card";
 import { CreateCollectionDialog } from "@/components/collection/create-collection-dialog";
 import { DeleteCollectionDialog } from "@/components/collection/delete-collection-dialog";
@@ -17,7 +17,49 @@ import { Input } from "@/components/ui/input";
 import { DeleteWorkspaceDialog } from "@/components/workspace/delete-workspace-dialog";
 import type { TabCollection } from "@/lib/db";
 import { cn } from "@/lib/utils";
+import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
+
+const VIEW_MODE_OPTIONS: { mode: ViewMode; label: string; btnClass: string; icon: ReactNode }[] = [
+  {
+    mode: "default",
+    label: "Default view",
+    btnClass: "rounded-r-none",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      </svg>
+    ),
+  },
+  {
+    mode: "compact",
+    label: "Compact view",
+    btnClass: "rounded-none border-x border-border",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" />
+        <rect x="9" y="1" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" />
+        <rect x="1" y="7" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" />
+        <rect x="9" y="7" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" />
+      </svg>
+    ),
+  },
+  {
+    mode: "list",
+    label: "List view",
+    btnClass: "rounded-l-none",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="1" y1="3" x2="15" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="1" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="1" y1="13" x2="15" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+];
 
 interface CollectionPanelProps {
   isZenMode: boolean;
@@ -38,6 +80,8 @@ export function CollectionPanel({
     (s) => s.workspaces.find((w) => w.id === s.activeWorkspaceId) ?? null,
   );
   const renameWorkspace = useAppStore((s) => s.renameWorkspace);
+  const setWorkspaceViewMode = useAppStore((s) => s.setWorkspaceViewMode);
+  const viewMode: ViewMode = activeWorkspace?.viewMode ?? "default";
 
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TabCollection | null>(null);
@@ -70,10 +114,7 @@ export function CollectionPanel({
     setIsRenaming(false);
   }
 
-  const canDelete = collections.length > 1;
-  const isEmpty =
-    collections.length <= 1 &&
-    (collections[0]?.id == null || (tabsByCollection.get(collections[0].id)?.length ?? 0) === 0);
+  const isEmpty = collections.length === 0;
 
   const workspaceName = activeWorkspace?.name ?? "Workspace";
 
@@ -142,6 +183,23 @@ export function CollectionPanel({
             Add collection
           </Button>
 
+          {/* View mode toggle */}
+          <div className="flex items-center rounded-md border border-border">
+            {VIEW_MODE_OPTIONS.map(({ mode, label, btnClass, icon }) => (
+              <Button
+                key={mode}
+                variant="ghost"
+                size="icon-xs"
+                className={cn(btnClass, viewMode === mode && "bg-accent")}
+                onClick={() => activeWorkspace?.id != null && setWorkspaceViewMode(activeWorkspace.id, mode)}
+                title={label}
+                aria-label={label}
+              >
+                {icon}
+              </Button>
+            ))}
+          </div>
+
           {/* More menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -185,7 +243,7 @@ export function CollectionPanel({
                 key={col.id}
                 collection={col}
                 tabs={tabsByCollection.get(col.id!) ?? []}
-                canDelete={canDelete && col.name !== "Unsorted"}
+                viewMode={viewMode}
                 onRequestDelete={() => setDeleteTarget(col)}
               />
             ))}

@@ -89,6 +89,21 @@ export default defineBackground(() => {
     })();
   });
 
+  // --- Extension icon click: open or focus dashboard tab ---
+  browser.action.onClicked.addListener(async () => {
+    const tabsUrl = browser.runtime.getURL("/tabs.html");
+    const existing = await browser.tabs.query({ url: tabsUrl });
+
+    if (existing.length > 0 && existing[0].id != null) {
+      await browser.tabs.update(existing[0].id, { active: true });
+      if (existing[0].windowId != null) {
+        await browser.windows.update(existing[0].windowId, { focused: true });
+      }
+    } else {
+      await browser.tabs.create({ url: tabsUrl });
+    }
+  });
+
   // --- Tab event broadcasting for live-tab panel ---
   const RELEVANT_TAB_FIELDS = ["title", "url", "favIconUrl", "status"] as const;
 
