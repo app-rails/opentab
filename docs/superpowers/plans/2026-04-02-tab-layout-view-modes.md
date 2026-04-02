@@ -4,7 +4,7 @@
 
 **Goal:** Add a 3-mode view toggle (default/compact/list) to the workspace toolbar, with per-workspace persistence.
 
-**Architecture:** Add `viewMode` to the Workspace type in Dexie, wire it through the Zustand store with optimistic updates, and thread the prop from CollectionPanel → CollectionCard → CollectionTabItem. Each component switches its CSS classes based on the mode. The grid layout uses `repeat(auto-fill, minmax(280px, 1fr))` and DnD switches to `rectSortingStrategy`.
+**Architecture:** Add `viewMode` to the Workspace type in Dexie, wire it through the Zustand store with optimistic updates, and thread the prop from CollectionPanel → CollectionCard → CollectionTabItem. Each component switches its CSS classes based on the mode. The grid layout uses `repeat(auto-fill, minmax(280px, 1fr))` and DnD uses `rectSortingStrategy` for default/compact (multi-column) and `verticalListSortingStrategy` for list mode (single-column at narrow widths).
 
 **Tech Stack:** React, Zustand, Dexie (IndexedDB), Tailwind CSS, @dnd-kit/sortable, lucide-react
 
@@ -292,18 +292,12 @@ git commit -m "feat: support view modes in CollectionTabItem"
 **Files:**
 - Modify: `app-extension/src/components/collection/collection-card.tsx`
 
-- [ ] **Step 1: Add viewMode prop, switch to rectSortingStrategy, use grid layout**
+- [ ] **Step 1: Add viewMode prop, conditional DnD strategy, use grid layout**
 
-In the imports, change:
-
-```typescript
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-```
-
-to:
+In the imports, add `rectSortingStrategy` (keep both strategies):
 
 ```typescript
-import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, rectSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable";
 ```
 
 Add import:
@@ -366,10 +360,10 @@ with:
 ```typescript
           <SortableContext
             items={tabs.map((t) => `col-tab-${t.id}`)}
-            strategy={rectSortingStrategy}
+            strategy={viewMode === "list" ? verticalListSortingStrategy : rectSortingStrategy}
           >
             {tabs.length > 0 ? (
-              <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+              <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
                 {tabs.map((tab) => (
                   <CollectionTabItem
                     key={tab.id}
@@ -389,7 +383,7 @@ with:
 
 ```bash
 git add app-extension/src/components/collection/collection-card.tsx
-git commit -m "feat: grid layout and rectSortingStrategy in CollectionCard"
+git commit -m "feat: grid layout and conditional DnD strategy in CollectionCard"
 ```
 
 ---
@@ -416,7 +410,7 @@ Inside the component, add after the existing store selectors (after line 40):
 
 - [ ] **Step 2: Create the toggle button group**
 
-Add this JSX between the Zen mode button and the Search Tabs button (after line 118, before line 120):
+Add this JSX after the "Add collection" button and before the "More" dropdown menu (after line 143, before line 146). This groups the toggle with other action controls rather than between mismatched button sizes:
 
 ```tsx
           {/* View mode toggle */}
