@@ -14,7 +14,6 @@ export interface Workspace {
   accountId: string;
   name: string;
   icon: string;
-  isDefault: boolean;
   order: string;
   viewMode?: ViewMode;
   createdAt: number;
@@ -75,7 +74,6 @@ db.version(2)
       const newKey = generateKeyBetween(prevKey, null);
       await tx.table("workspaces").update(workspaces[i].id, {
         icon: "folder",
-        isDefault: i === 0,
         order: newKey,
       });
       prevKey = newKey;

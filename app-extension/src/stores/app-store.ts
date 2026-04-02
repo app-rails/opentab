@@ -218,13 +218,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       accountId: await resolveAccountId(),
       name: validName,
       icon: validatedIcon(icon),
-      isDefault: false,
       order: newOrder,
       createdAt: Date.now(),
     };
     const id = await db.workspaces.add(workspace);
     workspace.id = id as number;
-    set({ workspaces: [...get().workspaces, workspace] });
+    const updatedWorkspaces = [...get().workspaces, workspace];
+    set({ workspaces: updatedWorkspaces });
+
+    if (get().activeWorkspaceId == null) {
+      get().setActiveWorkspace(id as number);
+    }
   },
 
   renameWorkspace: async (id, name) => {
@@ -289,7 +293,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteWorkspace: async (id) => {
     const { workspaces, activeWorkspaceId } = get();
     const target = workspaces.find((w) => w.id === id);
-    if (!target || target.isDefault) return;
+    if (!target || workspaces.length <= 1) return;
 
     try {
       await db.transaction(
@@ -312,7 +316,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const remaining = workspaces.filter((w) => w.id !== id);
     const needSwitch = activeWorkspaceId === id;
-    const defaultWs = remaining.find((w) => w.isDefault) ?? remaining[0];
+    const defaultWs = remaining[0];
 
     set({ workspaces: remaining, tabsByCollection: new Map() });
 

@@ -27,6 +27,7 @@ import { IconPicker } from "./icon-picker";
 interface WorkspaceItemProps {
   workspace: Workspace;
   isActive: boolean;
+  isLastWorkspace: boolean;
   onSelect: () => void;
   onRequestDelete: () => void;
 }
@@ -34,6 +35,7 @@ interface WorkspaceItemProps {
 export function WorkspaceItem({
   workspace,
   isActive,
+  isLastWorkspace,
   onSelect,
   onRequestDelete,
 }: WorkspaceItemProps) {
@@ -97,17 +99,17 @@ export function WorkspaceItem({
         <MenuSeparator />
         <MenuItem
           onClick={onRequestDelete}
-          disabled={workspace.isDefault}
+          disabled={isLastWorkspace}
           className={cn(
-            workspace.isDefault
+            isLastWorkspace
               ? "text-muted-foreground"
               : "text-destructive focus:text-destructive",
           )}
         >
           <Trash2 className="mr-2 size-4" />
           Delete
-          {workspace.isDefault && (
-            <span className="ml-auto text-xs italic text-muted-foreground">default</span>
+          {isLastWorkspace && (
+            <span className="ml-auto text-xs italic text-muted-foreground">last</span>
           )}
         </MenuItem>
       </>

@@ -38,11 +38,13 @@ function GoogleIcon() {
 function SortableWorkspaceItem({
   workspace,
   isActive,
+  isLastWorkspace,
   onSelect,
   onRequestDelete,
 }: {
   workspace: Workspace;
   isActive: boolean;
+  isLastWorkspace: boolean;
   onSelect: () => void;
   onRequestDelete: () => void;
 }) {
@@ -62,6 +64,7 @@ function SortableWorkspaceItem({
       <WorkspaceItem
         workspace={workspace}
         isActive={isActive}
+        isLastWorkspace={isLastWorkspace}
         onSelect={onSelect}
         onRequestDelete={onRequestDelete}
       />
@@ -144,6 +147,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
                 key={ws.id}
                 workspace={ws}
                 isActive={ws.id === activeWorkspaceId}
+                isLastWorkspace={workspaces.length <= 1}
                 onSelect={() => ws.id != null && setActiveWorkspace(ws.id)}
                 onRequestDelete={() => setDeleteTarget(ws)}
               />
