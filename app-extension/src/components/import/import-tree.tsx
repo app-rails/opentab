@@ -42,7 +42,7 @@ export function ImportTree({
       {diff.workspaces.map((ws, wi) => {
         const wsPlan = plan.workspaces[wi];
         return (
-          <div key={ws.name}>
+          <div key={ws.existingWorkspaceId ?? `new-${wi}`}>
             <div
               className={cn(
                 "flex items-center gap-2 rounded-md px-2 py-1.5",
@@ -64,7 +64,7 @@ export function ImportTree({
                 return (
                   <button
                     type="button"
-                    key={col.name}
+                    key={col.existingCollectionId ?? `new-${wi}-${ci}`}
                     className={cn(
                       "flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left",
                       isSelected && "bg-accent",

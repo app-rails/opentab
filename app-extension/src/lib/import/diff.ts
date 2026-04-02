@@ -122,19 +122,18 @@ async function loadTabsForCollection(collectionId: number): Promise<CollectionTa
 export async function computeDiff(importData: ImportData): Promise<DiffResult> {
   const existingWorkspaces = await db.workspaces.orderBy("order").toArray();
 
-  // Group by name — if duplicates exist, match the first one only
-  // and leave others unmatched (import will create new)
-  const workspaceByName = new Map<string, Workspace>();
+  // Group by name as arrays for one-to-one matching via shift()
+  const workspacesByName = new Map<string, Workspace[]>();
   for (const ws of existingWorkspaces) {
-    if (!workspaceByName.has(ws.name)) {
-      workspaceByName.set(ws.name, ws);
-    }
+    const group = workspacesByName.get(ws.name) ?? [];
+    group.push(ws);
+    workspacesByName.set(ws.name, group);
   }
 
   const workspaceDiffs: WorkspaceDiff[] = [];
 
   for (const importWs of importData.workspaces) {
-    const existingWs = workspaceByName.get(importWs.name);
+    const existingWs = workspacesByName.get(importWs.name)?.shift() ?? null;
 
     if (!existingWs) {
       workspaceDiffs.push({
@@ -155,18 +154,18 @@ export async function computeDiff(importData: ImportData): Promise<DiffResult> {
     }
 
     const existingCollections = await loadCollectionsForWorkspace(existingWs.id!);
-    // Match first collection per name to avoid ambiguity with duplicates
-    const collectionByName = new Map<string, TabCollection>();
+    // Group by name as arrays for one-to-one matching via shift()
+    const collectionsByName = new Map<string, TabCollection[]>();
     for (const col of existingCollections) {
-      if (!collectionByName.has(col.name)) {
-        collectionByName.set(col.name, col);
-      }
+      const group = collectionsByName.get(col.name) ?? [];
+      group.push(col);
+      collectionsByName.set(col.name, group);
     }
 
     const collectionDiffs: CollectionDiff[] = [];
 
     for (const importCol of importWs.collections) {
-      const existingCol = collectionByName.get(importCol.name);
+      const existingCol = collectionsByName.get(importCol.name)?.shift() ?? null;
 
       if (!existingCol) {
         collectionDiffs.push({
