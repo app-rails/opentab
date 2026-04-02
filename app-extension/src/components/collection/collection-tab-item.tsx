@@ -11,13 +11,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { CollectionTab } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
+import type { ViewMode } from "@/lib/view-mode";
+import { cn } from "@/lib/utils";
 
 interface CollectionTabItemProps {
   tab: CollectionTab;
+  viewMode: ViewMode;
   onRemove: () => void;
 }
 
-export function CollectionTabItem({ tab, onRemove }: CollectionTabItemProps) {
+const containerStyles: Record<ViewMode, string> = {
+  default:
+    "flex h-14 items-center gap-2 rounded-md border border-border bg-card p-2 text-sm hover:bg-accent",
+  compact:
+    "flex h-[38px] items-center gap-2.5 rounded-lg border border-border bg-card px-3 text-sm hover:bg-accent",
+  list:
+    "flex h-[38px] items-center rounded-lg border border-border bg-card px-5 text-sm hover:bg-accent",
+};
+
+export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `col-tab-${tab.id}`,
     data: { type: DRAG_TYPES.COLLECTION_TAB, tab, collectionId: tab.collectionId },
@@ -34,9 +46,7 @@ export function CollectionTabItem({ tab, onRemove }: CollectionTabItemProps) {
   }
 
   function handleCopyUrl() {
-    void navigator.clipboard.writeText(tab.url).catch(() => {
-      // Silently fail — clipboard API may be blocked in extension context
-    });
+    void navigator.clipboard.writeText(tab.url).catch(() => {});
   }
 
   return (
@@ -45,12 +55,21 @@ export function CollectionTabItem({ tab, onRemove }: CollectionTabItemProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className="group flex h-14 items-center gap-2 rounded-md border border-border bg-card p-2 text-sm hover:bg-accent"
+      className={cn("group", containerStyles[viewMode])}
     >
-      <TabFavicon url={tab.favIconUrl} size="md" />
-      <span className="ml-0.5 flex-1 min-w-0 text-xs leading-tight line-clamp-2" title={tab.url}>
+      {viewMode === "default" && <TabFavicon url={tab.favIconUrl} size="md" />}
+      {viewMode === "compact" && <TabFavicon url={tab.favIconUrl} size="compact" />}
+
+      <span
+        className={cn(
+          "flex-1 min-w-0 text-xs leading-tight",
+          viewMode === "default" ? "ml-0.5 line-clamp-2" : "truncate",
+        )}
+        title={tab.url}
+      >
         {tab.title || tab.url}
       </span>
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
