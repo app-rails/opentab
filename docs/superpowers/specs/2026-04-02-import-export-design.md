@@ -41,8 +41,12 @@ Add "Import / Export" nav item in Settings sidebar, above "General":
 - **Export** section: "Export All Data" button → downloads `opentab-backup-YYYY-MM-DD.json`
 - **Import** section: "Import Data" button → file picker → opens dedicated import page
 
+### Settings Panel Switching
+
+The current Settings page is a single "General" panel with no routing. Add a simple `useState<"general" | "import-export">` to switch between panels via conditional rendering. The left nav items become clickable, with active state styling.
+
 ### Sidebar Changes
-- **Remove** the "Sign in with Google" button from `workspace-sidebar.tsx` (lines 178-189)
+- **Remove** the `GoogleIcon` component and the "Sign in with Google" `<Button>` from `workspace-sidebar.tsx`
 - No new sidebar buttons needed — import/export lives in Settings
 
 ---
@@ -69,9 +73,25 @@ db.version(3)
 ```
 
 ### Write Operations
-All mutations must set `updatedAt: Date.now()`:
-- Create: `updatedAt = createdAt = Date.now()`
-- Update (rename, reorder, etc.): `updatedAt = Date.now()`
+All 12 mutations in `app-store.ts` must set `updatedAt: Date.now()`:
+
+**Create operations** (`updatedAt = createdAt = Date.now()`):
+- `createWorkspace`
+- `createCollection`
+- `addTabToCollection`
+- `saveTabsAsCollection`
+
+**Update operations** (`updatedAt = Date.now()`):
+- `renameWorkspace`
+- `changeWorkspaceIcon`
+- `setWorkspaceViewMode`
+- `reorderWorkspace`
+- `renameCollection`
+- `reorderCollection`
+
+**Delete operations** (no `updatedAt` needed):
+- `deleteWorkspace`
+- `deleteCollection`
 
 ---
 
@@ -219,8 +239,8 @@ interface ExistingTab {
 ### Architecture
 
 - **New entrypoint**: `app-extension/src/entrypoints/import/` (same pattern as `settings/` and `tabs/`)
-- **URL**: `/import.html`, opened via `chrome.tabs.create()`
-- **Data transfer**: `chrome.storage.session` to pass parsed JSON (cleared after page load)
+- **URL**: opened via `chrome.tabs.create({ url: chrome.runtime.getURL("/import.html") })` (same pattern as existing settings page)
+- **Data transfer**: Write parsed JSON to a temporary `importSessions` table in IndexedDB, pass only the session ID via URL query param (`/import.html?sessionId=xxx`). The import page reads the data on load and deletes the session record after. This avoids `chrome.storage.session`'s 1MB quota limit (backup with 1400+ tabs and base64 favicons could exceed it).
 - **State management**: React local state (one-time operation page, no Zustand needed)
 
 ### Layout: Tree-Based Diff View
@@ -295,7 +315,8 @@ interface ExistingTab {
 await db.transaction('rw', [db.workspaces, db.tabCollections, db.collectionTabs], async () => {
   for (const ws of selectedWorkspaces) {
     // Create new workspace or use existing
-    const wsId = ws.existingWorkspaceId ?? await db.workspaces.add({...});
+    // New workspaces need accountId — use resolveAccountId() (extract from app-store.ts to shared util)
+    const wsId = ws.existingWorkspaceId ?? await db.workspaces.add({...accountId: await resolveAccountId()...});
 
     for (const col of ws.selectedCollections) {
       if (col.strategy === 'skip') continue;
@@ -377,7 +398,7 @@ interface OpenTabExport {
 }
 ```
 
-3. Trigger download:
+3. Trigger download (requires `"downloads"` permission in manifest):
    ```typescript
    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
    const url = URL.createObjectURL(blob);
@@ -387,6 +408,12 @@ interface OpenTabExport {
      saveAs: true
    });
    ```
+
+### Manifest Change
+Add `"downloads"` to the permissions array in `wxt.config.ts`:
+```typescript
+permissions: ["storage", "alarms", "tabs", "downloads"],
+```
 
 ### Notes
 - Export preserves all internal fields (`id`, `order`, `createdAt`, `updatedAt`)
@@ -428,15 +455,16 @@ app-extension/src/
 ```
 app-extension/src/
 ├── lib/
-│   └── db.ts                         # Add updatedAt, version 3 migration
+│   └── db.ts                         # Add updatedAt, version 3 migration, importSessions table
 ├── stores/
-│   └── app-store.ts                  # Add updatedAt to all write operations
+│   └── app-store.ts                  # Add updatedAt to all 12 write operations, extract resolveAccountId
 ├── entrypoints/
 │   └── settings/
-│       └── App.tsx                    # Add Import/Export nav + panel
+│       └── App.tsx                    # Add Import/Export nav + panel switching (useState)
 └── components/
     └── layout/
-        └── workspace-sidebar.tsx      # Remove Google Sign-in button
+        └── workspace-sidebar.tsx      # Remove GoogleIcon + Sign in with Google button
+wxt.config.ts                          # Add "downloads" permission
 ```
 
 ---
@@ -455,6 +483,6 @@ app-extension/src/
 | Favicon handling | Store base64 data URIs directly in IndexedDB | Only 24/1467 are base64; minimal overhead, no extra complexity |
 | Export fields | Include all internal fields (id, order, createdAt, updatedAt) | OpenTab's own format — preserves full fidelity |
 | Export scope | Full dump only | MVP simplicity; selective export can be added later |
-| Data transfer to import page | `chrome.storage.session` | Session-scoped, auto-cleared, works across extension pages |
+| Data transfer to import page | IndexedDB `importSessions` table + URL query param | Avoids `chrome.storage.session` 1MB quota; cleaned up after load |
 | State management (import page) | React local state | One-time operation, no persistence needed |
 | `updatedAt` field | Add to all entities in this release | Needed for smarter merge (prefer newer data); also generally useful |
