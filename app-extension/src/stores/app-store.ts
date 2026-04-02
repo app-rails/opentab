@@ -271,6 +271,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { workspaces } = get();
     const prev = workspaces.find((w) => w.id === id);
     if (!prev) return;
+    if (prev.viewMode === mode) return;
 
     // Optimistic update
     set({

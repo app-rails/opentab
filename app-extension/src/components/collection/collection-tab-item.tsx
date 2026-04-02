@@ -57,8 +57,9 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
       {...listeners}
       className={cn("group", containerStyles[viewMode])}
     >
-      {viewMode === "default" && <TabFavicon url={tab.favIconUrl} size="md" />}
-      {viewMode === "compact" && <TabFavicon url={tab.favIconUrl} size="compact" />}
+      {viewMode !== "list" && (
+        <TabFavicon url={tab.favIconUrl} size={viewMode === "default" ? "md" : "compact"} />
+      )}
 
       <span
         className={cn(
