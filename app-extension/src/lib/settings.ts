@@ -1,12 +1,15 @@
 import { MSG } from "./constants";
 import { db } from "./db";
 
+export type Locale = "en" | "zh";
+
 export type ThemeMode = "light" | "dark" | "system";
 
 export interface AppSettings {
   server_enabled: boolean;
   server_url: string;
   theme: ThemeMode;
+  locale: Locale;
   welcome_dismissed: boolean;
   sidebar_collapsed: boolean;
   right_panel_collapsed: boolean;
@@ -16,6 +19,7 @@ const DEFAULTS: AppSettings = {
   server_enabled: false,
   server_url: "http://localhost:3001",
   theme: "system",
+  locale: "en",
   welcome_dismissed: false,
   sidebar_collapsed: false,
   right_panel_collapsed: false,
