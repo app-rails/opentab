@@ -1,5 +1,6 @@
 import { ArrowDownUp, ChevronRight, Save } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { LiveTabItem } from "@/components/live-tabs/live-tab-item";
 import { SaveTabsDialog } from "@/components/live-tabs/save-tabs-dialog";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ interface LiveTabPanelProps {
 }
 
 export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps) {
+  const { t } = useTranslation();
   const liveTabs = useAppStore((s) => s.liveTabs);
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -28,7 +30,7 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
         type="button"
         className="absolute top-3 -left-3 z-10 flex size-6 items-center justify-center rounded-full border bg-background shadow-sm hover:bg-accent"
         onClick={onToggleCollapse}
-        aria-label={collapsed ? "Expand panel" : "Collapse panel"}
+        aria-label={collapsed ? t("live_tab.expand_panel") : t("live_tab.collapse_panel")}
       >
         <ChevronRight
           className={cn("size-3.5 transition-transform duration-200", !collapsed && "rotate-180")}
@@ -44,7 +46,7 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
         {/* Header */}
         <div className="flex h-14 items-center justify-between border-b border-border px-4">
           <h2 className="text-sm font-medium text-muted-foreground ml-1">
-            Tabs
+            {t("live_tab.tabs")}
             <span className="ml-1 text-xs">({liveTabs.length})</span>
           </h2>
           <div className="flex items-center gap-1">
@@ -52,7 +54,7 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
               variant="ghost"
               size="icon-xs"
               onClick={() => setSortReversed((v) => !v)}
-              title="Toggle sort order"
+              title={t("live_tab.toggle_sort")}
             >
               <ArrowDownUp className="size-3.5" />
             </Button>
@@ -64,7 +66,7 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
               className="gap-1"
             >
               <Save className="size-3" />
-              Save
+              {t("live_tab.save")}
             </Button>
           </div>
         </div>
@@ -72,7 +74,7 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
         {/* Tab list */}
         <div className="flex-1 space-y-0.5 overflow-auto p-2">
           {displayTabs.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">No session tabs</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">{t("live_tab.no_tabs")}</p>
           ) : (
             displayTabs.map((tab) =>
               tab.id != null ? <LiveTabItem key={tab.id} tab={tab} /> : null,

@@ -1,5 +1,6 @@
 import { Ellipsis, ImagePlus, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -39,6 +40,7 @@ export function WorkspaceItem({
   onSelect,
   onRequestDelete,
 }: WorkspaceItemProps) {
+  const { t } = useTranslation();
   const renameWorkspace = useAppStore((s) => s.renameWorkspace);
   const changeWorkspaceIcon = useAppStore((s) => s.changeWorkspaceIcon);
 
@@ -90,11 +92,11 @@ export function WorkspaceItem({
       <>
         <MenuItem onClick={startRename}>
           <Pencil className="mr-2 size-4" />
-          Change Name
+          {t("workspace_item.change_name")}
         </MenuItem>
         <MenuItem onClick={openIconPicker}>
           <ImagePlus className="mr-2 size-4" />
-          Change Icon
+          {t("workspace_item.change_icon")}
         </MenuItem>
         <MenuSeparator />
         <MenuItem
@@ -105,9 +107,9 @@ export function WorkspaceItem({
           )}
         >
           <Trash2 className="mr-2 size-4" />
-          Delete
+          {t("workspace_item.delete")}
           {isLastWorkspace && (
-            <span className="ml-auto text-xs italic text-muted-foreground">last</span>
+            <span className="ml-auto text-xs italic text-muted-foreground">{t("workspace_item.last")}</span>
           )}
         </MenuItem>
       </>
@@ -150,7 +152,7 @@ export function WorkspaceItem({
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <span className="flex-1 truncate" title="Double-click to rename">
+                <span className="flex-1 truncate" title={t("workspace_item.rename_tooltip")}>
                   {workspace.name}
                 </span>
               )}
