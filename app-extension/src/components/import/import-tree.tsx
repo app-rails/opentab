@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { DiffResult, ImportPlan } from "@/lib/import/types";
 import { cn } from "@/lib/utils";
@@ -34,10 +35,11 @@ export function ImportTree({
   onToggleCollection,
   onSelectCollection,
 }: ImportTreeProps) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-1">
       <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Workspaces
+        {t("import_page.workspaces")}
       </h2>
       {diff.workspaces.map((ws, wi) => {
         const wsPlan = plan.workspaces[wi];

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type {
   CollectionDiff,
   CollectionImportPlan,
@@ -33,6 +34,7 @@ export function ImportDetail({
   onExtraTabDecision,
   onBatchExtraDecision,
 }: ImportDetailProps) {
+  const { t } = useTranslation();
   if (colDiff.status === "same") {
     return (
       <div>
@@ -40,7 +42,7 @@ export function ImportDetail({
           {wsDiff.name} / {colDiff.name}
         </h3>
         <p className="text-sm text-muted-foreground">
-          This collection is identical — nothing to import.
+          {t("import_detail.identical")}
         </p>
       </div>
     );
@@ -59,30 +61,30 @@ export function ImportDetail({
             value={colPlan.strategy}
             onChange={(e) => onStrategyChange(wsIndex, colIndex, e.target.value as MergeStrategy)}
           >
-            <option value="merge">Merge</option>
-            <option value="new">Create New</option>
-            <option value="skip">Skip</option>
+            <option value="merge">{t("import_detail.merge")}</option>
+            <option value="new">{t("import_detail.create_new")}</option>
+            <option value="skip">{t("import_detail.skip")}</option>
           </select>
         )}
       </div>
 
       <div className="flex gap-3 text-sm">
         {colDiff.toAdd.length > 0 && (
-          <span className="text-green-700 dark:text-green-400">+{colDiff.toAdd.length} new</span>
+          <span className="text-green-700 dark:text-green-400">{t("import_detail.new_count", { count: colDiff.toAdd.length })}</span>
         )}
         {colDiff.extraExisting.length > 0 && (
           <span className="text-amber-700 dark:text-amber-400">
-            &minus;{colDiff.extraExisting.length} extra existing
+            {t("import_detail.extra_count", { count: colDiff.extraExisting.length })}
           </span>
         )}
         {colDiff.unchangedCount > 0 && (
-          <span className="text-muted-foreground">{colDiff.unchangedCount} unchanged</span>
+          <span className="text-muted-foreground">{t("import_detail.unchanged_count", { count: colDiff.unchangedCount })}</span>
         )}
       </div>
 
       {colDiff.status === "new" && (
         <>
-          <h4 className="text-sm font-medium">Tabs to import ({colDiff.allTabs.length})</h4>
+          <h4 className="text-sm font-medium">{t("import_detail.tabs_to_import", { count: colDiff.allTabs.length })}</h4>
           <NewTabList tabs={colDiff.allTabs} />
         </>
       )}
@@ -91,7 +93,7 @@ export function ImportDetail({
         <>
           {colDiff.toAdd.length > 0 && (
             <>
-              <h4 className="text-sm font-medium">New tabs (will be added)</h4>
+              <h4 className="text-sm font-medium">{t("import_detail.new_tabs")}</h4>
               <NewTabList tabs={colDiff.toAdd} />
             </>
           )}
@@ -99,7 +101,7 @@ export function ImportDetail({
           {colPlan.extraExisting.length > 0 && (
             <>
               <h4 className="text-sm font-medium">
-                Extra existing tabs (in your data but not in import)
+                {t("import_detail.extra_tabs")}
               </h4>
               <ExtraExistingTabList
                 tabs={colPlan.extraExisting}
@@ -116,14 +118,14 @@ export function ImportDetail({
       {colDiff.status === "conflict" && colPlan.strategy === "new" && (
         <>
           <p className="text-sm text-muted-foreground">
-            A new collection &ldquo;{colDiff.name}&rdquo; will be created with all imported tabs.
+            {t("import_detail.create_message", { name: colDiff.name })}
           </p>
           <NewTabList tabs={colDiff.allTabs} />
         </>
       )}
 
       {colDiff.status === "conflict" && colPlan.strategy === "skip" && (
-        <p className="text-sm text-muted-foreground">This collection will be skipped.</p>
+        <p className="text-sm text-muted-foreground">{t("import_detail.skip_message")}</p>
       )}
     </div>
   );

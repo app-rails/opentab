@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Toaster, toast } from "sonner";
 import { ImportDetail } from "@/components/import/import-detail";
 import { ImportSummaryBar } from "@/components/import/import-summary-bar";
@@ -62,6 +63,7 @@ function buildInitialPlan(diff: DiffResult): ImportPlan {
 }
 
 export default function App() {
+  const { t } = useTranslation();
   const [pageState, setPageState] = useState<PageState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [diff, setDiff] = useState<DiffResult | null>(null);
@@ -77,14 +79,14 @@ export default function App() {
         const params = new URLSearchParams(window.location.search);
         const sessionId = Number(params.get("sessionId"));
         if (!sessionId) {
-          setErrorMessage("No import session found. Please start import from Settings.");
+          setErrorMessage(t("import_page.no_session"));
           setPageState("error");
           return;
         }
 
         const session = await db.importSessions.get(sessionId);
         if (!session) {
-          setErrorMessage("Import session expired. Please start import from Settings.");
+          setErrorMessage(t("import_page.expired"));
           setPageState("error");
           return;
         }
@@ -111,7 +113,7 @@ export default function App() {
         }
       } catch (err) {
         console.error("Failed to load import session:", err);
-        setErrorMessage("Failed to load import data.");
+        setErrorMessage(t("import_page.load_error"));
         setPageState("error");
       }
     })();
@@ -201,12 +203,12 @@ export default function App() {
       const result = await executeImport(plan);
       setPageState("done");
       toast.success(
-        `Successfully imported ${result.workspaceCount} workspaces, ${result.collectionCount} collections, ${result.tabCount} tabs`,
+        t("import_page.toast_success", { workspaces: result.workspaceCount, collections: result.collectionCount, tabs: result.tabCount }),
       );
       setTimeout(() => window.close(), 2000);
     } catch (err) {
       console.error("Import failed:", err);
-      toast.error("Import failed. No changes were made.");
+      toast.error(t("import_page.toast_error"));
       setPageState("preview");
     }
   }, [plan]);
@@ -214,7 +216,7 @@ export default function App() {
   if (pageState === "loading") {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading import data...</p>
+        <p className="text-muted-foreground">{t("import_page.loading")}</p>
       </div>
     );
   }
@@ -231,7 +233,7 @@ export default function App() {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Toaster />
-        <p className="text-muted-foreground">Import complete. This tab will close shortly.</p>
+        <p className="text-muted-foreground">{t("import_page.complete")}</p>
       </div>
     );
   }
@@ -243,9 +245,9 @@ export default function App() {
       <Toaster />
 
       <header className="flex items-center justify-between border-b border-border px-6 py-3">
-        <h1 className="text-lg font-semibold">Import Preview</h1>
+        <h1 className="text-lg font-semibold">{t("import_page.title")}</h1>
         <Button variant="ghost" size="sm" onClick={() => window.close()}>
-          Cancel
+          {t("import_page.cancel")}
         </Button>
       </header>
 
@@ -278,7 +280,7 @@ export default function App() {
               onBatchExtraDecision={handleBatchExtraDecision}
             />
           ) : (
-            <p className="text-muted-foreground">Select a collection to view details</p>
+            <p className="text-muted-foreground">{t("import_page.select_collection")}</p>
           )}
         </div>
       </div>
