@@ -1,4 +1,5 @@
 import { Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +27,7 @@ export function DeleteCollectionDialog({
   onOpenChange,
   onAfterDelete,
 }: DeleteCollectionDialogProps) {
+  const { t } = useTranslation();
   const deleteCollection = useAppStore((s) => s.deleteCollection);
 
   function handleDelete() {
@@ -44,19 +46,18 @@ export function DeleteCollectionDialog({
           <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-destructive/10">
             <Trash2 className="size-5 text-destructive" />
           </div>
-          <AlertDialogTitle>Delete &ldquo;{collectionName}&rdquo;?</AlertDialogTitle>
+          <AlertDialogTitle>{t("dialog.delete_collection.title", { name: collectionName })}</AlertDialogTitle>
           <AlertDialogDescription>
-            This collection and all its saved tabs will be permanently deleted. This action cannot
-            be undone.
+            {t("dialog.delete_collection.description")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("dialog.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={handleDelete}
           >
-            Delete
+            {t("dialog.delete_collection.submit")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

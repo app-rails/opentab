@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +19,7 @@ interface CreateCollectionDialogProps {
 }
 
 export function CreateCollectionDialog({ open, onOpenChange }: CreateCollectionDialogProps) {
+  const { t } = useTranslation();
   const createCollection = useAppStore((s) => s.createCollection);
   const [name, setName] = useState("");
 
@@ -40,14 +42,14 @@ export function CreateCollectionDialog({ open, onOpenChange }: CreateCollectionD
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle>New Collection</DialogTitle>
-          <DialogDescription>Create a new tab collection in this workspace.</DialogDescription>
+          <DialogTitle>{t("dialog.create_collection.title")}</DialogTitle>
+          <DialogDescription>{t("dialog.create_collection.description")}</DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <Input
             id="col-name"
             autoFocus
-            placeholder="Collection name"
+            placeholder={t("dialog.create_collection.name_placeholder")}
             maxLength={WORKSPACE_NAME_MAX_LENGTH}
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -58,10 +60,10 @@ export function CreateCollectionDialog({ open, onOpenChange }: CreateCollectionD
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>
-            Cancel
+            {t("dialog.cancel")}
           </Button>
           <Button onClick={handleCreate} disabled={!isValid}>
-            Create
+            {t("dialog.create_collection.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +20,7 @@ interface CreateWorkspaceDialogProps {
 }
 
 export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDialogProps) {
+  const { t } = useTranslation();
   const createWorkspace = useAppStore((s) => s.createWorkspace);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState<string>(DEFAULT_ICON);
@@ -46,20 +48,20 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle>New Workspace</DialogTitle>
-          <DialogDescription>Create a new workspace to organize your tabs</DialogDescription>
+          <DialogTitle>{t("dialog.create_workspace.title")}</DialogTitle>
+          <DialogDescription>{t("dialog.create_workspace.description")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
             <label htmlFor="ws-name" className="text-sm font-medium">
-              Name
+              {t("dialog.create_workspace.name_label")}
             </label>
             <Input
               id="ws-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={WORKSPACE_NAME_MAX_LENGTH}
-              placeholder="Workspace name"
+              placeholder={t("dialog.create_workspace.name_placeholder")}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && isValid) handleCreate();
               }}
@@ -67,16 +69,16 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
             />
           </div>
           <div className="space-y-2">
-            <span className="text-sm font-medium">Icon</span>
+            <span className="text-sm font-medium">{t("dialog.create_workspace.icon_label")}</span>
             <IconPicker value={icon} onChange={setIcon} />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
+            {t("dialog.cancel")}
           </Button>
           <Button onClick={handleCreate} disabled={!isValid}>
-            Create
+            {t("dialog.create_workspace.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>

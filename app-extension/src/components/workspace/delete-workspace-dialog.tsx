@@ -1,4 +1,5 @@
 import { Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +27,7 @@ export function DeleteWorkspaceDialog({
   onOpenChange,
   onAfterDelete,
 }: DeleteWorkspaceDialogProps) {
+  const { t } = useTranslation();
   const deleteWorkspace = useAppStore((s) => s.deleteWorkspace);
 
   async function handleDelete() {
@@ -44,19 +46,18 @@ export function DeleteWorkspaceDialog({
           <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-destructive/10">
             <Trash2 className="size-5 text-destructive" />
           </div>
-          <AlertDialogTitle>Delete &ldquo;{workspaceName}&rdquo;?</AlertDialogTitle>
+          <AlertDialogTitle>{t("dialog.delete_workspace.title", { name: workspaceName })}</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently delete this workspace and all its collections. This action cannot
-            be undone.
+            {t("dialog.delete_workspace.description")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("dialog.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Delete
+            {t("dialog.delete_workspace.submit")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
