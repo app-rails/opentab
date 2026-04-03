@@ -14,7 +14,8 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner";
 import { CollectionPanel } from "@/components/layout/collection-panel";
 import { LiveTabPanel } from "@/components/layout/live-tab-panel";
@@ -48,24 +49,27 @@ const customCollisionDetection: CollisionDetection = (args) => {
   return closestCenter(args);
 };
 
-const announcements: Announcements = {
-  onDragStart({ active }) {
-    return `Picked up ${getDragTitle(active)}`;
-  },
-  onDragOver({ active, over }) {
-    const title = getDragTitle(active);
-    return over ? `${title} is over drop target` : `${title} is no longer over a drop target`;
-  },
-  onDragEnd({ active, over }) {
-    const title = getDragTitle(active);
-    return over ? `${title} was dropped` : `${title} was dropped outside a target`;
-  },
-  onDragCancel({ active }) {
-    return `Dragging ${getDragTitle(active)} was cancelled`;
-  },
-};
-
 export default function App() {
+  const { t } = useTranslation();
+
+  const announcements: Announcements = useMemo(() => ({
+    onDragStart({ active }) {
+      const title = getDragTitle(active);
+      return t("dnd.picked_up", { title });
+    },
+    onDragOver({ active, over }) {
+      const title = getDragTitle(active);
+      return over ? t("dnd.over_target", { title }) : t("dnd.not_over_target", { title });
+    },
+    onDragEnd({ active, over }) {
+      const title = getDragTitle(active);
+      return over ? t("dnd.dropped", { title }) : t("dnd.dropped_outside", { title });
+    },
+    onDragCancel({ active }) {
+      const title = getDragTitle(active);
+      return t("dnd.cancelled", { title });
+    },
+  }), [t]);
   const isLoading = useAppStore((s) => s.isLoading);
 
   useLiveTabSync();
@@ -239,7 +243,7 @@ export default function App() {
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background" aria-live="polite">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">{t("settings.loading")}</p>
       </div>
     );
   }
@@ -278,7 +282,7 @@ export default function App() {
                 <span className="max-w-[200px] truncate">
                   {activeDragData.tab.title ||
                     (activeDragData.type === DRAG_TYPES.LIVE_TAB
-                      ? "New Tab"
+                      ? t("live_tab.new_tab")
                       : activeDragData.tab.url)}
                 </span>
               </div>
