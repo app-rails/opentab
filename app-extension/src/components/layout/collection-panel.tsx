@@ -275,7 +275,9 @@ export function CollectionPanel({
                 }
                 onClick={() => {
                   if (workspaceCount > 1) {
-                    (document.activeElement as HTMLElement)?.blur?.();
+                    if (document.activeElement instanceof HTMLElement) {
+                      document.activeElement.blur();
+                    }
                     setDeleteWorkspaceOpen(true);
                   }
                 }}

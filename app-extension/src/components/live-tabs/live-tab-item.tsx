@@ -29,10 +29,15 @@ export const LiveTabItem = memo(function LiveTabItem({ tab }: LiveTabItemProps) 
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      role="link"
       className="flex h-14 cursor-grab items-center gap-2 rounded-md border border-transparent p-2 text-sm hover:bg-accent"
       style={{ opacity: isDragging ? 0.5 : 1 }}
       onClick={handleClick}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
     >
       <TabFavicon url={tab.favIconUrl} size="md" />
       <span className="flex-1 min-w-0 text-xs leading-tight line-clamp-2">
