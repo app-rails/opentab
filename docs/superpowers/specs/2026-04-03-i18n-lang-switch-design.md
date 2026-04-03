@@ -69,16 +69,9 @@ export interface AppSettings {
 }
 ```
 
-Default value: detect via inline expression in the `DEFAULTS` constant:
+Default value: static `"en"` in `DEFAULTS`. Browser language detection (`navigator.language`) is handled as a one-time fallback in `initLocale()` (in `i18n.ts`) when no persisted locale exists. This avoids issues with Manifest V3 service worker contexts where `navigator` may behave differently.
 
-```typescript
-const DEFAULTS: AppSettings = {
-  // ... existing fields
-  locale: (navigator.language?.startsWith("zh") ? "zh" : "en") as Locale,
-};
-```
-
-This works because `settings.ts` is only imported in browser contexts (React entrypoints), never in the service worker. Both the `AppSettings` interface and the `DEFAULTS` constant must be updated — `getSettings()` derives its key list from `Object.keys(DEFAULTS)`.
+Both the `AppSettings` interface and the `DEFAULTS` constant must be updated — `getSettings()` derives its key list from `Object.keys(DEFAULTS)`.
 
 ### i18n Initialization
 

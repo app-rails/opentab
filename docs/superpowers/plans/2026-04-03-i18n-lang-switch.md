@@ -65,14 +65,14 @@ export interface AppSettings {
 
 - [ ] **Step 2: Update DEFAULTS constant**
 
-Add the `locale` field to `DEFAULTS` with browser language detection:
+Add the `locale` field to `DEFAULTS` with a static `"en"` default. Browser language detection is handled in `initLocale()` (Task 4) as a one-time fallback when no persisted locale exists — this avoids issues with service worker contexts where `navigator.language` may behave differently.
 
 ```typescript
 const DEFAULTS: AppSettings = {
   server_enabled: false,
   server_url: "http://localhost:3001",
   theme: "system",
-  locale: (navigator.language?.startsWith("zh") ? "zh" : "en") as Locale,
+  locale: "en" as Locale,
   welcome_dismissed: false,
   sidebar_collapsed: false,
   right_panel_collapsed: false,
@@ -585,7 +585,13 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import en from "@/locales/en.json";
 import zh from "@/locales/zh.json";
-import { getSettings } from "./settings";
+import type { Locale } from "./settings";
+import { getSettings, saveSettings } from "./settings";
+
+/** Detect browser language, falling back to "en". Only call in page contexts. */
+function detectLocale(): Locale {
+  return navigator.language?.startsWith("zh") ? "zh" : "en";
+}
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -597,10 +603,29 @@ i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 });
 
-/** Read persisted locale from settings and apply it. Call once per entrypoint. */
+/**
+ * Read persisted locale from settings and apply it. If no locale has been
+ * persisted yet (first launch), detect from browser language and save it.
+ * Returns a promise that resolves when i18n language is set.
+ */
 export async function initLocale(): Promise<void> {
-  const { locale } = await getSettings();
+  const settings = await getSettings();
+  let locale = settings.locale;
+  // First launch: DEFAULTS is static "en", detect from browser
+  if (locale === "en" && !await hasPersistedLocale()) {
+    locale = detectLocale();
+    if (locale !== "en") {
+      await saveSettings({ locale });
+    }
+  }
   await i18n.changeLanguage(locale);
+}
+
+/** Check if locale has been explicitly saved (vs just using DEFAULTS). */
+async function hasPersistedLocale(): Promise<boolean> {
+  const { db } = await import("./db");
+  const row = await db.settings.get("locale");
+  return row != null;
 }
 
 export default i18n;
@@ -686,7 +711,7 @@ createRoot(document.getElementById("root")!).render(
 
 - [ ] **Step 1: Update tabs/main.tsx**
 
-Add i18n import and call `initLocale()`:
+**Important:** `initLocale()` is async. We must wait for it to resolve before rendering to avoid a flash of English content for Chinese users. Defer `createRoot` into an async bootstrap:
 
 ```typescript
 import { StrictMode } from "react";
@@ -696,18 +721,18 @@ import "@/lib/i18n";
 import { initLocale } from "@/lib/i18n";
 import App from "./App";
 
-initLocale();
-
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+initLocale().then(() => {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+});
 ```
 
 - [ ] **Step 2: Update settings/main.tsx**
 
-Same pattern — add i18n import and `initLocale()` call:
+Same deferred rendering pattern:
 
 ```typescript
 import { StrictMode } from "react";
@@ -717,18 +742,18 @@ import "@/lib/i18n";
 import { initLocale } from "@/lib/i18n";
 import App from "./App";
 
-initLocale();
-
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+initLocale().then(() => {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+});
 ```
 
 - [ ] **Step 3: Update import/main.tsx**
 
-Same pattern:
+Same deferred rendering pattern:
 
 ```typescript
 import { StrictMode } from "react";
@@ -738,13 +763,13 @@ import "@/lib/i18n";
 import { initLocale } from "@/lib/i18n";
 import App from "./App";
 
-initLocale();
-
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+initLocale().then(() => {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+});
 ```
 
 - [ ] **Step 4: Verify build works**
@@ -949,10 +974,7 @@ Below the Theme radio group (after the closing `</div>` of the theme section), a
         key={opt.value}
         type="button"
         className="flex w-full items-center justify-between px-3 py-2.5 text-sm transition-colors hover:bg-accent first:rounded-t-lg last:rounded-b-lg [&:not(:last-child)]:border-b border-border"
-        onClick={() => {
-          setLocale(opt.value);
-          handleLocaleChange(opt.value);
-        }}
+        onClick={() => setLocale(opt.value)}
       >
         <div className="flex items-center gap-2">
           <span className="font-medium">{opt.native}</span>
@@ -969,15 +991,7 @@ Below the Theme radio group (after the closing `</div>` of the theme section), a
 </div>
 ```
 
-Add handler:
-```typescript
-const handleLocaleChange = useCallback(
-  (newLocale: Locale) => {
-    setSettings((prev) => (prev ? { ...prev, locale: newLocale } : prev));
-  },
-  [],
-);
-```
+No separate `handleLocaleChange` is needed — `setLocale()` from the `useLocale` hook already handles local state update, `i18n.changeLanguage()`, and `saveSettings()` persistence in one call.
 
 - [ ] **Step 3: Replace all hardcoded strings in settings/App.tsx**
 
@@ -1438,15 +1452,46 @@ git commit -m "feat(i18n): translate import page and all import components"
 
 - [ ] **Step 1: Translate DnD announcements in tabs/App.tsx**
 
-Add `useTranslation` import and hook at the top of the `App` component.
+**Important:** The `announcements` object is currently a module-level constant (outside any React component). Hooks like `useTranslation()` cannot be called at module scope. Move `announcements` inside the `App` component as a `useMemo`:
 
-Replace the accessibility announcement strings in the DnD config with `t()` calls:
-- `"Picked up ${title}"` → `t("dnd.picked_up", { title })`
-- `"${title} is over drop target"` → `t("dnd.over_target", { title })`
-- `"${title} is no longer over a drop target"` → `t("dnd.not_over_target", { title })`
-- `"${title} was dropped"` → `t("dnd.dropped", { title })`
-- `"${title} was dropped outside a target"` → `t("dnd.dropped_outside", { title })`
-- `"Dragging ${title} was cancelled"` → `t("dnd.cancelled", { title })`
+Add imports:
+```typescript
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+```
+
+Inside `App()`, add:
+```typescript
+const { t } = useTranslation();
+```
+
+Move the `announcements` constant from module scope into the component as a `useMemo`:
+```typescript
+const announcements: Announcements = useMemo(() => ({
+  onDragStart({ active }) {
+    const title = getDragTitle(active);
+    return t("dnd.picked_up", { title });
+  },
+  onDragOver({ active, over }) {
+    const title = getDragTitle(active);
+    if (over) return t("dnd.over_target", { title });
+    return t("dnd.not_over_target", { title });
+  },
+  onDragEnd({ active, over }) {
+    const title = getDragTitle(active);
+    if (over) return t("dnd.dropped", { title });
+    return t("dnd.dropped_outside", { title });
+  },
+  onDragCancel({ active }) {
+    const title = getDragTitle(active);
+    return t("dnd.cancelled", { title });
+  },
+}), [t]);
+```
+
+The helper function `getDragTitle` (or whatever extracts the title from the active drag item) can remain at module scope since it doesn't use `t()`.
+
+Also replace:
 - `"Loading..."` → `{t("settings.loading")}` (or add a `common.loading` key if preferred)
 - `"New Tab"` fallback → `t("live_tab.new_tab")`
 
