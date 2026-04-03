@@ -180,17 +180,23 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
           >
             <ThemeIcon className="size-4 text-sidebar-foreground/70" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={cycleLocale}
-            aria-label={locale === "en" ? t("sidebar.language_label_en") : t("sidebar.language_label_zh")}
-            title={locale === "en" ? t("sidebar.language_label_en") : t("sidebar.language_label_zh")}
-          >
-            <span className="text-xs font-medium text-sidebar-foreground/70">
-              {locale === "en" ? t("sidebar.language_en") : t("sidebar.language_zh")}
-            </span>
-          </Button>
+          {(() => {
+            const langLabel = locale === "en" ? t("sidebar.language_label_en") : t("sidebar.language_label_zh");
+            const langAbbr = locale === "en" ? t("sidebar.language_en") : t("sidebar.language_zh");
+            return (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={cycleLocale}
+                aria-label={langLabel}
+                title={langLabel}
+              >
+                <span className="text-xs font-medium text-sidebar-foreground/70">
+                  {langAbbr}
+                </span>
+              </Button>
+            );
+          })()}
         </div>
       </aside>
     </div>

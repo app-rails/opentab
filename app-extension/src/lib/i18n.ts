@@ -3,7 +3,7 @@ import { initReactI18next } from "react-i18next";
 import en from "@/locales/en.json";
 import zh from "@/locales/zh.json";
 import type { Locale } from "./settings";
-import { getSettings, saveSettings } from "./settings";
+import { saveSettings } from "./settings";
 
 /** Detect browser language, falling back to "en". Only call in page contexts. */
 function detectLocale(): Locale {
@@ -23,26 +23,22 @@ i18n.use(initReactI18next).init({
 /**
  * Read persisted locale from settings and apply it. If no locale has been
  * persisted yet (first launch), detect from browser language and save it.
- * Returns a promise that resolves when i18n language is set.
+ * Single DB read — checks the raw row to avoid a second query.
  */
 export async function initLocale(): Promise<void> {
-  const settings = await getSettings();
-  let locale = settings.locale;
-  // First launch: DEFAULTS is static "en", detect from browser
-  if (locale === "en" && !(await hasPersistedLocale())) {
+  const { db } = await import("./db");
+  const row = await db.settings.get("locale");
+  let locale: Locale;
+  if (row) {
+    locale = JSON.parse(row.value) as Locale;
+  } else {
+    // First launch: no persisted locale, detect from browser
     locale = detectLocale();
     if (locale !== "en") {
       await saveSettings({ locale });
     }
   }
   await i18n.changeLanguage(locale);
-}
-
-/** Check if locale has been explicitly saved (vs just using DEFAULTS). */
-async function hasPersistedLocale(): Promise<boolean> {
-  const { db } = await import("./db");
-  const row = await db.settings.get("locale");
-  return row != null;
 }
 
 export default i18n;

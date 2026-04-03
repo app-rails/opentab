@@ -18,15 +18,15 @@ import { cn } from "@/lib/utils";
 type SettingsPanel = "general" | "import-export";
 type ConnectionStatus = "not_enabled" | "testing" | "connected" | "disconnected";
 
-const THEME_OPTIONS: { value: ThemeMode; labelKey: string }[] = [
-  { value: "light", labelKey: "settings.appearance.theme_light" },
-  { value: "dark", labelKey: "settings.appearance.theme_dark" },
-  { value: "system", labelKey: "settings.appearance.theme_system" },
+const THEME_OPTIONS = [
+  { value: "light" as ThemeMode, labelKey: "settings.appearance.theme_light" as const },
+  { value: "dark" as ThemeMode, labelKey: "settings.appearance.theme_dark" as const },
+  { value: "system" as ThemeMode, labelKey: "settings.appearance.theme_system" as const },
 ];
 
-const LANGUAGE_OPTIONS: { value: Locale; native: string; nameKey: string }[] = [
-  { value: "en", native: "English", nameKey: "settings.appearance.lang_en" },
-  { value: "zh", native: "中文", nameKey: "settings.appearance.lang_zh" },
+const LANGUAGE_OPTIONS = [
+  { value: "en" as Locale, native: "English", labelKey: "settings.appearance.lang_en" as const },
+  { value: "zh" as Locale, native: "中文", labelKey: "settings.appearance.lang_zh" as const },
 ];
 
 function useDebouncedSave(delayMs: number) {
@@ -210,7 +210,7 @@ export default function App() {
                       )}
                       onClick={() => handleThemeChange(opt.value)}
                     >
-                      {t(opt.labelKey as never)}
+                      {t(opt.labelKey)}
                     </button>
                   ))}
                 </div>
@@ -229,7 +229,7 @@ export default function App() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{opt.native}</span>
                         {locale !== opt.value && (
-                          <span className="text-muted-foreground">{t(opt.nameKey as never)}</span>
+                          <span className="text-muted-foreground">{t(opt.labelKey)}</span>
                         )}
                       </div>
                       {locale === opt.value && <span className="text-primary">✓</span>}

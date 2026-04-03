@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
 
-const VIEW_MODE_OPTIONS: { mode: ViewMode; labelKey: string; btnClass: string; icon: ReactNode }[] = [
+const VIEW_MODE_OPTIONS: { mode: ViewMode; labelKey: "collection_panel.view_default" | "collection_panel.view_compact" | "collection_panel.view_list"; btnClass: string; icon: ReactNode }[] = [
   {
     mode: "default",
     labelKey: "collection_panel.view_default",
@@ -242,8 +242,8 @@ export function CollectionPanel({
                 onClick={() =>
                   activeWorkspace?.id != null && setWorkspaceViewMode(activeWorkspace.id, mode)
                 }
-                title={t(labelKey as never)}
-                aria-label={t(labelKey as never)}
+                title={t(labelKey)}
+                aria-label={t(labelKey)}
               >
                 {icon}
               </Button>

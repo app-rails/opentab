@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import i18n from "i18next";
 import { MSG } from "./constants";
 import { getSettings, saveSettings, type Locale } from "./settings";
@@ -9,6 +9,14 @@ export function useLocale() {
   // initLocale() guarantees i18n.language is correct before React renders,
   // so we read it synchronously here. No mount effect needed.
   const [locale, setLocaleState] = useState<Locale>((i18n.language as Locale) || "en");
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+
+  const applyLocale = useCallback(async (next: Locale) => {
+    setLocaleState(next);
+    await i18n.changeLanguage(next);
+    await saveSettings({ locale: next });
+  }, []);
 
   // Listen for cross-tab changes (when another tab changes locale)
   useEffect(() => {
@@ -24,19 +32,11 @@ export function useLocale() {
     return () => chrome.runtime.onMessage.removeListener(handler);
   }, []);
 
-  const setLocale = useCallback(async (next: Locale) => {
-    setLocaleState(next);
-    await i18n.changeLanguage(next);
-    await saveSettings({ locale: next });
-  }, []);
-
   const cycleLocale = useCallback(async () => {
-    const idx = LOCALE_CYCLE.indexOf(locale);
+    const idx = LOCALE_CYCLE.indexOf(localeRef.current);
     const next = LOCALE_CYCLE[(idx + 1) % LOCALE_CYCLE.length];
-    setLocaleState(next);
-    await i18n.changeLanguage(next);
-    await saveSettings({ locale: next });
-  }, [locale]);
+    await applyLocale(next);
+  }, [applyLocale]);
 
-  return { locale, setLocale, cycleLocale };
+  return { locale, setLocale: applyLocale, cycleLocale };
 }
