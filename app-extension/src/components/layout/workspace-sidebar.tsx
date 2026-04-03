@@ -115,7 +115,10 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
             variant="ghost"
             size="icon-xs"
             className="absolute right-2"
-            onClick={() => setCreateOpen(true)}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              setCreateOpen(true);
+            }}
           >
             <Plus className="size-4" />
           </Button>

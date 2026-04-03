@@ -27,7 +27,10 @@ export function EmptyWorkspace() {
         variant="outline"
         size="sm"
         disabled={savableTabs.length === 0 || activeWorkspaceId == null}
-        onClick={() => setDialogOpen(true)}
+        onClick={(e) => {
+          e.currentTarget.blur();
+          setDialogOpen(true);
+        }}
       >
         {t("empty.save_current")}
       </Button>
