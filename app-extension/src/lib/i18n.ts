@@ -30,7 +30,12 @@ export async function initLocale(): Promise<void> {
   const row = await db.settings.get("locale");
   let locale: Locale;
   if (row) {
-    locale = JSON.parse(row.value) as Locale;
+    try {
+      const parsed = JSON.parse(row.value);
+      locale = parsed === "en" || parsed === "zh" ? parsed : "en";
+    } catch {
+      locale = "en";
+    }
   } else {
     // First launch: no persisted locale, detect from browser
     locale = detectLocale();

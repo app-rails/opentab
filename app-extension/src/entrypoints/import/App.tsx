@@ -211,7 +211,7 @@ export default function App() {
       toast.error(t("import_page.toast_error"));
       setPageState("preview");
     }
-  }, [plan]);
+  }, [plan, t]);
 
   if (pageState === "loading") {
     return (
