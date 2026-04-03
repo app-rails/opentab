@@ -1,4 +1,5 @@
 import { ExternalLink } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 
 function GithubIcon({ className }: { className?: string }) {
   return (
@@ -10,6 +11,7 @@ function GithubIcon({ className }: { className?: string }) {
 }
 
 export function AboutPage() {
+  const { t } = useTranslation();
   const version = (() => {
     try {
       return `v${chrome.runtime.getManifest().version}`;
@@ -22,46 +24,44 @@ export function AboutPage() {
     <div className="px-2 pt-2">
       {/* Title */}
       <div className="flex items-center gap-2">
-        <h2 className="text-lg font-semibold">About OpenTab</h2>
+        <h2 className="text-lg font-semibold">{t("about.title")}</h2>
         <span className="text-xs text-muted-foreground">{version}</span>
       </div>
 
       {/* Description */}
       <div className="mt-3 flex items-center gap-2">
-        <p className="text-sm text-foreground">OpenTab is a tab management tool</p>
+        <p className="text-sm text-foreground">{t("about.description")}</p>
         <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
-          OpenTab Info
+          {t("about.info_badge")}
         </span>
       </div>
 
       {/* Feature bullets */}
       <ul className="mt-4 list-disc pl-5 space-y-1.5 text-sm text-foreground">
         <li>
-          The left sidebar shows all workspaces. Click <span className="font-medium">+</span> to
-          create a new space
+          <Trans i18nKey="about.feature_sidebar" components={{ strong: <span className="font-medium" /> }} />
         </li>
         <li>
-          The right side of the workspace shows currently open tabs in the browser. You can drag
-          them to the space area to add to favorites
+          {t("about.feature_drag")}
         </li>
       </ul>
 
       {/* Docs link */}
       <p className="mt-4 text-sm text-foreground">
-        For more information, please refer to{" "}
+        {t("about.docs_prefix")}{" "}
         <a
           href="https://github.com/nicepkg/opentab"
           target="_blank"
           rel="noopener noreferrer"
           className="text-blue-500 hover:underline"
         >
-          OpenTab Docs
+          {t("about.docs_link")}
         </a>
       </p>
 
       {/* Changelog */}
       <div className="mt-6 flex items-center gap-2">
-        <span className="text-sm font-semibold">ChangeLog</span>
+        <span className="text-sm font-semibold">{t("about.changelog")}</span>
         <a
           href="https://github.com/nicepkg/opentab/releases"
           target="_blank"
@@ -69,13 +69,13 @@ export function AboutPage() {
           className="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline"
         >
           <ExternalLink className="size-3" />
-          Latest Version Info
+          {t("about.latest_version")}
         </a>
       </div>
 
       {/* Contact us */}
       <div className="mt-4 flex items-center gap-2">
-        <span className="text-sm">Contact us</span>
+        <span className="text-sm">{t("about.contact")}</span>
         <a
           href="https://github.com/nicepkg/opentab"
           target="_blank"
