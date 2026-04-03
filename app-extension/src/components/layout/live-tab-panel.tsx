@@ -62,7 +62,10 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
               variant="outline"
               size="xs"
               disabled={savableTabs.length === 0 || activeWorkspaceId == null}
-              onClick={() => setDialogOpen(true)}
+              onClick={(e) => {
+                e.currentTarget.blur();
+                setDialogOpen(true);
+              }}
               className="gap-1"
             >
               <Save className="size-3" />

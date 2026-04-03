@@ -225,7 +225,10 @@ export function CollectionPanel({
             variant="outline"
             size="sm"
             className="gap-1 text-xs"
-            onClick={() => setCreateOpen(true)}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              setCreateOpen(true);
+            }}
           >
             <Plus className="size-3.5" />
             {t("collection_panel.add_collection")}
@@ -271,7 +274,10 @@ export function CollectionPanel({
                     : "text-destructive focus:text-destructive"
                 }
                 onClick={() => {
-                  if (workspaceCount > 1) setDeleteWorkspaceOpen(true);
+                  if (workspaceCount > 1) {
+                    (document.activeElement as HTMLElement)?.blur?.();
+                    setDeleteWorkspaceOpen(true);
+                  }
                 }}
               >
                 <Trash2 className="mr-2 size-4" />
