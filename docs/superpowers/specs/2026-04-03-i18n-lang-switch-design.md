@@ -69,7 +69,16 @@ export interface AppSettings {
 }
 ```
 
-Default value: detect from `navigator.language` — if starts with "zh" use "zh", otherwise "en".
+Default value: detect via inline expression in the `DEFAULTS` constant:
+
+```typescript
+const DEFAULTS: AppSettings = {
+  // ... existing fields
+  locale: (navigator.language?.startsWith("zh") ? "zh" : "en") as Locale,
+};
+```
+
+This works because `settings.ts` is only imported in browser contexts (React entrypoints), never in the service worker. Both the `AppSettings` interface and the `DEFAULTS` constant must be updated — `getSettings()` derives its key list from `Object.keys(DEFAULTS)`.
 
 ### i18n Initialization
 
@@ -123,13 +132,16 @@ declare module "i18next" {
 
 ## Translation Scope
 
-### Components to translate (~70 strings total)
+### Components to translate (~80 strings total)
 
 | Area | File | Strings |
 |---|---|---|
 | Sidebar | workspace-sidebar.tsx | ~6 |
 | Settings | settings/App.tsx | ~20 |
 | Dialogs | create-workspace-dialog, delete-workspace-dialog, create-collection-dialog, delete-collection-dialog, save-tabs-dialog | ~20 |
+| Search | search-dialog.tsx | ~3 |
+| Collection panel | collection-panel.tsx (view labels: Default/Compact/List/Zen) | ~5 |
+| Live tabs | live-tab-item.tsx ("New Tab" fallback) | ~1 |
 | Welcome | welcome-banner.tsx | ~3 |
 | Empty state | empty-workspace.tsx | ~3 |
 | Import | import page components | ~10 |
@@ -146,7 +158,7 @@ declare module "i18next" {
 1. Install i18next + react-i18next
 2. Create translation files (en.json, zh.json) with all strings
 3. Create i18n.ts initialization module
-4. Add `locale` to AppSettings with detection default
+4. Add `locale` field to both `AppSettings` interface and `DEFAULTS` constant in settings.ts
 5. Create useLocale hook (locale.ts)
 6. Add TypeScript type declarations
 7. Add sidebar language cycle button
