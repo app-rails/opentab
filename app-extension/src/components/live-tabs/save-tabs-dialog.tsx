@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { TabFavicon } from "@/components/tab-favicon";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ interface SaveTabsDialogProps {
 }
 
 export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps) {
+  const { t } = useTranslation();
   const saveTabsAsCollection = useAppStore((s) => s.saveTabsAsCollection);
   const [name, setName] = useState(() => formatTimestamp());
   const [selectedIds, setSelectedIds] = useState<Set<number>>(
@@ -95,7 +97,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
       }));
     saveTabsAsCollection(trimmedName, selectedTabs);
     toast.success(
-      `Saved ${selectedTabs.length} tab${selectedTabs.length === 1 ? "" : "s"} to "${trimmedName}"`,
+      t("dialog.save_tabs.toast_success", { count: selectedTabs.length, name: trimmedName }),
     );
     onOpenChange(false);
   }
@@ -104,16 +106,16 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="overflow-hidden sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Save as Collection</DialogTitle>
+          <DialogTitle>{t("dialog.save_tabs.title")}</DialogTitle>
           <DialogDescription>
-            Save selected tabs as a new collection in the current workspace.
+            {t("dialog.save_tabs.description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <Input
             autoFocus
-            placeholder="Collection name"
+            placeholder={t("dialog.save_tabs.name_placeholder")}
             maxLength={WORKSPACE_NAME_MAX_LENGTH}
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -134,7 +136,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
                   onCheckedChange={() => toggleTab(tab.id!)}
                 />
                 <TabFavicon url={tab.favIconUrl} />
-                <span className="truncate">{tab.title || tab.url || "New Tab"}</span>
+                <span className="truncate">{tab.title || tab.url || t("dialog.save_tabs.new_tab")}</span>
               </label>
             ))}
           </div>
@@ -145,20 +147,20 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
               className="underline-offset-2 hover:underline"
               onClick={toggleAll}
             >
-              {allSelected ? "Deselect all" : "Select all"}
+              {allSelected ? t("dialog.save_tabs.deselect_all") : t("dialog.save_tabs.select_all")}
             </button>
             <span>
-              {selectedIds.size} of {tabs.length} selected
+              {t("dialog.save_tabs.selected_count", { selected: selectedIds.size, total: tabs.length })}
             </span>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>
-            Cancel
+            {t("dialog.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={!canSave}>
-            Save
+            {t("dialog.save_tabs.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

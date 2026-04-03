@@ -2,18 +2,19 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import { ChevronLeft, Monitor, Moon, PanelLeft, Plus, Settings, Sun } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import { DeleteWorkspaceDialog } from "@/components/workspace/delete-workspace-dialog";
 import { WorkspaceItem } from "@/components/workspace/workspace-item";
 import type { Workspace } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
+import { useLocale } from "@/lib/locale";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
 const THEME_ICON = { light: Sun, dark: Moon, system: Monitor } as const;
-const THEME_LABEL = { light: "Light", dark: "Dark", system: "System" } as const;
 
 function SortableWorkspaceItem({
   workspace,
@@ -63,6 +64,8 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
   const setActiveWorkspace = useAppStore((s) => s.setActiveWorkspace);
 
   const { mode, cycleTheme } = useTheme();
+  const { locale, cycleLocale } = useLocale();
+  const { t } = useTranslation();
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Workspace | null>(null);
   const ThemeIcon = THEME_ICON[mode];
@@ -75,7 +78,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
           type="button"
           className="absolute top-3 -right-3 z-10 flex size-6 items-center justify-center rounded-full border bg-background shadow-sm hover:bg-accent"
           onClick={onToggleCollapse}
-          aria-label="Expand sidebar"
+          aria-label={t("sidebar.expand_sidebar")}
         >
           <ChevronLeft className="size-3.5 rotate-180" />
         </button>
@@ -94,7 +97,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
             variant="ghost"
             size="icon-xs"
             onClick={onToggleCollapse}
-            aria-label="Toggle sidebar"
+            aria-label={t("sidebar.toggle_sidebar")}
           >
             <PanelLeft className="size-4" />
           </Button>
@@ -106,7 +109,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
         {/* Spaces header */}
         <div className="relative mb-1 mt-3 flex items-center px-4">
           <h2 className="text-xs font-medium uppercase tracking-wide text-sidebar-foreground/70">
-            Spaces
+            {t("sidebar.spaces")}
           </h2>
           <Button
             variant="ghost"
@@ -166,17 +169,34 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
             }}
           >
             <Settings className="size-4" />
-            Settings
+            {t("sidebar.settings")}
           </Button>
           <Button
             variant="ghost"
             size="icon-xs"
             onClick={cycleTheme}
-            aria-label={`Theme: ${THEME_LABEL[mode]}`}
-            title={`Theme: ${THEME_LABEL[mode]}`}
+            aria-label={t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) })}
+            title={t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) })}
           >
             <ThemeIcon className="size-4 text-sidebar-foreground/70" />
           </Button>
+          {(() => {
+            const langLabel = locale === "en" ? t("sidebar.language_label_en") : t("sidebar.language_label_zh");
+            const langAbbr = locale === "en" ? t("sidebar.language_en") : t("sidebar.language_zh");
+            return (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={cycleLocale}
+                aria-label={langLabel}
+                title={langLabel}
+              >
+                <span className="text-xs font-medium text-sidebar-foreground/70">
+                  {langAbbr}
+                </span>
+              </Button>
+            );
+          })()}
         </div>
       </aside>
     </div>

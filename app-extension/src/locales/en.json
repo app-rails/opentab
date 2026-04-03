@@ -1,0 +1,223 @@
+{
+  "sidebar": {
+    "spaces": "Spaces",
+    "settings": "Settings",
+    "expand_sidebar": "Expand sidebar",
+    "toggle_sidebar": "Toggle sidebar",
+    "theme_light": "Light",
+    "theme_dark": "Dark",
+    "theme_system": "System",
+    "theme_label": "Theme: {{mode}}",
+    "language_en": "EN",
+    "language_zh": "中",
+    "language_label_en": "Language: English",
+    "language_label_zh": "Language: 中文"
+  },
+  "collection_panel": {
+    "view_default": "Default view",
+    "view_compact": "Compact view",
+    "view_list": "List view",
+    "zen_mode": "Zen mode",
+    "toggle_zen_mode": "Toggle zen mode",
+    "search_tabs": "Search Tabs",
+    "add_collection": "Add collection",
+    "more_actions": "More actions",
+    "rename_space": "Rename Space",
+    "delete_space": "Delete Space"
+  },
+  "search": {
+    "close": "Close search",
+    "label": "Search saved tabs",
+    "placeholder": "Search saved tabs...",
+    "no_results": "No results found"
+  },
+  "collection_card": {
+    "expand": "Expand collection",
+    "collapse": "Collapse collection",
+    "open_all": "Open all tabs",
+    "delete": "Delete collection",
+    "more_actions": "More actions",
+    "rename": "Rename",
+    "delete_menu": "Delete",
+    "drag_tabs_here": "Drag tabs here"
+  },
+  "collection_tab": {
+    "open": "Open",
+    "copy_url": "Copy URL",
+    "remove": "Remove"
+  },
+  "add_tab": {
+    "add_url": "Add URL",
+    "placeholder": "https://example.com",
+    "invalid_url": "Please enter a valid URL"
+  },
+  "workspace_item": {
+    "change_name": "Change Name",
+    "change_icon": "Change Icon",
+    "delete": "Delete",
+    "last": "last",
+    "rename_tooltip": "Double-click to rename"
+  },
+  "dialog": {
+    "cancel": "Cancel",
+    "create_workspace": {
+      "title": "New Workspace",
+      "description": "Create a new workspace to organize your tabs",
+      "name_label": "Name",
+      "name_placeholder": "Workspace name",
+      "icon_label": "Icon",
+      "submit": "Create"
+    },
+    "delete_workspace": {
+      "title": "Delete \"{{name}}\"?",
+      "description": "This will permanently delete this workspace and all its collections. This action cannot be undone.",
+      "submit": "Delete"
+    },
+    "create_collection": {
+      "title": "New Collection",
+      "description": "Create a new tab collection in this workspace.",
+      "name_placeholder": "Collection name",
+      "submit": "Create"
+    },
+    "delete_collection": {
+      "title": "Delete \"{{name}}\"?",
+      "description": "This collection and all its saved tabs will be permanently deleted. This action cannot be undone.",
+      "submit": "Delete"
+    },
+    "save_tabs": {
+      "title": "Save as Collection",
+      "description": "Save selected tabs as a new collection in the current workspace.",
+      "name_placeholder": "Collection name",
+      "new_tab": "New Tab",
+      "deselect_all": "Deselect all",
+      "select_all": "Select all",
+      "selected_count": "{{selected}} of {{total}} selected",
+      "save": "Save",
+      "toast_success": "Saved {{count}} tab(s) to \"{{name}}\""
+    }
+  },
+  "live_tab": {
+    "new_tab": "New Tab",
+    "expand_panel": "Expand panel",
+    "collapse_panel": "Collapse panel",
+    "tabs": "Tabs",
+    "toggle_sort": "Toggle sort order",
+    "save": "Save",
+    "no_tabs": "No session tabs"
+  },
+  "welcome": {
+    "title": "Welcome to OpenTab",
+    "description": "Organize your browser tabs into workspaces and collections. Drag tabs from the right panel to get started.",
+    "dismiss": "Dismiss"
+  },
+  "empty": {
+    "title": "Get started",
+    "description": "Drag tabs from the right panel or save your open tabs as a collection.",
+    "save_current": "Save Current Tabs"
+  },
+  "about": {
+    "title": "About OpenTab",
+    "description": "OpenTab is a tab management tool",
+    "info_badge": "OpenTab Info",
+    "feature_sidebar": "The left sidebar shows all workspaces. Click <strong>+</strong> to create a new space",
+    "feature_drag": "The right side of the workspace shows currently open tabs in the browser. You can drag them to the space area to add to favorites",
+    "docs_prefix": "For more information, please refer to ",
+    "docs_link": "OpenTab Docs",
+    "changelog": "ChangeLog",
+    "latest_version": "Latest Version Info",
+    "contact": "Contact us"
+  },
+  "settings": {
+    "title": "Settings",
+    "loading": "Loading...",
+    "nav": {
+      "general": "General",
+      "import_export": "Import / Export"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "theme": "Theme",
+      "theme_light": "Light",
+      "theme_dark": "Dark",
+      "theme_system": "System",
+      "language": "Language",
+      "lang_en": "English",
+      "lang_zh": "中文",
+      "lang_en_native": "English",
+      "lang_zh_native": "中文"
+    },
+    "server": {
+      "title": "Server Sync",
+      "enable": "Enable Server Sync",
+      "url_label": "Server URL",
+      "url_placeholder": "http://localhost:3001",
+      "test": "Test Connection",
+      "testing": "Testing...",
+      "status": {
+        "not_enabled": "Not enabled",
+        "testing": "Testing...",
+        "connected": "Connected",
+        "disconnected": "Disconnected"
+      }
+    },
+    "export": {
+      "title": "Export",
+      "description": "Export all your workspaces, collections, and tabs as a JSON file.",
+      "button": "Export All Data",
+      "exporting": "Exporting..."
+    },
+    "import": {
+      "title": "Import",
+      "description": "Import data from a TabTab or OpenTab JSON backup file. You'll be able to preview and select what to import before any changes are made.",
+      "button": "Import Data",
+      "unsupported_format": "Unsupported file format. Please select a TabTab or OpenTab JSON file.",
+      "read_error": "Failed to read file. Please ensure it is a valid JSON file."
+    }
+  },
+  "import_page": {
+    "no_session": "No import session found. Please start import from Settings.",
+    "expired": "Import session expired. Please start import from Settings.",
+    "load_error": "Failed to load import data.",
+    "loading": "Loading import data...",
+    "complete": "Import complete. This tab will close shortly.",
+    "title": "Import Preview",
+    "cancel": "Cancel",
+    "select_collection": "Select a collection to view details",
+    "toast_success": "Successfully imported {{workspaces}} workspaces, {{collections}} collections, {{tabs}} tabs",
+    "toast_error": "Import failed. No changes were made.",
+    "workspaces": "Workspaces"
+  },
+  "import_detail": {
+    "identical": "This collection is identical — nothing to import.",
+    "merge": "Merge",
+    "create_new": "Create New",
+    "skip": "Skip",
+    "new_count": "+{{count}} new",
+    "extra_count": "-{{count}} extra existing",
+    "unchanged_count": "{{count}} unchanged",
+    "tabs_to_import": "Tabs to import ({{count}})",
+    "new_tabs": "New tabs (will be added)",
+    "extra_tabs": "Extra existing tabs (in your data but not in import)",
+    "create_message": "A new collection \"{{name}}\" will be created with all imported tabs.",
+    "skip_message": "This collection will be skipped."
+  },
+  "import_summary": {
+    "summary": "Will import: {{workspaces}} new workspaces, {{collections}} collections, {{tabs}} tabs",
+    "importing": "Importing...",
+    "import": "Import"
+  },
+  "tab_diff": {
+    "keep_all": "Keep All",
+    "delete_all": "Delete All",
+    "keep": "Keep",
+    "delete": "Delete"
+  },
+  "dnd": {
+    "picked_up": "Picked up {{title}}",
+    "over_target": "{{title}} is over drop target",
+    "not_over_target": "{{title}} is no longer over a drop target",
+    "dropped": "{{title}} was dropped",
+    "dropped_outside": "{{title}} was dropped outside a target",
+    "cancelled": "Dragging {{title}} was cancelled"
+  }
+}

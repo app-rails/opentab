@@ -1,6 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Copy, EllipsisVertical, ExternalLink, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { TabFavicon } from "@/components/tab-favicon";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +30,7 @@ const containerStyles: Record<ViewMode, string> = {
 };
 
 export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItemProps) {
+  const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `col-tab-${tab.id}`,
     data: { type: DRAG_TYPES.COLLECTION_TAB, tab, collectionId: tab.collectionId },
@@ -89,7 +91,7 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
             }}
           >
             <ExternalLink className="mr-2 size-4" />
-            Open
+            {t("collection_tab.open")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={(e) => {
@@ -98,7 +100,7 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
             }}
           >
             <Copy className="mr-2 size-4" />
-            Copy URL
+            {t("collection_tab.copy_url")}
           </DropdownMenuItem>
           <DropdownMenuItem
             className="text-destructive"
@@ -108,7 +110,7 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
             }}
           >
             <Trash2 className="mr-2 size-4" />
-            Remove
+            {t("collection_tab.remove")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

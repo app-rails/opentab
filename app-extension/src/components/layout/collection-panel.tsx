@@ -1,5 +1,6 @@
 import { EllipsisVertical, Pencil, Plus, Trash2, Zap } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CollectionCard } from "@/components/collection/collection-card";
 import { CreateCollectionDialog } from "@/components/collection/create-collection-dialog";
 import { DeleteCollectionDialog } from "@/components/collection/delete-collection-dialog";
@@ -20,10 +21,10 @@ import { cn } from "@/lib/utils";
 import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
 
-const VIEW_MODE_OPTIONS: { mode: ViewMode; label: string; btnClass: string; icon: ReactNode }[] = [
+const VIEW_MODE_OPTIONS: { mode: ViewMode; labelKey: "collection_panel.view_default" | "collection_panel.view_compact" | "collection_panel.view_list"; btnClass: string; icon: ReactNode }[] = [
   {
     mode: "default",
-    label: "Default view",
+    labelKey: "collection_panel.view_default",
     btnClass: "rounded-r-none",
     icon: (
       <svg
@@ -43,7 +44,7 @@ const VIEW_MODE_OPTIONS: { mode: ViewMode; label: string; btnClass: string; icon
   },
   {
     mode: "compact",
-    label: "Compact view",
+    labelKey: "collection_panel.view_compact",
     btnClass: "rounded-none border-x border-border",
     icon: (
       <svg
@@ -63,7 +64,7 @@ const VIEW_MODE_OPTIONS: { mode: ViewMode; label: string; btnClass: string; icon
   },
   {
     mode: "list",
-    label: "List view",
+    labelKey: "collection_panel.view_list",
     btnClass: "rounded-l-none",
     icon: (
       <svg
@@ -129,6 +130,7 @@ export function CollectionPanel({
   const setWorkspaceViewMode = useAppStore((s) => s.setWorkspaceViewMode);
   const viewMode: ViewMode = activeWorkspace?.viewMode ?? "default";
 
+  const { t } = useTranslation();
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TabCollection | null>(null);
   const [deleteWorkspaceOpen, setDeleteWorkspaceOpen] = useState(false);
@@ -198,8 +200,8 @@ export function CollectionPanel({
             variant="ghost"
             size="icon-xs"
             onClick={onToggleZenMode}
-            title="Zen mode"
-            aria-label="Toggle zen mode"
+            title={t("collection_panel.zen_mode")}
+            aria-label={t("collection_panel.toggle_zen_mode")}
           >
             <Zap className={cn("size-4", isZenMode ? "text-primary" : "text-muted-foreground")} />
           </Button>
@@ -211,7 +213,7 @@ export function CollectionPanel({
             className="gap-1.5 text-xs"
             onClick={() => onSearchOpenChange(true)}
           >
-            Search Tabs
+            {t("collection_panel.search_tabs")}
             <kbd className="pointer-events-none ml-1 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
               ⌘J
             </kbd>
@@ -226,12 +228,12 @@ export function CollectionPanel({
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="size-3.5" />
-            Add collection
+            {t("collection_panel.add_collection")}
           </Button>
 
           {/* View mode toggle */}
           <div className="flex items-center rounded-md border border-border">
-            {VIEW_MODE_OPTIONS.map(({ mode, label, btnClass, icon }) => (
+            {VIEW_MODE_OPTIONS.map(({ mode, labelKey, btnClass, icon }) => (
               <Button
                 key={mode}
                 variant="ghost"
@@ -240,8 +242,8 @@ export function CollectionPanel({
                 onClick={() =>
                   activeWorkspace?.id != null && setWorkspaceViewMode(activeWorkspace.id, mode)
                 }
-                title={label}
-                aria-label={label}
+                title={t(labelKey)}
+                aria-label={t(labelKey)}
               >
                 {icon}
               </Button>
@@ -251,14 +253,14 @@ export function CollectionPanel({
           {/* More menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-xs" aria-label="More actions">
+              <Button variant="ghost" size="icon-xs" aria-label={t("collection_panel.more_actions")}>
                 <EllipsisVertical className="size-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={startRename}>
                 <Pencil className="mr-2 size-4" />
-                Rename Space
+                {t("collection_panel.rename_space")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -273,7 +275,7 @@ export function CollectionPanel({
                 }}
               >
                 <Trash2 className="mr-2 size-4" />
-                Delete Space
+                {t("collection_panel.delete_space")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { TabFavicon } from "@/components/tab-favicon";
 import type { CollectionTab } from "@/lib/db";
 import { db } from "@/lib/db";
@@ -21,6 +22,7 @@ interface SearchDialogProps {
 }
 
 export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -134,14 +136,14 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
         type="button"
         className="fixed inset-0 z-50 bg-black/50"
         onClick={() => onOpenChange(false)}
-        aria-label="Close search"
+        aria-label={t("search.close")}
       />
       {/* Dialog */}
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Search saved tabs"
+        aria-label={t("search.label")}
         onKeyDown={handleDialogKeyDown}
         className="fixed left-1/2 top-[20%] z-50 w-full max-w-lg -translate-x-1/2 rounded-xl border bg-popover shadow-lg"
       >
@@ -153,7 +155,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search saved tabs..."
+            placeholder={t("search.placeholder")}
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         </div>
@@ -161,7 +163,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
         {/* Results */}
         <div className="max-h-[300px] overflow-auto p-2">
           {query.trim() && results.length === 0 && (
-            <p className="py-6 text-center text-sm text-muted-foreground">No results found</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">{t("search.no_results")}</p>
           )}
           {results.map((result, i) => (
             <button

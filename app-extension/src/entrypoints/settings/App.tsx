@@ -1,5 +1,6 @@
 import { Download, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -9,17 +10,23 @@ import { exportAllData } from "@/lib/export";
 import { detectFormat } from "@/lib/import/detect";
 import { parseOpenTab } from "@/lib/import/parse-opentab";
 import { parseTabTab } from "@/lib/import/parse-tabtab";
-import { type AppSettings, getSettings, saveSettings, type ThemeMode } from "@/lib/settings";
+import { useLocale } from "@/lib/locale";
+import { type AppSettings, getSettings, type Locale, saveSettings, type ThemeMode } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 type SettingsPanel = "general" | "import-export";
 type ConnectionStatus = "not_enabled" | "testing" | "connected" | "disconnected";
 
-const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "system", label: "System" },
+const THEME_OPTIONS = [
+  { value: "light" as ThemeMode, labelKey: "settings.appearance.theme_light" as const },
+  { value: "dark" as ThemeMode, labelKey: "settings.appearance.theme_dark" as const },
+  { value: "system" as ThemeMode, labelKey: "settings.appearance.theme_system" as const },
+];
+
+const LANGUAGE_OPTIONS = [
+  { value: "en" as Locale, native: "English", labelKey: "settings.appearance.lang_en" as const },
+  { value: "zh" as Locale, native: "中文", labelKey: "settings.appearance.lang_zh" as const },
 ];
 
 function useDebouncedSave(delayMs: number) {
@@ -46,6 +53,8 @@ export default function App() {
   const debouncedSave = useDebouncedSave(500);
 
   const { mode: themeMode, setTheme } = useTheme();
+  const { locale, setLocale } = useLocale();
+  const { t } = useTranslation();
 
   useEffect(() => {
     getSettings().then((loaded) => {
@@ -109,7 +118,7 @@ export default function App() {
         const format = detectFormat(json);
 
         if (!format) {
-          alert("Unsupported file format. Please select a TabTab or OpenTab JSON file.");
+          alert(t("settings.import.unsupported_format"));
           return;
         }
 
@@ -125,16 +134,16 @@ export default function App() {
         });
       } catch (err) {
         console.error("Failed to read import file:", err);
-        alert("Failed to read file. Please ensure it is a valid JSON file.");
+        alert(t("settings.import.read_error"));
       }
     };
     input.click();
-  }, []);
+  }, [t]);
 
   if (!settings) {
     return (
       <div className="flex h-screen items-center justify-center bg-background" aria-live="polite">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">{t("settings.loading")}</p>
       </div>
     );
   }
@@ -143,7 +152,7 @@ export default function App() {
     <div className="grid h-screen grid-cols-1 sm:grid-cols-[200px_1fr] bg-background text-foreground">
       {/* Left nav */}
       <nav className="border-r border-border p-4">
-        <h1 className="mb-4 text-lg font-semibold">Settings</h1>
+        <h1 className="mb-4 text-lg font-semibold">{t("settings.title")}</h1>
         <div className="space-y-1">
           <button
             type="button"
@@ -155,7 +164,7 @@ export default function App() {
             )}
             onClick={() => setActivePanel("import-export")}
           >
-            Import / Export
+            {t("settings.nav.import_export")}
           </button>
           <button
             type="button"
@@ -165,7 +174,7 @@ export default function App() {
             )}
             onClick={() => setActivePanel("general")}
           >
-            General
+            {t("settings.nav.general")}
           </button>
         </div>
       </nav>
@@ -174,17 +183,17 @@ export default function App() {
       <main className="p-8">
         {activePanel === "general" && (
           <>
-            <h2 className="mb-6 text-xl font-semibold">General</h2>
+            <h2 className="mb-6 text-xl font-semibold">{t("settings.nav.general")}</h2>
             <section className="max-w-md space-y-6">
               <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-                Appearance
+                {t("settings.appearance.title")}
               </h3>
               <div className="space-y-2">
-                <span className="text-sm font-medium">Theme</span>
+                <span className="text-sm font-medium">{t("settings.appearance.theme")}</span>
                 <div
                   className="flex gap-1 rounded-lg border border-border p-1"
                   role="radiogroup"
-                  aria-label="Theme"
+                  aria-label={t("settings.appearance.theme")}
                 >
                   {THEME_OPTIONS.map((opt) => (
                     // biome-ignore lint/a11y/useSemanticElements: styled radio group using button+role is intentional
@@ -201,18 +210,40 @@ export default function App() {
                       )}
                       onClick={() => handleThemeChange(opt.value)}
                     >
-                      {opt.label}
+                      {t(opt.labelKey)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-sm font-medium">{t("settings.appearance.language")}</span>
+                <div className="rounded-lg border border-border">
+                  {LANGUAGE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className="flex w-full items-center justify-between px-3 py-2.5 text-sm transition-colors hover:bg-accent first:rounded-t-lg last:rounded-b-lg [&:not(:last-child)]:border-b border-border"
+                      onClick={() => setLocale(opt.value)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{opt.native}</span>
+                        {locale !== opt.value && (
+                          <span className="text-muted-foreground">{t(opt.labelKey)}</span>
+                        )}
+                      </div>
+                      {locale === opt.value && <span className="text-primary">✓</span>}
                     </button>
                   ))}
                 </div>
               </div>
 
               <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-                Server Sync
+                {t("settings.server.title")}
               </h3>
               <div className="flex items-center justify-between">
                 <label htmlFor="server-sync" className="text-sm font-medium">
-                  Enable Server Sync
+                  {t("settings.server.enable")}
                 </label>
                 <Switch
                   id="server-sync"
@@ -224,13 +255,13 @@ export default function App() {
                 <>
                   <div className="space-y-2">
                     <label htmlFor="server-url" className="text-sm font-medium">
-                      Server URL
+                      {t("settings.server.url_label")}
                     </label>
                     <Input
                       id="server-url"
                       value={settings.server_url}
                       onChange={(e) => handleUrlChange(e.target.value)}
-                      placeholder="http://localhost:3001"
+                      placeholder={t("settings.server.url_placeholder")}
                     />
                   </div>
                   <div className="flex items-center gap-3">
@@ -240,7 +271,9 @@ export default function App() {
                       onClick={handleTestConnection}
                       disabled={connectionStatus === "testing"}
                     >
-                      {connectionStatus === "testing" ? "Testing..." : "Test Connection"}
+                      {connectionStatus === "testing"
+                        ? t("settings.server.testing")
+                        : t("settings.server.test")}
                     </Button>
                     <StatusIndicator status={connectionStatus} />
                   </div>
@@ -253,29 +286,24 @@ export default function App() {
 
         {activePanel === "import-export" && (
           <>
-            <h2 className="mb-6 text-xl font-semibold">Import / Export</h2>
+            <h2 className="mb-6 text-xl font-semibold">{t("settings.nav.import_export")}</h2>
             <section className="max-w-md space-y-6">
               <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-                Export
+                {t("settings.export.title")}
               </h3>
-              <p className="text-sm text-muted-foreground">
-                Export all your workspaces, collections, and tabs as a JSON file.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("settings.export.description")}</p>
               <Button onClick={handleExport} disabled={isExporting} className="gap-2">
                 <Download className="size-4" />
-                {isExporting ? "Exporting..." : "Export All Data"}
+                {isExporting ? t("settings.export.exporting") : t("settings.export.button")}
               </Button>
 
               <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-                Import
+                {t("settings.import.title")}
               </h3>
-              <p className="text-sm text-muted-foreground">
-                Import data from a TabTab or OpenTab JSON backup file. You'll be able to preview and
-                select what to import before any changes are made.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("settings.import.description")}</p>
               <Button variant="outline" onClick={handleImport} className="gap-2">
                 <Upload className="size-4" />
-                Import Data
+                {t("settings.import.button")}
               </Button>
             </section>
           </>
@@ -286,11 +314,15 @@ export default function App() {
 }
 
 function StatusIndicator({ status }: { status: ConnectionStatus }) {
+  const { t } = useTranslation();
   const config = {
-    not_enabled: { color: "bg-muted-foreground/40", text: "Not enabled" },
-    testing: { color: "bg-[var(--status-yellow)]", text: "Testing..." },
-    connected: { color: "bg-[var(--status-green)]", text: "Connected" },
-    disconnected: { color: "bg-[var(--status-red)]", text: "Disconnected" },
+    not_enabled: { color: "bg-muted-foreground/40", text: t("settings.server.status.not_enabled") },
+    testing: { color: "bg-[var(--status-yellow)]", text: t("settings.server.status.testing") },
+    connected: { color: "bg-[var(--status-green)]", text: t("settings.server.status.connected") },
+    disconnected: {
+      color: "bg-[var(--status-red)]",
+      text: t("settings.server.status.disconnected"),
+    },
   }[status];
 
   return (

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { ExistingTabDecision, ExtraTabDecision, ImportTab } from "@/lib/import/types";
 import { cn } from "@/lib/utils";
 
@@ -6,6 +7,7 @@ interface NewTabListProps {
 }
 
 export function NewTabList({ tabs }: NewTabListProps) {
+  const { t } = useTranslation();
   if (tabs.length === 0) return null;
   return (
     <div className="space-y-1">
@@ -37,6 +39,7 @@ export function ExtraExistingTabList({
   onDecision,
   onBatchDecision,
 }: ExtraExistingTabListProps) {
+  const { t } = useTranslation();
   if (tabs.length === 0) return null;
   return (
     <div className="space-y-1">
@@ -46,7 +49,7 @@ export function ExtraExistingTabList({
           className="text-xs text-muted-foreground hover:text-foreground"
           onClick={() => onBatchDecision("keep")}
         >
-          Keep All
+          {t("tab_diff.keep_all")}
         </button>
         <span className="text-muted-foreground">·</span>
         <button
@@ -54,7 +57,7 @@ export function ExtraExistingTabList({
           className="text-xs text-muted-foreground hover:text-destructive"
           onClick={() => onBatchDecision("delete")}
         >
-          Delete All
+          {t("tab_diff.delete_all")}
         </button>
       </div>
       {tabs.map((tab) => (
@@ -73,8 +76,8 @@ export function ExtraExistingTabList({
             value={tab.decision}
             onChange={(e) => onDecision(tab.id, e.target.value as ExtraTabDecision)}
           >
-            <option value="keep">Keep</option>
-            <option value="delete">Delete</option>
+            <option value="keep">{t("tab_diff.keep")}</option>
+            <option value="delete">{t("tab_diff.delete")}</option>
           </select>
         </div>
       ))}

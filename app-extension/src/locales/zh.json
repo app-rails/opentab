@@ -1,0 +1,223 @@
+{
+  "sidebar": {
+    "spaces": "空间",
+    "settings": "设置",
+    "expand_sidebar": "展开侧边栏",
+    "toggle_sidebar": "切换侧边栏",
+    "theme_light": "浅色",
+    "theme_dark": "深色",
+    "theme_system": "跟随系统",
+    "theme_label": "主题: {{mode}}",
+    "language_en": "EN",
+    "language_zh": "中",
+    "language_label_en": "Language: English",
+    "language_label_zh": "语言: 中文"
+  },
+  "collection_panel": {
+    "view_default": "默认视图",
+    "view_compact": "紧凑视图",
+    "view_list": "列表视图",
+    "zen_mode": "专注模式",
+    "toggle_zen_mode": "切换专注模式",
+    "search_tabs": "搜索标签页",
+    "add_collection": "添加集合",
+    "more_actions": "更多操作",
+    "rename_space": "重命名空间",
+    "delete_space": "删除空间"
+  },
+  "search": {
+    "close": "关闭搜索",
+    "label": "搜索已保存的标签页",
+    "placeholder": "搜索已保存的标签页...",
+    "no_results": "没有找到结果"
+  },
+  "collection_card": {
+    "expand": "展开集合",
+    "collapse": "折叠集合",
+    "open_all": "打开所有标签页",
+    "delete": "删除集合",
+    "more_actions": "更多操作",
+    "rename": "重命名",
+    "delete_menu": "删除",
+    "drag_tabs_here": "将标签页拖放到这里"
+  },
+  "collection_tab": {
+    "open": "打开",
+    "copy_url": "复制链接",
+    "remove": "移除"
+  },
+  "add_tab": {
+    "add_url": "添加链接",
+    "placeholder": "https://example.com",
+    "invalid_url": "请输入有效的链接"
+  },
+  "workspace_item": {
+    "change_name": "修改名称",
+    "change_icon": "修改图标",
+    "delete": "删除",
+    "last": "最后一个",
+    "rename_tooltip": "双击重命名"
+  },
+  "dialog": {
+    "cancel": "取消",
+    "create_workspace": {
+      "title": "新建工作空间",
+      "description": "创建新的工作空间来组织你的标签页",
+      "name_label": "名称",
+      "name_placeholder": "工作空间名称",
+      "icon_label": "图标",
+      "submit": "创建"
+    },
+    "delete_workspace": {
+      "title": "删除「{{name}}」？",
+      "description": "这将永久删除该工作空间及其所有集合。此操作无法撤销。",
+      "submit": "删除"
+    },
+    "create_collection": {
+      "title": "新建集合",
+      "description": "在当前工作空间中创建新的标签页集合。",
+      "name_placeholder": "集合名称",
+      "submit": "创建"
+    },
+    "delete_collection": {
+      "title": "删除「{{name}}」？",
+      "description": "该集合及其所有已保存的标签页将被永久删除。此操作无法撤销。",
+      "submit": "删除"
+    },
+    "save_tabs": {
+      "title": "保存为集合",
+      "description": "将选中的标签页保存为当前工作空间中的新集合。",
+      "name_placeholder": "集合名称",
+      "new_tab": "新标签页",
+      "deselect_all": "取消全选",
+      "select_all": "全选",
+      "selected_count": "已选 {{selected}} / {{total}}",
+      "save": "保存",
+      "toast_success": "已保存 {{count}} 个标签页到「{{name}}」"
+    }
+  },
+  "live_tab": {
+    "new_tab": "新标签页",
+    "expand_panel": "展开面板",
+    "collapse_panel": "折叠面板",
+    "tabs": "标签页",
+    "toggle_sort": "切换排序方式",
+    "save": "保存",
+    "no_tabs": "没有会话标签页"
+  },
+  "welcome": {
+    "title": "欢迎使用 OpenTab",
+    "description": "将浏览器标签页组织到工作空间和集合中。从右侧面板拖拽标签页即可开始。",
+    "dismiss": "关闭"
+  },
+  "empty": {
+    "title": "开始使用",
+    "description": "从右侧面板拖拽标签页，或将当前打开的标签页保存为集合。",
+    "save_current": "保存当前标签页"
+  },
+  "about": {
+    "title": "关于 OpenTab",
+    "description": "OpenTab 是一款标签页管理工具",
+    "info_badge": "OpenTab 信息",
+    "feature_sidebar": "左侧边栏显示所有工作空间。点击 <strong>+</strong> 创建新空间",
+    "feature_drag": "工作空间右侧显示浏览器中当前打开的标签页。你可以将它们拖到空间区域添加到收藏",
+    "docs_prefix": "如需了解更多信息，请参阅 ",
+    "docs_link": "OpenTab 文档",
+    "changelog": "更新日志",
+    "latest_version": "最新版本信息",
+    "contact": "联系我们"
+  },
+  "settings": {
+    "title": "设置",
+    "loading": "加载中...",
+    "nav": {
+      "general": "通用",
+      "import_export": "导入 / 导出"
+    },
+    "appearance": {
+      "title": "外观",
+      "theme": "主题",
+      "theme_light": "浅色",
+      "theme_dark": "深色",
+      "theme_system": "跟随系统",
+      "language": "语言",
+      "lang_en": "English",
+      "lang_zh": "中文",
+      "lang_en_native": "English",
+      "lang_zh_native": "中文"
+    },
+    "server": {
+      "title": "服务器同步",
+      "enable": "启用服务器同步",
+      "url_label": "服务器地址",
+      "url_placeholder": "http://localhost:3001",
+      "test": "测试连接",
+      "testing": "测试中...",
+      "status": {
+        "not_enabled": "未启用",
+        "testing": "测试中...",
+        "connected": "已连接",
+        "disconnected": "未连接"
+      }
+    },
+    "export": {
+      "title": "导出",
+      "description": "将所有工作空间、集合和标签页导出为 JSON 文件。",
+      "button": "导出所有数据",
+      "exporting": "导出中..."
+    },
+    "import": {
+      "title": "导入",
+      "description": "从 TabTab 或 OpenTab 的 JSON 备份文件导入数据。在进行任何更改之前，你可以预览并选择要导入的内容。",
+      "button": "导入数据",
+      "unsupported_format": "不支持的文件格式。请选择 TabTab 或 OpenTab 的 JSON 文件。",
+      "read_error": "读取文件失败。请确保文件为有效的 JSON 格式。"
+    }
+  },
+  "import_page": {
+    "no_session": "未找到导入会话。请从设置中开始导入。",
+    "expired": "导入会话已过期。请从设置中重新开始导入。",
+    "load_error": "加载导入数据失败。",
+    "loading": "正在加载导入数据...",
+    "complete": "导入完成。此标签页将在短时间内关闭。",
+    "title": "导入预览",
+    "cancel": "取消",
+    "select_collection": "选择一个集合查看详情",
+    "toast_success": "成功导入 {{workspaces}} 个工作空间、{{collections}} 个集合、{{tabs}} 个标签页",
+    "toast_error": "导入失败。未做任何更改。",
+    "workspaces": "工作空间"
+  },
+  "import_detail": {
+    "identical": "此集合完全相同——无需导入。",
+    "merge": "合并",
+    "create_new": "新建",
+    "skip": "跳过",
+    "new_count": "+{{count}} 个新增",
+    "extra_count": "-{{count}} 个已有多余",
+    "unchanged_count": "{{count}} 个未变更",
+    "tabs_to_import": "待导入标签页 ({{count}})",
+    "new_tabs": "新标签页（将被添加）",
+    "extra_tabs": "已有多余标签页（存在于你的数据中但不在导入文件中）",
+    "create_message": "将创建新集合「{{name}}」并导入所有标签页。",
+    "skip_message": "此集合将被跳过。"
+  },
+  "import_summary": {
+    "summary": "将导入：{{workspaces}} 个新工作空间、{{collections}} 个集合、{{tabs}} 个标签页",
+    "importing": "导入中...",
+    "import": "导入"
+  },
+  "tab_diff": {
+    "keep_all": "全部保留",
+    "delete_all": "全部删除",
+    "keep": "保留",
+    "delete": "删除"
+  },
+  "dnd": {
+    "picked_up": "已拾起 {{title}}",
+    "over_target": "{{title}} 在放置目标上方",
+    "not_over_target": "{{title}} 已离开放置目标",
+    "dropped": "{{title}} 已放置",
+    "dropped_outside": "{{title}} 被放置在目标外部",
+    "cancelled": "拖拽 {{title}} 已取消"
+  }
+}

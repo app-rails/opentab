@@ -1,5 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import { TabFavicon } from "@/components/tab-favicon";
 import { DRAG_TYPES } from "@/lib/dnd-types";
 
@@ -8,6 +9,7 @@ interface LiveTabItemProps {
 }
 
 export const LiveTabItem = memo(function LiveTabItem({ tab }: LiveTabItemProps) {
+  const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `live-tab-${tab.id}`,
     data: { type: DRAG_TYPES.LIVE_TAB, tab },
@@ -23,7 +25,7 @@ export const LiveTabItem = memo(function LiveTabItem({ tab }: LiveTabItemProps) 
     >
       <TabFavicon url={tab.favIconUrl} size="md" />
       <span className="flex-1 min-w-0 text-xs leading-tight line-clamp-2">
-        {tab.title || tab.url || "New Tab"}
+        {tab.title || tab.url || t("live_tab.new_tab")}
       </span>
     </div>
   );
