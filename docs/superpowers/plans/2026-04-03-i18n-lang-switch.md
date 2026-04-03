@@ -805,19 +805,13 @@ import { getSettings, saveSettings, type Locale } from "./settings";
 const LOCALE_CYCLE: Locale[] = ["en", "zh"];
 
 export function useLocale() {
+  // initLocale() guarantees i18n.language is correct before React renders,
+  // so we read it synchronously here. No mount effect needed.
   const [locale, setLocaleState] = useState<Locale>(
     (i18n.language as Locale) || "en",
   );
 
-  // Load on mount
-  useEffect(() => {
-    getSettings().then((s) => {
-      setLocaleState(s.locale);
-      i18n.changeLanguage(s.locale);
-    });
-  }, []);
-
-  // Listen for cross-tab changes
+  // Listen for cross-tab changes (when another tab changes locale)
   useEffect(() => {
     const handler = (message: { type: string }) => {
       if (message.type === MSG.SETTINGS_CHANGED) {
