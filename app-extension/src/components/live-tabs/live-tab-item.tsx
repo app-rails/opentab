@@ -15,13 +15,24 @@ export const LiveTabItem = memo(function LiveTabItem({ tab }: LiveTabItemProps) 
     data: { type: DRAG_TYPES.LIVE_TAB, tab },
   });
 
+  function handleClick() {
+    if (tab.id != null) {
+      chrome.tabs.update(tab.id, { active: true });
+      if (tab.windowId != null) {
+        chrome.windows.update(tab.windowId, { focused: true });
+      }
+    }
+  }
+
   return (
     <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      role="link"
       className="flex h-14 cursor-grab items-center gap-2 rounded-md border border-transparent p-2 text-sm hover:bg-accent"
       style={{ opacity: isDragging ? 0.5 : 1 }}
+      onClick={handleClick}
     >
       <TabFavicon url={tab.favIconUrl} size="md" />
       <span className="flex-1 min-w-0 text-xs leading-tight line-clamp-2">

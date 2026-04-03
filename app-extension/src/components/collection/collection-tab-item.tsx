@@ -56,7 +56,9 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
       style={style}
       {...attributes}
       {...listeners}
-      className={cn("group", containerStyles[viewMode])}
+      role="link"
+      className={cn("group cursor-pointer", containerStyles[viewMode])}
+      onClick={handleOpen}
     >
       {viewMode !== "list" && (
         <TabFavicon url={tab.favIconUrl} size={viewMode === "default" ? "md" : "compact"} />
