@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -43,6 +44,7 @@ export function CollectionCard({
   viewMode,
   onRequestDelete,
 }: CollectionCardProps) {
+  const { t } = useTranslation();
   const renameCollection = useAppStore((s) => s.renameCollection);
   const removeTabFromCollection = useAppStore((s) => s.removeTabFromCollection);
   const addTabToCollection = useAppStore((s) => s.addTabToCollection);
@@ -121,7 +123,7 @@ export function CollectionCard({
           type="button"
           className="flex items-center p-0.5 text-muted-foreground hover:text-foreground"
           onClick={() => setCollapsed(!collapsed)}
-          aria-label={collapsed ? "Expand collection" : "Collapse collection"}
+          aria-label={collapsed ? t("collection_card.expand") : t("collection_card.collapse")}
           aria-expanded={!collapsed}
         >
           <ChevronRight
@@ -134,14 +136,14 @@ export function CollectionCard({
           type="button"
           className="flex-1 h-8 cursor-pointer"
           onClick={() => setCollapsed(!collapsed)}
-          aria-label={collapsed ? "Expand collection" : "Collapse collection"}
+          aria-label={collapsed ? t("collection_card.expand") : t("collection_card.collapse")}
         />
 
         {/* Right group — hover visible */}
         {!isRenaming && (
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             {tabs.length > 0 && (
-              <Button variant="ghost" size="icon-xs" onClick={handleOpenAll} title="Open all tabs">
+              <Button variant="ghost" size="icon-xs" onClick={handleOpenAll} title={t("collection_card.open_all")}>
                 <ExternalLink className="size-3.5 text-muted-foreground" />
               </Button>
             )}
@@ -149,13 +151,13 @@ export function CollectionCard({
               variant="ghost"
               size="icon-xs"
               onClick={onRequestDelete}
-              title="Delete collection"
+              title={t("collection_card.delete")}
             >
               <Trash2 className="size-3.5 text-muted-foreground" />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-xs" aria-label="More actions">
+                <Button variant="ghost" size="icon-xs" aria-label={t("collection_card.more_actions")}>
                   <EllipsisVertical className="size-3.5 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
@@ -167,12 +169,12 @@ export function CollectionCard({
                   }}
                 >
                   <Pencil className="mr-2 size-4" />
-                  Rename
+                  {t("collection_card.rename")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive" onClick={onRequestDelete}>
                   <Trash2 className="mr-2 size-4" />
-                  Delete
+                  {t("collection_card.delete_menu")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -211,7 +213,7 @@ export function CollectionCard({
               </div>
             ) : (
               <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground/70">
-                Drag tabs here
+                {t("collection_card.drag_tabs_here")}
               </div>
             )}
           </SortableContext>

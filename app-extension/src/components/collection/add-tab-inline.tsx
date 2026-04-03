@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -9,6 +10,7 @@ interface AddTabInlineProps {
 }
 
 export function AddTabInline({ onAdd }: AddTabInlineProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
@@ -23,7 +25,7 @@ export function AddTabInline({ onAdd }: AddTabInlineProps) {
     try {
       new URL(finalUrl);
     } catch {
-      setError("Please enter a valid URL");
+      setError(t("add_tab.invalid_url"));
       return;
     }
 
@@ -42,7 +44,7 @@ export function AddTabInline({ onAdd }: AddTabInlineProps) {
         onClick={() => setIsOpen(true)}
       >
         <Plus className="size-3" />
-        Add URL
+        {t("add_tab.add_url")}
       </Button>
     );
   }
@@ -52,7 +54,7 @@ export function AddTabInline({ onAdd }: AddTabInlineProps) {
       <div className="flex gap-1">
         <Input
           autoFocus
-          placeholder="https://example.com"
+          placeholder={t("add_tab.placeholder")}
           value={url}
           onChange={(e) => {
             setUrl(e.target.value);
