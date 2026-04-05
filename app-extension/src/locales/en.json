@@ -123,6 +123,10 @@
   "welcome": {
     "title": "Welcome to OpenTab",
     "description": "Organize your browser tabs into workspaces and collections. Drag tabs from the right panel to get started.",
+    "newtab_notice": "OpenTab has replaced your new tab page. Every time you open a new tab, you'll see your saved workspaces and collections.",
+    "feature_organize": "Organize your browser tabs into workspaces and collections for easy access.",
+    "feature_drag": "Drag tabs from the right panel into collections to save them.",
+    "get_started": "Get Started",
     "dismiss": "Dismiss"
   },
   "empty": {

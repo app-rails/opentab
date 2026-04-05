@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner";
 import { CollectionPanel } from "@/components/layout/collection-panel";
 import { LiveTabPanel } from "@/components/layout/live-tab-panel";
+import { WelcomeDialog } from "@/components/layout/welcome-dialog";
 import { WorkspaceSidebar } from "@/components/layout/workspace-sidebar";
 import { TabFavicon } from "@/components/tab-favicon";
 import { useLiveTabSync } from "@/hooks/use-live-tab-sync";
@@ -309,6 +310,7 @@ export default function App() {
             )}
         </DragOverlay>
       </DndContext>
+      <WelcomeDialog />
       <Toaster position="bottom-center" theme={mode === "system" ? "system" : mode} />
     </>
   );
