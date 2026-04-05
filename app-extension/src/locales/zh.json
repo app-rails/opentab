@@ -49,6 +49,7 @@
   },
   "edit_tab": {
     "title": "编辑标签页",
+    "description": "更新已保存标签页的标题和链接。",
     "label_title": "标题",
     "label_url": "链接",
     "title_placeholder": "页面标题",

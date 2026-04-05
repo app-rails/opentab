@@ -49,6 +49,7 @@
   },
   "edit_tab": {
     "title": "Edit Tab",
+    "description": "Update the title and URL of the saved tab.",
     "label_title": "Title",
     "label_url": "URL",
     "title_placeholder": "Page title",
