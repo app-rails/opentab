@@ -1,6 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Copy, EllipsisVertical, ExternalLink, Trash2 } from "lucide-react";
+import { Copy, EllipsisVertical, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TabFavicon } from "@/components/tab-favicon";
 import { Button } from "@/components/ui/button";
@@ -8,8 +9,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EditTabDialog } from "./edit-tab-dialog";
 import type { CollectionTab } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
 import { cn } from "@/lib/utils";
@@ -49,6 +52,8 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
   function handleCopyUrl() {
     void navigator.clipboard.writeText(tab.url).catch(() => {});
   }
+
+  const [editOpen, setEditOpen] = useState(false);
 
   return (
     <div
@@ -110,6 +115,16 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
             {t("collection_tab.copy_url")}
           </DropdownMenuItem>
           <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditOpen(true);
+            }}
+          >
+            <Pencil className="mr-2 size-4" />
+            {t("collection_tab.edit")}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
             className="text-destructive"
             onClick={(e) => {
               e.stopPropagation();
@@ -121,6 +136,8 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <EditTabDialog key={tab.id} tab={tab} open={editOpen} onOpenChange={setEditOpen} />
     </div>
   );
 }
