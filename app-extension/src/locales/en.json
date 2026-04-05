@@ -44,12 +44,24 @@
   "collection_tab": {
     "open": "Open",
     "copy_url": "Copy URL",
+    "edit": "Edit",
     "remove": "Remove"
+  },
+  "edit_tab": {
+    "title": "Edit Tab",
+    "label_title": "Title",
+    "label_url": "URL",
+    "title_placeholder": "Page title",
+    "save": "Save",
+    "cancel": "Cancel",
+    "invalid_url": "Please enter a valid URL"
   },
   "add_tab": {
     "add_url": "Add URL",
     "placeholder": "https://example.com",
-    "invalid_url": "Please enter a valid URL"
+    "title_placeholder": "Page title (optional)",
+    "invalid_url": "Please enter a valid URL",
+    "add": "Add"
   },
   "workspace_item": {
     "change_name": "Change Name",
