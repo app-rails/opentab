@@ -134,9 +134,9 @@ export function CollectionCard({
           aria-label={collapsed ? t("collection_card.expand") : t("collection_card.collapse")}
         />
 
-        {/* Right group — hover visible */}
+        {/* Right group — visible on hover and keyboard focus within */}
         {!isRenaming && (
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             <AddTabPopover onAdd={handleAddUrl} />
             {tabs.length > 0 && (
               <Button variant="ghost" size="icon-xs" onClick={handleOpenAll} title={t("collection_card.open_all")}>

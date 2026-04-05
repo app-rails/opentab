@@ -42,7 +42,7 @@ export function AddTabPopover({ onAdd }: AddTabPopoverProps) {
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon-xs" title={t("add_tab.add_url")}>
+        <Button variant="ghost" size="icon-xs" title={t("add_tab.add_url")} aria-label={t("add_tab.add_url")}>
           <Plus className="size-3.5 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
@@ -64,9 +64,15 @@ export function AddTabPopover({ onAdd }: AddTabPopoverProps) {
               if (e.key === "Enter") handleSubmit();
               if (e.key === "Escape") handleOpenChange(false);
             }}
+            aria-invalid={!!urlError}
+            aria-describedby={urlError ? "add-tab-url-error" : undefined}
             className={urlError ? "h-7 text-xs border-destructive" : "h-7 text-xs"}
           />
-          {urlError && <p className="text-xs text-destructive">{urlError}</p>}
+          {urlError && (
+            <p id="add-tab-url-error" className="text-xs text-destructive">
+              {urlError}
+            </p>
+          )}
         </div>
         <div className="space-y-1">
           <label htmlFor="add-tab-title" className="text-xs font-medium text-muted-foreground">

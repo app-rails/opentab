@@ -79,13 +79,18 @@ export function EditTabDialog({ tab, open, onOpenChange }: EditTabDialogProps) {
                 setUrl(e.target.value);
                 if (urlError) setUrlError("");
               }}
-              placeholder="https://example.com"
-              className={urlError ? "border-destructive" : ""}
+              placeholder={t("add_tab.placeholder")}
+              aria-invalid={!!urlError}
+              aria-describedby={urlError ? "edit-tab-url-error" : undefined}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSave();
               }}
             />
-            {urlError && <p className="text-xs text-destructive">{urlError}</p>}
+            {urlError && (
+              <p id="edit-tab-url-error" className="text-xs text-destructive">
+                {urlError}
+              </p>
+            )}
           </div>
         </div>
 
@@ -93,7 +98,9 @@ export function EditTabDialog({ tab, open, onOpenChange }: EditTabDialogProps) {
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t("edit_tab.cancel")}
           </Button>
-          <Button onClick={handleSave}>{t("edit_tab.save")}</Button>
+          <Button onClick={handleSave} disabled={!normalizeUrl(url)}>
+            {t("edit_tab.save")}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
