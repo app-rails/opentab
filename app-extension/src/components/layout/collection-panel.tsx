@@ -112,6 +112,7 @@ interface CollectionPanelProps {
   onToggleZenMode: () => void;
   searchOpen: boolean;
   onSearchOpenChange: (open: boolean) => void;
+  sidebarCollapsed?: boolean;
 }
 
 export function CollectionPanel({
@@ -119,6 +120,7 @@ export function CollectionPanel({
   onToggleZenMode,
   searchOpen,
   onSearchOpenChange,
+  sidebarCollapsed,
 }: CollectionPanelProps) {
   const collections = useAppStore((s) => s.collections);
   const tabsByCollection = useAppStore((s) => s.tabsByCollection);
@@ -169,7 +171,7 @@ export function CollectionPanel({
   return (
     <main className="flex h-full flex-col overflow-auto">
       {/* Sticky topbar */}
-      <div className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background/70 px-6 backdrop-blur-md">
+      <div className={cn("sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background/70 px-6 backdrop-blur-md", sidebarCollapsed && "pl-10")}>
         {/* Left: workspace name — click to rename */}
         {isRenaming ? (
           <Input

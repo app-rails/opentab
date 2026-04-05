@@ -268,6 +268,7 @@ export default function App() {
               onToggleZenMode={toggleZenMode}
               searchOpen={searchOpen}
               onSearchOpenChange={setSearchOpen}
+              sidebarCollapsed={sidebarCollapsed}
             />
           </div>
           <LiveTabPanel collapsed={rightPanelCollapsed} onToggleCollapse={toggleRightPanel} />
