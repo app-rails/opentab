@@ -176,6 +176,9 @@ export default function App() {
       case DRAG_TYPES.WORKSPACE:
         handleWorkspaceReorder(active, over);
         break;
+      case DRAG_TYPES.COLLECTION:
+        handleCollectionReorder(active, over);
+        break;
       case DRAG_TYPES.LIVE_TAB:
         handleLiveTabDrop(active, over);
         break;
@@ -200,6 +203,20 @@ export default function App() {
     useAppStore.getState().reorderWorkspace(active.id as number, newOrder);
   }
 
+  function handleCollectionReorder(active: Active, over: NonNullable<DragEndEvent["over"]>) {
+    if (active.id === over.id) return;
+    const collections = useAppStore.getState().collections;
+    const oldIndex = collections.findIndex((c) => `collection-${c.id}` === String(active.id));
+    const newIndex = collections.findIndex((c) => `collection-${c.id}` === String(over.id));
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = computeOrderBetween(collections, oldIndex, newIndex);
+    const col = collections[oldIndex];
+    if (col.id != null) {
+      useAppStore.getState().reorderCollection(col.id, newOrder);
+    }
+  }
+
   function handleLiveTabDrop(active: Active, over: NonNullable<DragEndEvent["over"]>) {
     const data = active.data.current as DragData;
     if (data.type !== DRAG_TYPES.LIVE_TAB) return;
@@ -207,6 +224,8 @@ export default function App() {
     const overData = over.data.current as DragData | undefined;
     let collectionId: number | undefined;
     if (overData?.type === DRAG_TYPES.COLLECTION_DROP) {
+      collectionId = overData.collectionId;
+    } else if (overData?.type === DRAG_TYPES.COLLECTION) {
       collectionId = overData.collectionId;
     } else if (overData?.type === DRAG_TYPES.COLLECTION_TAB) {
       collectionId = overData.collectionId;

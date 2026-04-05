@@ -79,19 +79,24 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
         workspaceCount++;
       }
 
+      // Get last collection order once, then chain locally to avoid
+      // relying on Dexie reading its own writes within the transaction.
+      let lastColOrder = await getLastOrder("tabCollections", {
+        field: "workspaceId",
+        value: wsId,
+      });
+
       for (const colPlan of wsPlan.collections) {
         if (!colPlan.selected || colPlan.strategy === "skip") continue;
 
         if (colPlan.strategy === "new" || colPlan.existingCollectionId == null) {
-          const lastColOrder = await getLastOrder("tabCollections", {
-            field: "workspaceId",
-            value: wsId,
-          });
+          const order = generateKeyBetween(lastColOrder, null);
+          lastColOrder = order;
           const now = Date.now();
           const colId = (await db.tabCollections.add({
             workspaceId: wsId,
             name: colPlan.name,
-            order: generateKeyBetween(lastColOrder, null),
+            order,
             createdAt: now,
             updatedAt: now,
           })) as number;
