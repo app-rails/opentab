@@ -28,7 +28,8 @@ import { DRAG_TYPES } from "@/lib/dnd-types";
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
-import { AddTabInline } from "./add-tab-inline";
+import { faviconUrl } from "@/lib/url";
+import { AddTabPopover } from "./add-tab-popover";
 import { CollectionTabItem } from "./collection-tab-item";
 
 interface CollectionCardProps {
@@ -71,19 +72,13 @@ export function CollectionCard({
     restoreCollection(collection.id);
   }
 
-  function handleAddUrl(url: string) {
+  function handleAddUrl(url: string, title: string) {
     if (collection.id == null) return;
-    const domain = (() => {
-      try {
-        return new URL(url).hostname;
-      } catch {
-        return "";
-      }
-    })();
+    const favicon = faviconUrl(url);
     addTabToCollection(collection.id, {
       url,
-      title: url,
-      favIconUrl: domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32` : undefined,
+      title: title || url,
+      favIconUrl: favicon,
     });
   }
 
@@ -139,9 +134,10 @@ export function CollectionCard({
           aria-label={collapsed ? t("collection_card.expand") : t("collection_card.collapse")}
         />
 
-        {/* Right group — hover visible */}
+        {/* Right group — visible on hover and keyboard focus within */}
         {!isRenaming && (
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+            <AddTabPopover onAdd={handleAddUrl} />
             {tabs.length > 0 && (
               <Button variant="ghost" size="icon-xs" onClick={handleOpenAll} title={t("collection_card.open_all")}>
                 <ExternalLink className="size-3.5 text-muted-foreground" />
@@ -218,9 +214,6 @@ export function CollectionCard({
             )}
           </SortableContext>
 
-          <div className="mt-2">
-            <AddTabInline onAdd={handleAddUrl} />
-          </div>
         </div>
       )}
     </div>

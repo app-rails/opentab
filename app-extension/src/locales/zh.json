@@ -44,12 +44,26 @@
   "collection_tab": {
     "open": "打开",
     "copy_url": "复制链接",
+    "edit": "编辑",
     "remove": "移除"
+  },
+  "edit_tab": {
+    "title": "编辑标签页",
+    "label_title": "标题",
+    "label_url": "链接",
+    "title_placeholder": "页面标题",
+    "save": "保存",
+    "cancel": "取消",
+    "invalid_url": "请输入有效的链接"
   },
   "add_tab": {
     "add_url": "添加链接",
+    "label_title": "标题",
+    "label_url": "链接",
     "placeholder": "https://example.com",
-    "invalid_url": "请输入有效的链接"
+    "title_placeholder": "页面标题（可选）",
+    "invalid_url": "请输入有效的链接",
+    "add": "添加"
   },
   "workspace_item": {
     "change_name": "修改名称",
