@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { MSG } from "@/lib/constants";
 import { getSettings, saveSettings } from "@/lib/settings";
 
 export function WelcomeDialog() {
@@ -17,9 +18,24 @@ export function WelcomeDialog() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    getSettings().then((s) => {
-      if (!s.welcome_dismissed) setOpen(true);
-    });
+    let mounted = true;
+
+    const syncOpenState = async () => {
+      const s = await getSettings();
+      if (mounted) setOpen(!s.welcome_dismissed);
+    };
+
+    void syncOpenState();
+
+    const listener = (message: { type: string }) => {
+      if (message.type === MSG.SETTINGS_CHANGED) void syncOpenState();
+    };
+    chrome.runtime.onMessage.addListener(listener);
+
+    return () => {
+      mounted = false;
+      chrome.runtime.onMessage.removeListener(listener);
+    };
   }, []);
 
   const handleDismiss = useCallback(async () => {
@@ -28,8 +44,13 @@ export function WelcomeDialog() {
   }, []);
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && handleDismiss()}>
-      <DialogContent showCloseButton={false} className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent
+        showCloseButton={false}
+        className="sm:max-w-md"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader className="items-center">
           <img src={opentabLogo} alt="OpenTab" className="size-16 mb-2" />
           <DialogTitle className="text-xl">{t("welcome.title")}</DialogTitle>
