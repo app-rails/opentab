@@ -101,6 +101,11 @@ interface AppState {
   ) => Promise<void>;
   removeTabFromCollection: (tabId: number, collectionId: number) => Promise<void>;
   reorderTabInCollection: (tabId: number, collectionId: number, newOrder: string) => Promise<void>;
+  updateTab: (
+    tabId: number,
+    collectionId: number,
+    updates: { title: string; url: string; favIconUrl?: string },
+  ) => Promise<void>;
 
   // Restore
   restoreCollection: (collectionId: number) => Promise<void>;
@@ -520,6 +525,32 @@ export const useAppStore = create<AppState>((set, get) => ({
       await db.collectionTabs.update(tabId, { order: newOrder, updatedAt: now });
     } catch (err) {
       console.error("[store] failed to reorder tab:", err);
+      const revertMap = new Map(get().tabsByCollection);
+      revertMap.set(collectionId, prevTabs);
+      set({ tabsByCollection: revertMap });
+    }
+  },
+
+  updateTab: async (tabId, collectionId, updates) => {
+    const { tabsByCollection } = get();
+    const prevTabs = tabsByCollection.get(collectionId);
+    if (!prevTabs) return;
+
+    const tabIndex = prevTabs.findIndex((t) => t.id === tabId);
+    if (tabIndex === -1) return;
+
+    const now = Date.now();
+    const updatedTab = { ...prevTabs[tabIndex], ...updates, updatedAt: now };
+    const newTabs = prevTabs.map((t) => (t.id === tabId ? updatedTab : t));
+
+    const newMap = new Map(tabsByCollection);
+    newMap.set(collectionId, newTabs);
+    set({ tabsByCollection: newMap });
+
+    try {
+      await db.collectionTabs.update(tabId, { ...updates, updatedAt: now });
+    } catch (err) {
+      console.error("[store] failed to update tab:", err);
       const revertMap = new Map(get().tabsByCollection);
       revertMap.set(collectionId, prevTabs);
       set({ tabsByCollection: revertMap });
