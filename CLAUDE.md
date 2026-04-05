@@ -56,7 +56,7 @@ Build output: `app-extension/.output/chrome-mv3/` — load unpacked in `chrome:/
 
 ### Auth Flow
 
-The extension works offline by default with a local UUID. When server sync is enabled: extension calls `/api/auth/sign-in/anonymous` → gets bearer token → stores in `chrome.storage` → uses for subsequent API calls.
+The extension works offline by default with a local UUID. When server sync is enabled: extension calls `/api/auth/sign-in/anonymous` → gets bearer token → stores it in `browser.storage.local` under the `opentab_auth` key → uses it for subsequent API calls.
 
 ## Key Patterns
 
