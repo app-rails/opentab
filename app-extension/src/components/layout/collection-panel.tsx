@@ -1,3 +1,4 @@
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { EllipsisVertical, Pencil, Plus, Trash2, Zap } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -297,17 +298,22 @@ export function CollectionPanel({
         {isEmpty ? (
           <AboutPage />
         ) : (
-          <div className="space-y-2">
-            {collections.map((col) => (
-              <CollectionCard
-                key={col.id}
-                collection={col}
-                tabs={tabsByCollection.get(col.id!) ?? []}
-                viewMode={viewMode}
-                onRequestDelete={() => setDeleteTarget(col)}
-              />
-            ))}
-          </div>
+          <SortableContext
+            items={collections.map((col) => `collection-${col.id}`)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-2">
+              {collections.map((col) => (
+                <CollectionCard
+                  key={col.id}
+                  collection={col}
+                  tabs={tabsByCollection.get(col.id!) ?? []}
+                  viewMode={viewMode}
+                  onRequestDelete={() => setDeleteTarget(col)}
+                />
+              ))}
+            </div>
+          </SortableContext>
         )}
       </div>
 

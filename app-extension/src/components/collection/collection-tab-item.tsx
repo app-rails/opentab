@@ -1,7 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Copy, EllipsisVertical, ExternalLink, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TabFavicon } from "@/components/tab-favicon";
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EditTabDialog } from "./edit-tab-dialog";
 import type { CollectionTab } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "@/lib/view-mode";
+import { EditTabDialog } from "./edit-tab-dialog";
 
 interface CollectionTabItemProps {
   tab: CollectionTab;
@@ -54,6 +54,7 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
   }
 
   const [editOpen, setEditOpen] = useState(false);
+  const willOpenDialog = useRef(false);
 
   return (
     <div
@@ -95,7 +96,15 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
             <EllipsisVertical className="size-3.5" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent
+          align="end"
+          onCloseAutoFocus={(e) => {
+            if (willOpenDialog.current) {
+              e.preventDefault();
+              willOpenDialog.current = false;
+            }
+          }}
+        >
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
@@ -117,6 +126,7 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
+              willOpenDialog.current = true;
               setEditOpen(true);
             }}
           >

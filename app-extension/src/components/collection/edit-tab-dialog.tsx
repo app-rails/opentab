@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -50,6 +51,7 @@ export function EditTabDialog({ tab, open, onOpenChange }: EditTabDialogProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("edit_tab.title")}</DialogTitle>
+          <DialogDescription>{t("edit_tab.description")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">

@@ -1,9 +1,11 @@
-import { useDroppable } from "@dnd-kit/core";
+import { useDndContext } from "@dnd-kit/core";
 import {
   rectSortingStrategy,
   SortableContext,
+  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   ChevronRight,
   EllipsisVertical,
@@ -25,10 +27,10 @@ import {
 import { Input } from "@/components/ui/input";
 import type { CollectionTab, TabCollection } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
+import { faviconUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
-import { faviconUrl } from "@/lib/url";
 import { AddTabPopover } from "./add-tab-popover";
 import { CollectionTabItem } from "./collection-tab-item";
 
@@ -55,10 +57,23 @@ export function CollectionCard({
   const [renameValue, setRenameValue] = useState(collection.name);
   const [collapsed, setCollapsed] = useState(false);
 
-  const { setNodeRef, isOver } = useDroppable({
-    id: `collection-drop-${collection.id}`,
-    data: { type: DRAG_TYPES.COLLECTION_DROP, collectionId: collection.id },
+  const sortableId = `collection-${collection.id}`;
+  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
+    id: sortableId,
+    data: { type: DRAG_TYPES.COLLECTION, collectionId: collection.id },
   });
+
+  // Detect when a live tab is being dragged over this collection
+  const { active, over } = useDndContext();
+  const isOver =
+    over?.id === sortableId &&
+    (active?.data.current as { type?: string } | undefined)?.type === DRAG_TYPES.LIVE_TAB;
+
+  const sortableStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   function handleRenameConfirm() {
     if (collection.id != null && renameValue.trim()) {
@@ -83,11 +98,22 @@ export function CollectionCard({
   }
 
   return (
-    <div ref={setNodeRef} className={cn("transition-colors", isOver && "bg-primary/5")}>
+    <div
+      ref={setNodeRef}
+      style={sortableStyle}
+      className={cn("transition-colors", isOver && "bg-primary/5")}
+    >
       {/* Header */}
       <div className="group flex items-center gap-1 px-4 pt-2 pb-3 border-b border-border">
-        {/* Left group */}
-        <GripVertical className="size-4 shrink-0 cursor-grab text-muted-foreground/50 active:cursor-grabbing" />
+        {/* Left group — drag handle */}
+        <button
+          type="button"
+          className="touch-none p-0 border-0 bg-transparent cursor-grab active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="size-4 shrink-0 text-muted-foreground/50" />
+        </button>
 
         {isRenaming ? (
           <Input

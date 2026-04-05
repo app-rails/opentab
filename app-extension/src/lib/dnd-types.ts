@@ -2,6 +2,7 @@ import type { CollectionTab } from "@/lib/db";
 
 export const DRAG_TYPES = {
   WORKSPACE: "workspace",
+  COLLECTION: "collection",
   LIVE_TAB: "live-tab",
   COLLECTION_TAB: "collection-tab",
   COLLECTION_DROP: "collection-drop",
@@ -9,6 +10,11 @@ export const DRAG_TYPES = {
 
 export interface WorkspaceDragData {
   type: typeof DRAG_TYPES.WORKSPACE;
+}
+
+export interface CollectionDragData {
+  type: typeof DRAG_TYPES.COLLECTION;
+  collectionId: number;
 }
 
 export interface LiveTabDragData {
@@ -29,6 +35,7 @@ export interface CollectionDropData {
 
 export type DragData =
   | WorkspaceDragData
+  | CollectionDragData
   | LiveTabDragData
   | CollectionTabDragData
   | CollectionDropData;
