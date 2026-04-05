@@ -137,7 +137,7 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <EditTabDialog key={tab.id} tab={tab} open={editOpen} onOpenChange={setEditOpen} />
+      {editOpen && <EditTabDialog tab={tab} open={editOpen} onOpenChange={setEditOpen} />}
     </div>
   );
 }

@@ -49,7 +49,7 @@ export function AddTabPopover({ onAdd }: AddTabPopoverProps) {
       <PopoverContent align="end" className="w-72 space-y-3 p-3">
         <div className="space-y-1">
           <label htmlFor="add-tab-url" className="text-xs font-medium text-muted-foreground">
-            URL
+            {t("add_tab.label_url")}
           </label>
           <Input
             id="add-tab-url"
@@ -70,7 +70,7 @@ export function AddTabPopover({ onAdd }: AddTabPopoverProps) {
         </div>
         <div className="space-y-1">
           <label htmlFor="add-tab-title" className="text-xs font-medium text-muted-foreground">
-            {t("edit_tab.label_title")}
+            {t("add_tab.label_title")}
           </label>
           <Input
             id="add-tab-title"

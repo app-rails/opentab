@@ -58,6 +58,8 @@
   },
   "add_tab": {
     "add_url": "Add URL",
+    "label_title": "Title",
+    "label_url": "URL",
     "placeholder": "https://example.com",
     "title_placeholder": "Page title (optional)",
     "invalid_url": "Please enter a valid URL",

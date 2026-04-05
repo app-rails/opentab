@@ -58,6 +58,8 @@
   },
   "add_tab": {
     "add_url": "添加链接",
+    "label_title": "标题",
+    "label_url": "链接",
     "placeholder": "https://example.com",
     "title_placeholder": "页面标题（可选）",
     "invalid_url": "请输入有效的链接",
