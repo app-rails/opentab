@@ -11,6 +11,7 @@ export default defineConfig({
   manifest: {
     permissions: ["storage", "alarms", "tabs", "downloads"],
     action: {},
+    chrome_url_overrides: { newtab: "tabs.html" },
   },
   vite: () => ({
     plugins: [tailwindcss()],

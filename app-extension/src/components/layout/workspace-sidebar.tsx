@@ -13,6 +13,7 @@ import { useLocale } from "@/lib/locale";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
+import opentabLogo from "@/assets/opentab-logo.webp";
 
 const THEME_ICON = { light: Sun, dark: Moon, system: Monitor } as const;
 
@@ -93,7 +94,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <div className="flex items-center gap-2">
-            <img src="/favicon-32x32.png" alt="" className="size-6 rounded" />
+            <img src={opentabLogo} alt="" className="size-6 rounded" />
             <h1 className="text-lg font-semibold text-sidebar-foreground">OpenTab</h1>
           </div>
           <Button
