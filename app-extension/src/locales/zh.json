@@ -123,6 +123,10 @@
   "welcome": {
     "title": "欢迎使用 OpenTab",
     "description": "将浏览器标签页组织到工作空间和集合中。从右侧面板拖拽标签页即可开始。",
+    "newtab_notice": "OpenTab 已替换您的新标签页。每次打开新标签页时，您将看到已保存的工作空间和集合。",
+    "feature_organize": "将浏览器标签页组织到工作空间和集合中，方便快速访问。",
+    "feature_drag": "从右侧面板将标签页拖入集合即可保存。",
+    "get_started": "开始使用",
     "dismiss": "关闭"
   },
   "empty": {
