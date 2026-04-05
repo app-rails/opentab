@@ -410,7 +410,7 @@ In the `DropdownMenuContent`, insert the Edit menu item between "Copy URL" and "
 After the closing `</DropdownMenu>` tag (before the closing `</div>` of the component), add the dialog:
 
 ```tsx
-      <EditTabDialog tab={tab} open={editOpen} onOpenChange={setEditOpen} />
+      <EditTabDialog key={tab.id} tab={tab} open={editOpen} onOpenChange={setEditOpen} />
 ```
 
 - [ ] **Step 2: Verify the build compiles**
@@ -564,6 +564,8 @@ import { AddTabPopover } from "./add-tab-popover";
 ```
 
 - [ ] **Step 2: Update `handleAddUrl` to accept title parameter**
+
+> **Note:** Steps 2-4 change the `handleAddUrl` signature and remove the old caller. The build will be temporarily broken between Step 2 and Step 4. Apply all steps before running the build check in Step 6.
 
 Replace the existing `handleAddUrl` function:
 
