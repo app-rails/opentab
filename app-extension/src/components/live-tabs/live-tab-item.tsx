@@ -25,6 +25,7 @@ export const LiveTabItem = memo(function LiveTabItem({ tab }: LiveTabItemProps) 
   }
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: dnd-kit spreads listeners via attributes
     <div
       ref={setNodeRef}
       {...attributes}

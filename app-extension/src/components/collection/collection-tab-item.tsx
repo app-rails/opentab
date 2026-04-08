@@ -57,6 +57,7 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
   const willOpenDialog = useRef(false);
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: dnd-kit spreads listeners via attributes
     <div
       ref={setNodeRef}
       style={style}
