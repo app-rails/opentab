@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import i18n from "i18next";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MSG } from "./constants";
-import { getSettings, saveSettings, type Locale } from "./settings";
+import { getSettings, type Locale, saveSettings } from "./settings";
 
 const LOCALE_CYCLE: Locale[] = ["en", "zh"];
 

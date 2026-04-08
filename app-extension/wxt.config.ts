@@ -15,6 +15,13 @@ export default defineConfig({
   },
   vite: () => ({
     plugins: [tailwindcss()],
+    define: {
+      __BUILD_VERSION__: JSON.stringify(process.env.BUILD_VERSION || "dev"),
+      __BUILD_COMMIT__: JSON.stringify(process.env.BUILD_COMMIT || "dev"),
+      __BUILD_TIME__: JSON.stringify(
+        process.env.BUILD_TIME || new Date().toISOString().slice(0, 10),
+      ),
+    },
     resolve: {
       alias: {
         "@": resolve(__dirname, "./src"),

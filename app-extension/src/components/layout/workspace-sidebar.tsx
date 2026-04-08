@@ -3,6 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ChevronLeft, Monitor, Moon, PanelLeft, Plus, Settings, Sun } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import opentabLogo from "@/assets/opentab-logo.webp";
 import { Button } from "@/components/ui/button";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import { DeleteWorkspaceDialog } from "@/components/workspace/delete-workspace-dialog";
@@ -13,7 +14,6 @@ import { useLocale } from "@/lib/locale";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
-import opentabLogo from "@/assets/opentab-logo.webp";
 
 const THEME_ICON = { light: Sun, dark: Moon, system: Monitor } as const;
 
