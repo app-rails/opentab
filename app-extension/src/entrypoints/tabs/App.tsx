@@ -14,6 +14,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { generateKeyBetween } from "fractional-indexing";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner";
@@ -23,7 +24,7 @@ import { WelcomeDialog } from "@/components/layout/welcome-dialog";
 import { WorkspaceSidebar } from "@/components/layout/workspace-sidebar";
 import { TabFavicon } from "@/components/tab-favicon";
 import { useLiveTabSync } from "@/hooks/use-live-tab-sync";
-import { DRAG_TYPES, type DragData } from "@/lib/dnd-types";
+import { DRAG_TYPES, type DragData, resolveTargetCollectionId } from "@/lib/dnd-types";
 import { getSettings, saveSettings } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
 import { computeOrderBetween } from "@/lib/utils";
@@ -44,7 +45,7 @@ function getDragTitle(active: Active): string {
 
 const customCollisionDetection: CollisionDetection = (args) => {
   const activeType = getDragType(args.active);
-  if (activeType === DRAG_TYPES.LIVE_TAB) {
+  if (activeType === DRAG_TYPES.LIVE_TAB || activeType === DRAG_TYPES.COLLECTION_TAB) {
     return rectIntersection(args);
   }
   return closestCenter(args);
@@ -53,24 +54,27 @@ const customCollisionDetection: CollisionDetection = (args) => {
 export default function App() {
   const { t } = useTranslation();
 
-  const announcements: Announcements = useMemo(() => ({
-    onDragStart({ active }) {
-      const title = getDragTitle(active);
-      return t("dnd.picked_up", { title });
-    },
-    onDragOver({ active, over }) {
-      const title = getDragTitle(active);
-      return over ? t("dnd.over_target", { title }) : t("dnd.not_over_target", { title });
-    },
-    onDragEnd({ active, over }) {
-      const title = getDragTitle(active);
-      return over ? t("dnd.dropped", { title }) : t("dnd.dropped_outside", { title });
-    },
-    onDragCancel({ active }) {
-      const title = getDragTitle(active);
-      return t("dnd.cancelled", { title });
-    },
-  }), [t]);
+  const announcements: Announcements = useMemo(
+    () => ({
+      onDragStart({ active }) {
+        const title = getDragTitle(active);
+        return t("dnd.picked_up", { title });
+      },
+      onDragOver({ active, over }) {
+        const title = getDragTitle(active);
+        return over ? t("dnd.over_target", { title }) : t("dnd.not_over_target", { title });
+      },
+      onDragEnd({ active, over }) {
+        const title = getDragTitle(active);
+        return over ? t("dnd.dropped", { title }) : t("dnd.dropped_outside", { title });
+      },
+      onDragCancel({ active }) {
+        const title = getDragTitle(active);
+        return t("dnd.cancelled", { title });
+      },
+    }),
+    [t],
+  );
   const isLoading = useAppStore((s) => s.isLoading);
 
   useLiveTabSync();
@@ -222,15 +226,7 @@ export default function App() {
     const data = active.data.current as DragData;
     if (data.type !== DRAG_TYPES.LIVE_TAB) return;
 
-    const overData = over.data.current as DragData | undefined;
-    let collectionId: number | undefined;
-    if (overData?.type === DRAG_TYPES.COLLECTION_DROP) {
-      collectionId = overData.collectionId;
-    } else if (overData?.type === DRAG_TYPES.COLLECTION) {
-      collectionId = overData.collectionId;
-    } else if (overData?.type === DRAG_TYPES.COLLECTION_TAB) {
-      collectionId = overData.collectionId;
-    }
+    const collectionId = resolveTargetCollectionId(over.data.current as DragData | undefined);
     if (collectionId == null) return;
 
     const tab = data.tab;
@@ -248,16 +244,44 @@ export default function App() {
 
     const data = active.data.current as DragData;
     if (data.type !== DRAG_TYPES.COLLECTION_TAB) return;
+    if (data.tab.id == null) return;
 
-    const collectionId = data.tab.collectionId;
-    const tabs = useAppStore.getState().tabsByCollection.get(collectionId) ?? [];
+    const overData = over.data.current as DragData | undefined;
+    const sourceCollectionId = data.collectionId;
+    const targetCollectionId = resolveTargetCollectionId(overData);
+    if (targetCollectionId == null) return;
 
-    const oldIndex = tabs.findIndex((t) => `col-tab-${t.id}` === String(active.id));
-    const newIndex = tabs.findIndex((t) => `col-tab-${t.id}` === String(over.id));
-    if (oldIndex === -1 || newIndex === -1) return;
+    const store = useAppStore.getState();
 
-    const newOrder = computeOrderBetween(tabs, oldIndex, newIndex);
-    useAppStore.getState().reorderTabInCollection(data.tab.id!, collectionId, newOrder);
+    if (sourceCollectionId === targetCollectionId) {
+      // Same collection: reorder
+      const tabs = store.tabsByCollection.get(sourceCollectionId) ?? [];
+      const oldIndex = tabs.findIndex((t) => `col-tab-${t.id}` === String(active.id));
+      const newIndex = tabs.findIndex((t) => `col-tab-${t.id}` === String(over.id));
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const newOrder = computeOrderBetween(tabs, oldIndex, newIndex);
+      store.reorderTabInCollection(data.tab.id, sourceCollectionId, newOrder);
+    } else {
+      // Cross-collection: move tab
+      const targetTabs = store.tabsByCollection.get(targetCollectionId) ?? [];
+      let newOrder: string;
+
+      if (overData?.type === DRAG_TYPES.COLLECTION_TAB) {
+        // Dropped on a specific tab — insert after it
+        const overIndex = targetTabs.findIndex((t) => `col-tab-${t.id}` === String(over.id));
+        const lowerBound = overIndex >= 0 ? targetTabs[overIndex].order : null;
+        const upperBound =
+          overIndex + 1 < targetTabs.length ? targetTabs[overIndex + 1].order : null;
+        newOrder = generateKeyBetween(lowerBound, upperBound);
+      } else {
+        // Dropped on collection header — append to end
+        const lastOrder = targetTabs.length > 0 ? targetTabs[targetTabs.length - 1].order : null;
+        newOrder = generateKeyBetween(lastOrder, null);
+      }
+
+      store.moveTabToCollection(data.tab.id, sourceCollectionId, targetCollectionId, newOrder);
+    }
   }
 
   if (isLoading) {

@@ -109,7 +109,9 @@ export function WorkspaceItem({
           <Trash2 className="mr-2 size-4" />
           {t("workspace_item.delete")}
           {isLastWorkspace && (
-            <span className="ml-auto text-xs italic text-muted-foreground">{t("workspace_item.last")}</span>
+            <span className="ml-auto text-xs italic text-muted-foreground">
+              {t("workspace_item.last")}
+            </span>
           )}
         </MenuItem>
       </>

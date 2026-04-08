@@ -41,9 +41,7 @@ export function ImportDetail({
         <h3 className="mb-2 text-sm font-medium text-muted-foreground">
           {wsDiff.name} / {colDiff.name}
         </h3>
-        <p className="text-sm text-muted-foreground">
-          {t("import_detail.identical")}
-        </p>
+        <p className="text-sm text-muted-foreground">{t("import_detail.identical")}</p>
       </div>
     );
   }
@@ -70,7 +68,9 @@ export function ImportDetail({
 
       <div className="flex gap-3 text-sm">
         {colDiff.toAdd.length > 0 && (
-          <span className="text-green-700 dark:text-green-400">{t("import_detail.new_count", { count: colDiff.toAdd.length })}</span>
+          <span className="text-green-700 dark:text-green-400">
+            {t("import_detail.new_count", { count: colDiff.toAdd.length })}
+          </span>
         )}
         {colDiff.extraExisting.length > 0 && (
           <span className="text-amber-700 dark:text-amber-400">
@@ -78,13 +78,17 @@ export function ImportDetail({
           </span>
         )}
         {colDiff.unchangedCount > 0 && (
-          <span className="text-muted-foreground">{t("import_detail.unchanged_count", { count: colDiff.unchangedCount })}</span>
+          <span className="text-muted-foreground">
+            {t("import_detail.unchanged_count", { count: colDiff.unchangedCount })}
+          </span>
         )}
       </div>
 
       {colDiff.status === "new" && (
         <>
-          <h4 className="text-sm font-medium">{t("import_detail.tabs_to_import", { count: colDiff.allTabs.length })}</h4>
+          <h4 className="text-sm font-medium">
+            {t("import_detail.tabs_to_import", { count: colDiff.allTabs.length })}
+          </h4>
           <NewTabList tabs={colDiff.allTabs} />
         </>
       )}
@@ -100,9 +104,7 @@ export function ImportDetail({
 
           {colPlan.extraExisting.length > 0 && (
             <>
-              <h4 className="text-sm font-medium">
-                {t("import_detail.extra_tabs")}
-              </h4>
+              <h4 className="text-sm font-medium">{t("import_detail.extra_tabs")}</h4>
               <ExtraExistingTabList
                 tabs={colPlan.extraExisting}
                 onDecision={(tabId, decision) =>

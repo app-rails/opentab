@@ -165,7 +165,12 @@ export function CollectionCard({
           <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             <AddTabPopover onAdd={handleAddUrl} />
             {tabs.length > 0 && (
-              <Button variant="ghost" size="icon-xs" onClick={handleOpenAll} title={t("collection_card.open_all")}>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={handleOpenAll}
+                title={t("collection_card.open_all")}
+              >
                 <ExternalLink className="size-3.5 text-muted-foreground" />
               </Button>
             )}
@@ -179,7 +184,11 @@ export function CollectionCard({
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-xs" aria-label={t("collection_card.more_actions")}>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={t("collection_card.more_actions")}
+                >
                   <EllipsisVertical className="size-3.5 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
@@ -239,7 +248,6 @@ export function CollectionCard({
               </div>
             )}
           </SortableContext>
-
         </div>
       )}
     </div>

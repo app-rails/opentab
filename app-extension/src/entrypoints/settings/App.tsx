@@ -11,7 +11,13 @@ import { detectFormat } from "@/lib/import/detect";
 import { parseOpenTab } from "@/lib/import/parse-opentab";
 import { parseTabTab } from "@/lib/import/parse-tabtab";
 import { useLocale } from "@/lib/locale";
-import { type AppSettings, getSettings, type Locale, saveSettings, type ThemeMode } from "@/lib/settings";
+import {
+  type AppSettings,
+  getSettings,
+  type Locale,
+  saveSettings,
+  type ThemeMode,
+} from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 

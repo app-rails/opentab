@@ -39,11 +39,12 @@ export function AboutPage() {
       {/* Feature bullets */}
       <ul className="mt-4 list-disc pl-5 space-y-1.5 text-sm text-foreground">
         <li>
-          <Trans i18nKey="about.feature_sidebar" components={{ strong: <span className="font-medium" /> }} />
+          <Trans
+            i18nKey="about.feature_sidebar"
+            components={{ strong: <span className="font-medium" /> }}
+          />
         </li>
-        <li>
-          {t("about.feature_drag")}
-        </li>
+        <li>{t("about.feature_drag")}</li>
       </ul>
 
       {/* Docs link */}

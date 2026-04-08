@@ -203,7 +203,11 @@ export default function App() {
       const result = await executeImport(plan);
       setPageState("done");
       toast.success(
-        t("import_page.toast_success", { workspaces: result.workspaceCount, collections: result.collectionCount, tabs: result.tabCount }),
+        t("import_page.toast_success", {
+          workspaces: result.workspaceCount,
+          collections: result.collectionCount,
+          tabs: result.tabCount,
+        }),
       );
       setTimeout(() => window.close(), 2000);
     } catch (err) {

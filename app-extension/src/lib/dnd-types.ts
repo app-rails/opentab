@@ -39,3 +39,14 @@ export type DragData =
   | LiveTabDragData
   | CollectionTabDragData
   | CollectionDropData;
+
+export function resolveTargetCollectionId(data: DragData | undefined): number | undefined {
+  if (
+    data?.type === DRAG_TYPES.COLLECTION_TAB ||
+    data?.type === DRAG_TYPES.COLLECTION ||
+    data?.type === DRAG_TYPES.COLLECTION_DROP
+  ) {
+    return data.collectionId;
+  }
+  return undefined;
+}

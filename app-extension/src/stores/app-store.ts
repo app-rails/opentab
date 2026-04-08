@@ -107,6 +107,14 @@ interface AppState {
     updates: { title: string; url: string; favIconUrl?: string },
   ) => Promise<void>;
 
+  // Move tab across collections
+  moveTabToCollection: (
+    tabId: number,
+    sourceCollectionId: number,
+    targetCollectionId: number,
+    targetOrder: string,
+  ) => Promise<void>;
+
   // Restore
   restoreCollection: (collectionId: number) => Promise<void>;
 
@@ -620,6 +628,58 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
     } catch (err) {
       console.error("[store] failed to save tabs as collection:", err);
+    }
+  },
+
+  moveTabToCollection: async (tabId, sourceCollectionId, targetCollectionId, targetOrder) => {
+    const { tabsByCollection } = get();
+    const sourceTabs = tabsByCollection.get(sourceCollectionId);
+    if (!sourceTabs) return;
+
+    const tab = sourceTabs.find((t) => t.id === tabId);
+    if (!tab) return;
+
+    // Check for duplicate URL in target
+    const targetTabs = tabsByCollection.get(targetCollectionId) ?? [];
+    if (targetTabs.some((t) => t.url === tab.url)) return;
+
+    const now = Date.now();
+    const movedTab: CollectionTab = {
+      ...tab,
+      collectionId: targetCollectionId,
+      order: targetOrder,
+      updatedAt: now,
+    };
+
+    // Optimistic update — insert at correct position to avoid re-sorting
+    const newTargetTabs = [...targetTabs];
+    const insertIndex = newTargetTabs.findIndex((t) => t.order > targetOrder);
+    if (insertIndex === -1) {
+      newTargetTabs.push(movedTab);
+    } else {
+      newTargetTabs.splice(insertIndex, 0, movedTab);
+    }
+
+    const newMap = new Map(tabsByCollection);
+    newMap.set(
+      sourceCollectionId,
+      sourceTabs.filter((t) => t.id !== tabId),
+    );
+    newMap.set(targetCollectionId, newTargetTabs);
+    set({ tabsByCollection: newMap });
+
+    try {
+      await db.collectionTabs.update(tabId, {
+        collectionId: targetCollectionId,
+        order: targetOrder,
+        updatedAt: now,
+      });
+    } catch (err) {
+      console.error("[store] failed to move tab:", err);
+      const revertMap = new Map(get().tabsByCollection);
+      revertMap.set(sourceCollectionId, sourceTabs);
+      revertMap.set(targetCollectionId, targetTabs);
+      set({ tabsByCollection: revertMap });
     }
   },
 

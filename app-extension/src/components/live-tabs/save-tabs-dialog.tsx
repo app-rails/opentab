@@ -104,15 +104,13 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="overflow-hidden sm:max-w-[480px]">
+      <DialogContent className="flex max-h-[85dvh] flex-col sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>{t("dialog.save_tabs.title")}</DialogTitle>
-          <DialogDescription>
-            {t("dialog.save_tabs.description")}
-          </DialogDescription>
+          <DialogDescription>{t("dialog.save_tabs.description")}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-2">
           <Input
             autoFocus
             placeholder={t("dialog.save_tabs.name_placeholder")}
@@ -136,7 +134,9 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
                   onCheckedChange={() => toggleTab(tab.id!)}
                 />
                 <TabFavicon url={tab.favIconUrl} />
-                <span className="truncate">{tab.title || tab.url || t("dialog.save_tabs.new_tab")}</span>
+                <span className="truncate">
+                  {tab.title || tab.url || t("dialog.save_tabs.new_tab")}
+                </span>
               </label>
             ))}
           </div>
@@ -150,7 +150,10 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
               {allSelected ? t("dialog.save_tabs.deselect_all") : t("dialog.save_tabs.select_all")}
             </button>
             <span>
-              {t("dialog.save_tabs.selected_count", { selected: selectedIds.size, total: tabs.length })}
+              {t("dialog.save_tabs.selected_count", {
+                selected: selectedIds.size,
+                total: tabs.length,
+              })}
             </span>
           </div>
         </div>

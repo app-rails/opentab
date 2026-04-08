@@ -188,7 +188,8 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
             <ThemeIcon className="size-4 text-sidebar-foreground/70" />
           </Button>
           {(() => {
-            const langLabel = locale === "en" ? t("sidebar.language_label_en") : t("sidebar.language_label_zh");
+            const langLabel =
+              locale === "en" ? t("sidebar.language_label_en") : t("sidebar.language_label_zh");
             const langAbbr = locale === "en" ? t("sidebar.language_en") : t("sidebar.language_zh");
             return (
               <Button
@@ -198,9 +199,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
                 aria-label={langLabel}
                 title={langLabel}
               >
-                <span className="text-xs font-medium text-sidebar-foreground/70">
-                  {langAbbr}
-                </span>
+                <span className="text-xs font-medium text-sidebar-foreground/70">{langAbbr}</span>
               </Button>
             );
           })()}

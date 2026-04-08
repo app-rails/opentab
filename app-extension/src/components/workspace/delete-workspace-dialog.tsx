@@ -46,7 +46,9 @@ export function DeleteWorkspaceDialog({
           <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-destructive/10">
             <Trash2 className="size-5 text-destructive" />
           </div>
-          <AlertDialogTitle>{t("dialog.delete_workspace.title", { name: workspaceName })}</AlertDialogTitle>
+          <AlertDialogTitle>
+            {t("dialog.delete_workspace.title", { name: workspaceName })}
+          </AlertDialogTitle>
           <AlertDialogDescription>
             {t("dialog.delete_workspace.description")}
           </AlertDialogDescription>

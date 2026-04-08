@@ -77,18 +77,20 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
         {/* Tab list */}
         <div className="flex-1 space-y-0.5 overflow-auto p-2">
           {displayTabs.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">{t("live_tab.no_tabs")}</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              {t("live_tab.no_tabs")}
+            </p>
           ) : (
             displayTabs.map((tab) =>
               tab.id != null ? <LiveTabItem key={tab.id} tab={tab} /> : null,
             )
           )}
         </div>
-
-        {savableTabs.length > 0 && (
-          <SaveTabsDialog open={dialogOpen} onOpenChange={setDialogOpen} tabs={savableTabs} />
-        )}
       </aside>
+
+      {savableTabs.length > 0 && (
+        <SaveTabsDialog open={dialogOpen} onOpenChange={setDialogOpen} tabs={savableTabs} />
+      )}
     </div>
   );
 }
