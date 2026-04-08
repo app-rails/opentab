@@ -7,7 +7,6 @@ interface NewTabListProps {
 }
 
 export function NewTabList({ tabs }: NewTabListProps) {
-  const { t } = useTranslation();
   if (tabs.length === 0) return null;
   return (
     <div className="space-y-1">

@@ -117,7 +117,7 @@ export default function App() {
         setPageState("error");
       }
     })();
-  }, []);
+  }, [t]);
 
   const handleToggleWorkspace = useCallback((wsIndex: number) => {
     setPlan((prev) => {
