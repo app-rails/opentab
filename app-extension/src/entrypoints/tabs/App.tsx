@@ -257,10 +257,17 @@ export default function App() {
       // Same collection: reorder
       const tabs = store.tabsByCollection.get(sourceCollectionId) ?? [];
       const oldIndex = tabs.findIndex((t) => `col-tab-${t.id}` === String(active.id));
-      const newIndex = tabs.findIndex((t) => `col-tab-${t.id}` === String(over.id));
-      if (oldIndex === -1 || newIndex === -1) return;
+      if (oldIndex === -1) return;
 
-      const newOrder = computeOrderBetween(tabs, oldIndex, newIndex);
+      const newIndex = tabs.findIndex((t) => `col-tab-${t.id}` === String(over.id));
+      let newOrder: string;
+      if (newIndex === -1) {
+        // Dropped on collection container — move to end
+        const lastOrder = tabs.length > 0 ? tabs[tabs.length - 1].order : null;
+        newOrder = generateKeyBetween(lastOrder, null);
+      } else {
+        newOrder = computeOrderBetween(tabs, oldIndex, newIndex);
+      }
       store.reorderTabInCollection(data.tab.id, sourceCollectionId, newOrder);
     } else {
       // Cross-collection: move tab
