@@ -191,6 +191,11 @@
       "button": "Import Data",
       "unsupported_format": "Unsupported file format. Please select a TabTab or OpenTab JSON file.",
       "read_error": "Failed to read file. Please ensure it is a valid JSON file."
+    },
+    "about": {
+      "title": "About",
+      "copy": "Copy build info",
+      "copied": "Copied!"
     }
   },
   "import_page": {

@@ -163,7 +163,9 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
         {/* Results */}
         <div className="max-h-[300px] overflow-auto p-2">
           {query.trim() && results.length === 0 && (
-            <p className="py-6 text-center text-sm text-muted-foreground">{t("search.no_results")}</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              {t("search.no_results")}
+            </p>
           )}
           {results.map((result, i) => (
             <button

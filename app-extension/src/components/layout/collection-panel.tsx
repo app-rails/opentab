@@ -22,7 +22,15 @@ import { cn } from "@/lib/utils";
 import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
 
-const VIEW_MODE_OPTIONS: { mode: ViewMode; labelKey: "collection_panel.view_default" | "collection_panel.view_compact" | "collection_panel.view_list"; btnClass: string; icon: ReactNode }[] = [
+const VIEW_MODE_OPTIONS: {
+  mode: ViewMode;
+  labelKey:
+    | "collection_panel.view_default"
+    | "collection_panel.view_compact"
+    | "collection_panel.view_list";
+  btnClass: string;
+  icon: ReactNode;
+}[] = [
   {
     mode: "default",
     labelKey: "collection_panel.view_default",
@@ -172,7 +180,12 @@ export function CollectionPanel({
   return (
     <main className="flex h-full flex-col overflow-auto">
       {/* Sticky topbar */}
-      <div className={cn("sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background/70 px-6 backdrop-blur-md", sidebarCollapsed && "pl-10")}>
+      <div
+        className={cn(
+          "sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background/70 px-6 backdrop-blur-md",
+          sidebarCollapsed && "pl-10",
+        )}
+      >
         {/* Left: workspace name — click to rename */}
         {isRenaming ? (
           <Input
@@ -259,7 +272,11 @@ export function CollectionPanel({
           {/* More menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-xs" aria-label={t("collection_panel.more_actions")}>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t("collection_panel.more_actions")}
+              >
                 <EllipsisVertical className="size-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>

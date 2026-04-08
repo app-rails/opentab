@@ -42,7 +42,12 @@ export function AddTabPopover({ onAdd }: AddTabPopoverProps) {
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon-xs" title={t("add_tab.add_url")} aria-label={t("add_tab.add_url")}>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          title={t("add_tab.add_url")}
+          aria-label={t("add_tab.add_url")}
+        >
           <Plus className="size-3.5 text-muted-foreground" />
         </Button>
       </PopoverTrigger>

@@ -19,9 +19,7 @@ export function EmptyWorkspace() {
       <FolderOpen className="size-10 text-muted-foreground/40" />
       <div className="space-y-1">
         <p className="text-sm font-medium text-muted-foreground">{t("empty.title")}</p>
-        <p className="max-w-[240px] text-xs text-muted-foreground/70">
-          {t("empty.description")}
-        </p>
+        <p className="max-w-[240px] text-xs text-muted-foreground/70">{t("empty.description")}</p>
       </div>
       <Button
         variant="outline"

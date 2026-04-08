@@ -3,6 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ChevronLeft, Monitor, Moon, PanelLeft, Plus, Settings, Sun } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import opentabLogo from "@/assets/opentab-logo.webp";
 import { Button } from "@/components/ui/button";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import { DeleteWorkspaceDialog } from "@/components/workspace/delete-workspace-dialog";
@@ -13,7 +14,6 @@ import { useLocale } from "@/lib/locale";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
-import opentabLogo from "@/assets/opentab-logo.webp";
 
 const THEME_ICON = { light: Sun, dark: Moon, system: Monitor } as const;
 
@@ -188,7 +188,8 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
             <ThemeIcon className="size-4 text-sidebar-foreground/70" />
           </Button>
           {(() => {
-            const langLabel = locale === "en" ? t("sidebar.language_label_en") : t("sidebar.language_label_zh");
+            const langLabel =
+              locale === "en" ? t("sidebar.language_label_en") : t("sidebar.language_label_zh");
             const langAbbr = locale === "en" ? t("sidebar.language_en") : t("sidebar.language_zh");
             return (
               <Button
@@ -198,9 +199,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
                 aria-label={langLabel}
                 title={langLabel}
               >
-                <span className="text-xs font-medium text-sidebar-foreground/70">
-                  {langAbbr}
-                </span>
+                <span className="text-xs font-medium text-sidebar-foreground/70">{langAbbr}</span>
               </Button>
             );
           })()}

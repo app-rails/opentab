@@ -46,7 +46,9 @@ export function DeleteCollectionDialog({
           <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-destructive/10">
             <Trash2 className="size-5 text-destructive" />
           </div>
-          <AlertDialogTitle>{t("dialog.delete_collection.title", { name: collectionName })}</AlertDialogTitle>
+          <AlertDialogTitle>
+            {t("dialog.delete_collection.title", { name: collectionName })}
+          </AlertDialogTitle>
           <AlertDialogDescription>
             {t("dialog.delete_collection.description")}
           </AlertDialogDescription>

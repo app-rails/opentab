@@ -1,17 +1,24 @@
-import { Download, Upload } from "lucide-react";
+import { Check, Copy, Download, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { checkHealth } from "@/lib/api";
+import { getBuildString } from "@/lib/build-info";
 import { db } from "@/lib/db";
 import { exportAllData } from "@/lib/export";
 import { detectFormat } from "@/lib/import/detect";
 import { parseOpenTab } from "@/lib/import/parse-opentab";
 import { parseTabTab } from "@/lib/import/parse-tabtab";
 import { useLocale } from "@/lib/locale";
-import { type AppSettings, getSettings, type Locale, saveSettings, type ThemeMode } from "@/lib/settings";
+import {
+  type AppSettings,
+  getSettings,
+  type Locale,
+  saveSettings,
+  type ThemeMode,
+} from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -280,6 +287,11 @@ export default function App() {
                 </>
               )}
               {!settings.server_enabled && <StatusIndicator status="not_enabled" />}
+
+              <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                {t("settings.about.title")}
+              </h3>
+              <BuildInfo />
             </section>
           </>
         )}
@@ -309,6 +321,35 @@ export default function App() {
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+function BuildInfo() {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  const buildString = getBuildString();
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(buildString);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [buildString]);
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-muted-foreground">{buildString}</span>
+      <button
+        type="button"
+        className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        onClick={handleCopy}
+        aria-label={t("settings.about.copy")}
+      >
+        {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+      </button>
+      {copied && (
+        <span className="text-xs text-muted-foreground">{t("settings.about.copied")}</span>
+      )}
     </div>
   );
 }
