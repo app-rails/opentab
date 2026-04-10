@@ -1,0 +1,17 @@
+{
+  "name": "@opentab/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@opentab/db": "workspace:*",
+    "better-auth": "^1.5.6"
+  },
+  "devDependencies": {
+    "@opentab/config": "workspace:*",
+    "typescript": "^5"
+  }
+}
