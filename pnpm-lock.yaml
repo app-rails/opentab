@@ -226,6 +226,37 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  packages/ui:
+    dependencies:
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      lucide-react:
+        specifier: ^1.7.0
+        version: 1.7.0(react@19.2.4)
+      radix-ui:
+        specifier: ^1.4.3
+        version: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react:
+        specifier: ^19
+        version: 19.2.4
+      tailwind-merge:
+        specifier: ^3.5.0
+        version: 3.5.0
+    devDependencies:
+      '@opentab/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/react':
+        specifier: ^19
+        version: 19.2.14
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
 packages:
 
   '@1natsu/wait-element@4.1.2':

@@ -1,0 +1,34 @@
+{
+  "name": "@opentab/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./components/alert-dialog": "./src/components/alert-dialog.tsx",
+    "./components/button": "./src/components/button.tsx",
+    "./components/card": "./src/components/card.tsx",
+    "./components/checkbox": "./src/components/checkbox.tsx",
+    "./components/context-menu": "./src/components/context-menu.tsx",
+    "./components/dialog": "./src/components/dialog.tsx",
+    "./components/dropdown-menu": "./src/components/dropdown-menu.tsx",
+    "./components/input": "./src/components/input.tsx",
+    "./components/popover": "./src/components/popover.tsx",
+    "./components/switch": "./src/components/switch.tsx",
+    "./components/tooltip": "./src/components/tooltip.tsx",
+    "./lib/utils": "./src/lib/utils.ts",
+    "./globals.css": "./src/styles/globals.css"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.7.0",
+    "radix-ui": "^1.4.3",
+    "react": "^19",
+    "tailwind-merge": "^3.5.0"
+  },
+  "devDependencies": {
+    "@opentab/config": "workspace:*",
+    "@types/react": "^19",
+    "typescript": "^5"
+  }
+}
