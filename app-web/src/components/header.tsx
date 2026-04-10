@@ -5,7 +5,7 @@ export function Header() {
   return (
     <header className="border-b">
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
-        <Link to="/" className="text-lg font-semibold">
+        <Link to="/" className="font-semibold text-lg">
           OpenTab
         </Link>
         <nav className="flex items-center gap-2">

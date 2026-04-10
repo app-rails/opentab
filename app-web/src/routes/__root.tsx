@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 import { Header } from "../components/header";
 import type { trpc } from "../lib/trpc";
 
-interface RouterContext {
+export interface RouterContext {
   trpc: typeof trpc;
   queryClient: QueryClient;
 }

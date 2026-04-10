@@ -30,7 +30,7 @@ function LoginPage() {
 
   return (
     <div className="mx-auto max-w-sm space-y-6 pt-20">
-      <h1 className="text-center text-2xl font-bold">Sign In</h1>
+      <h1 className="text-center font-bold text-2xl">Sign In</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           type="email"
