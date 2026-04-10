@@ -1,15 +1,12 @@
-import { createExtensionTRPCClient } from "./trpc";
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:3001";
+const DEFAULT_BASE = "http://localhost:3001";
 
 interface SignInAnonymousResponse {
   token: string;
   user: { id: string; isAnonymous: boolean };
 }
 
-export async function signInAnonymous(baseUrl?: string): Promise<SignInAnonymousResponse> {
-  const base = baseUrl ?? API_BASE;
-  const res = await fetch(`${base}/api/auth/sign-in/anonymous`, {
+export async function signInAnonymous(baseUrl = DEFAULT_BASE): Promise<SignInAnonymousResponse> {
+  const res = await fetch(`${baseUrl}/api/auth/sign-in/anonymous`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
@@ -22,15 +19,10 @@ export async function signInAnonymous(baseUrl?: string): Promise<SignInAnonymous
   return res.json();
 }
 
-export async function checkHealth(baseUrl?: string): Promise<boolean> {
+export async function checkHealth(baseUrl = DEFAULT_BASE): Promise<boolean> {
   try {
-    if (baseUrl) {
-      const res = await fetch(`${baseUrl}/api/health`);
-      return res.ok;
-    }
-    const client = await createExtensionTRPCClient();
-    const result = await client.health.check.query();
-    return result.status === "ok";
+    const res = await fetch(`${baseUrl}/api/health`);
+    return res.ok;
   } catch {
     return false;
   }

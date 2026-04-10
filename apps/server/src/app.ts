@@ -38,19 +38,18 @@ const createContext = createContextFactory(auth);
 export const app = new Hono();
 
 app.use("*", logger());
-app.use(
-  "/api/*",
-  cors({
-    origin: (origin) => {
-      if (!origin) return null;
-      if (TRUSTED_ORIGINS.includes(origin)) return origin;
-      return null;
-    },
-    allowHeaders: ["Content-Type", "Authorization"],
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    credentials: true,
-  }),
-);
+const corsMiddleware = cors({
+  origin: (origin) => {
+    if (!origin) return null;
+    if (TRUSTED_ORIGINS.includes(origin)) return origin;
+    return null;
+  },
+  allowHeaders: ["Content-Type", "Authorization"],
+  allowMethods: ["GET", "POST", "OPTIONS"],
+  credentials: true,
+});
+app.use("/api/*", corsMiddleware);
+app.use("/trpc/*", corsMiddleware);
 
 app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
 

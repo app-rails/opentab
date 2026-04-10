@@ -3,10 +3,13 @@ import { createTRPCClient, httpLink } from "@trpc/client";
 import { getAuthState } from "./auth-storage";
 import { getSettings } from "./settings";
 
-export async function createExtensionTRPCClient() {
-  const settings = await getSettings();
+let _cached: { url: string; client: ReturnType<typeof createTRPCClient<AppRouter>> } | null = null;
 
-  return createTRPCClient<AppRouter>({
+export async function getExtensionTRPCClient() {
+  const settings = await getSettings();
+  if (_cached?.url === settings.server_url) return _cached.client;
+
+  const client = createTRPCClient<AppRouter>({
     links: [
       httpLink({
         url: `${settings.server_url}/trpc`,
@@ -20,4 +23,7 @@ export async function createExtensionTRPCClient() {
       }),
     ],
   });
+
+  _cached = { url: settings.server_url, client };
+  return client;
 }

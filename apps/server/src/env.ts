@@ -14,7 +14,7 @@ export const env = createEnv({
     TRUSTED_ORIGINS_RAW: z.string().optional(),
     TRUSTED_EXTENSION_ORIGINS_RAW: z.string().optional(),
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-    DB_DRIVER: z.enum(["sqlite", "pg"]).default("sqlite"),
+    DB_DRIVER: z.literal("sqlite").default("sqlite"),
     DATABASE_URL: z.string().optional(),
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
