@@ -314,7 +314,8 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
    export type AppRouter = typeof appRouter;
    ```
 
-**Dependencies:** `@trpc/server`, `@trpc/client`, `@opentab/auth`, `@opentab/db`, `zod`
+**Dependencies:** `@trpc/server`, `@opentab/auth`, `@opentab/db`, `zod`
+**Note:** `@trpc/client` is NOT a dependency of this package. Consumers (`app-extension`, `app-web`) import `@trpc/client` directly and only need the `AppRouter` type from this package (pure type import, no runtime dependency).
 **Depends on:** Phase 4, 5
 
 ---
