@@ -39,13 +39,13 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
 
       <aside
         className={cn(
-          "flex h-full flex-col border-l border-border bg-background overflow-hidden transition-all duration-300 ease-in-out",
+          "flex h-full flex-col overflow-hidden border-border border-l bg-background transition-all duration-300 ease-in-out",
           collapsed ? "w-0 border-l-0" : "w-64",
         )}
       >
         {/* Header */}
-        <div className="flex h-14 items-center justify-between border-b border-border px-4">
-          <h2 className="text-sm font-medium text-muted-foreground ml-1">
+        <div className="flex h-14 items-center justify-between border-border border-b px-4">
+          <h2 className="ml-1 font-medium text-muted-foreground text-sm">
             {t("live_tab.tabs")}
             <span className="ml-1 text-xs">({liveTabs.length})</span>
           </h2>
@@ -77,7 +77,7 @@ export function LiveTabPanel({ collapsed, onToggleCollapse }: LiveTabPanelProps)
         {/* Tab list */}
         <div className="flex-1 space-y-0.5 overflow-auto p-2">
           {displayTabs.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
+            <p className="py-6 text-center text-muted-foreground text-sm">
               {t("live_tab.no_tabs")}
             </p>
           ) : (

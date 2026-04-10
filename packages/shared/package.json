@@ -11,7 +11,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "lint": "tsc --noEmit && biome check ."
+    "check-types": "tsc --noEmit",
+    "lint": "biome check ."
   },
   "devDependencies": {
     "@opentab/config": "workspace:^",

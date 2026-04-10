@@ -145,7 +145,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
         aria-modal="true"
         aria-label={t("search.label")}
         onKeyDown={handleDialogKeyDown}
-        className="fixed left-1/2 top-[20%] z-50 w-full max-w-lg -translate-x-1/2 rounded-xl border bg-popover shadow-lg"
+        className="fixed top-[20%] left-1/2 z-50 w-full max-w-lg -translate-x-1/2 rounded-xl border bg-popover shadow-lg"
       >
         {/* Search input */}
         <div className="flex items-center gap-2 border-b px-4 py-3">
@@ -163,7 +163,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
         {/* Results */}
         <div className="max-h-[300px] overflow-auto p-2">
           {query.trim() && results.length === 0 && (
-            <p className="py-6 text-center text-sm text-muted-foreground">
+            <p className="py-6 text-center text-muted-foreground text-sm">
               {t("search.no_results")}
             </p>
           )}
@@ -181,9 +181,9 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
               onMouseEnter={() => setSelectedIndex(i)}
             >
               <TabFavicon url={result.favIconUrl} size="md" />
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate">{result.title || result.url}</p>
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-muted-foreground text-xs">
                   {result.collectionName}
                   {result.workspaceName && ` · ${result.workspaceName}`}
                 </p>

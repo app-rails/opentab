@@ -87,7 +87,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
 
       <aside
         className={cn(
-          "flex h-full flex-col border-r border-border bg-sidebar overflow-hidden transition-[width] duration-200 ease-linear",
+          "flex h-full flex-col overflow-hidden border-border border-r bg-sidebar transition-[width] duration-200 ease-linear",
           collapsed ? "w-0 border-r-0" : "w-64",
         )}
       >
@@ -95,7 +95,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <div className="flex items-center gap-2">
             <img src={opentabLogo} alt="" className="size-6 rounded" />
-            <h1 className="text-lg font-semibold text-sidebar-foreground">OpenTab</h1>
+            <h1 className="font-semibold text-lg text-sidebar-foreground">OpenTab</h1>
           </div>
           <Button
             variant="ghost"
@@ -111,8 +111,8 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
         <div className="mx-2 h-[1px] bg-sidebar-border" />
 
         {/* Spaces header */}
-        <div className="relative mb-1 mt-3 flex items-center px-4">
-          <h2 className="text-xs font-medium uppercase tracking-wide text-sidebar-foreground/70">
+        <div className="relative mt-3 mb-1 flex items-center px-4">
+          <h2 className="font-medium text-sidebar-foreground/70 text-xs uppercase tracking-wide">
             {t("sidebar.spaces")}
           </h2>
           <Button
@@ -170,7 +170,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
           <Button
             variant="ghost"
             size="sm"
-            className="flex-1 justify-start gap-2 text-sm text-sidebar-foreground/70"
+            className="flex-1 justify-start gap-2 text-sidebar-foreground/70 text-sm"
             onClick={() => {
               chrome.tabs.create({ url: chrome.runtime.getURL("/settings.html") });
             }}
@@ -199,7 +199,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
                 aria-label={langLabel}
                 title={langLabel}
               >
-                <span className="text-xs font-medium text-sidebar-foreground/70">{langAbbr}</span>
+                <span className="font-medium text-sidebar-foreground/70 text-xs">{langAbbr}</span>
               </Button>
             );
           })()}

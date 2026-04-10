@@ -1,9 +1,14 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
+  "ui": "tui",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".output/**", "dist/**"]
+    },
+    "check-types": {
+      "dependsOn": ["^build"]
     },
     "dev": {
       "cache": false,
@@ -11,6 +16,25 @@
     },
     "lint": {
       "dependsOn": ["^build"]
+    },
+    "db:push": {
+      "cache": false
+    },
+    "db:generate": {
+      "cache": false
+    },
+    "db:migrate": {
+      "cache": false
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
+    },
+    "deploy": {
+      "cache": false
+    },
+    "destroy": {
+      "cache": false
     }
   }
 }

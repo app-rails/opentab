@@ -24,20 +24,20 @@ export function AboutPage() {
     <div className="px-2 pt-2">
       {/* Title */}
       <div className="flex items-center gap-2">
-        <h2 className="text-lg font-semibold">{t("about.title")}</h2>
-        <span className="text-xs text-muted-foreground">{version}</span>
+        <h2 className="font-semibold text-lg">{t("about.title")}</h2>
+        <span className="text-muted-foreground text-xs">{version}</span>
       </div>
 
       {/* Description */}
       <div className="mt-3 flex items-center gap-2">
-        <p className="text-sm text-foreground">{t("about.description")}</p>
-        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+        <p className="text-foreground text-sm">{t("about.description")}</p>
+        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-muted-foreground text-xs">
           {t("about.info_badge")}
         </span>
       </div>
 
       {/* Feature bullets */}
-      <ul className="mt-4 list-disc pl-5 space-y-1.5 text-sm text-foreground">
+      <ul className="mt-4 list-disc space-y-1.5 pl-5 text-foreground text-sm">
         <li>
           <Trans
             i18nKey="about.feature_sidebar"
@@ -48,7 +48,7 @@ export function AboutPage() {
       </ul>
 
       {/* Docs link */}
-      <p className="mt-4 text-sm text-foreground">
+      <p className="mt-4 text-foreground text-sm">
         {t("about.docs_prefix")}{" "}
         <a
           href="https://github.com/nicepkg/opentab"
@@ -62,12 +62,12 @@ export function AboutPage() {
 
       {/* Changelog */}
       <div className="mt-6 flex items-center gap-2">
-        <span className="text-sm font-semibold">{t("about.changelog")}</span>
+        <span className="font-semibold text-sm">{t("about.changelog")}</span>
         <a
           href="https://github.com/nicepkg/opentab/releases"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline"
+          className="inline-flex items-center gap-1 text-blue-500 text-sm hover:underline"
         >
           <ExternalLink className="size-3" />
           {t("about.latest_version")}

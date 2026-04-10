@@ -52,13 +52,13 @@ export function WelcomeDialog() {
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader className="items-center">
-          <img src={opentabLogo} alt="OpenTab" className="size-16 mb-2" />
+          <img src={opentabLogo} alt="OpenTab" className="mb-2 size-16" />
           <DialogTitle className="text-xl">{t("welcome.title")}</DialogTitle>
           <DialogDescription className="text-center">
             {t("welcome.newtab_notice")}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 text-sm text-muted-foreground">
+        <div className="space-y-3 text-muted-foreground text-sm">
           <p>{t("welcome.feature_organize")}</p>
           <p>{t("welcome.feature_drag")}</p>
         </div>

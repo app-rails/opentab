@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
-    "lint": "tsc --noEmit && biome check .",
+    "check-types": "tsc --noEmit",
+    "lint": "biome check .",
     "postinstall": "wxt prepare"
   },
   "dependencies": {

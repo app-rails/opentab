@@ -53,7 +53,7 @@ export function AddTabPopover({ onAdd }: AddTabPopoverProps) {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 space-y-3 p-3">
         <div className="space-y-1">
-          <label htmlFor="add-tab-url" className="text-xs font-medium text-muted-foreground">
+          <label htmlFor="add-tab-url" className="font-medium text-muted-foreground text-xs">
             {t("add_tab.label_url")}
           </label>
           <Input
@@ -71,16 +71,16 @@ export function AddTabPopover({ onAdd }: AddTabPopoverProps) {
             }}
             aria-invalid={!!urlError}
             aria-describedby={urlError ? "add-tab-url-error" : undefined}
-            className={urlError ? "h-7 text-xs border-destructive" : "h-7 text-xs"}
+            className={urlError ? "h-7 border-destructive text-xs" : "h-7 text-xs"}
           />
           {urlError && (
-            <p id="add-tab-url-error" className="text-xs text-destructive">
+            <p id="add-tab-url-error" className="text-destructive text-xs">
               {urlError}
             </p>
           )}
         </div>
         <div className="space-y-1">
-          <label htmlFor="add-tab-title" className="text-xs font-medium text-muted-foreground">
+          <label htmlFor="add-tab-title" className="font-medium text-muted-foreground text-xs">
             {t("add_tab.label_title")}
           </label>
           <Input

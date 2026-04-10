@@ -18,8 +18,8 @@ export function EmptyWorkspace() {
     <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
       <FolderOpen className="size-10 text-muted-foreground/40" />
       <div className="space-y-1">
-        <p className="text-sm font-medium text-muted-foreground">{t("empty.title")}</p>
-        <p className="max-w-[240px] text-xs text-muted-foreground/70">{t("empty.description")}</p>
+        <p className="font-medium text-muted-foreground text-sm">{t("empty.title")}</p>
+        <p className="max-w-[240px] text-muted-foreground/70 text-xs">{t("empty.description")}</p>
       </div>
       <Button
         variant="outline"

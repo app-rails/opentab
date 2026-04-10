@@ -56,7 +56,7 @@ export function EditTabDialog({ tab, open, onOpenChange }: EditTabDialogProps) {
 
         <div className="space-y-3">
           <div className="space-y-1">
-            <label htmlFor="edit-tab-title" className="text-xs font-medium text-muted-foreground">
+            <label htmlFor="edit-tab-title" className="font-medium text-muted-foreground text-xs">
               {t("edit_tab.label_title")}
             </label>
             <Input
@@ -71,7 +71,7 @@ export function EditTabDialog({ tab, open, onOpenChange }: EditTabDialogProps) {
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="edit-tab-url" className="text-xs font-medium text-muted-foreground">
+            <label htmlFor="edit-tab-url" className="font-medium text-muted-foreground text-xs">
               {t("edit_tab.label_url")}
             </label>
             <Input
@@ -89,7 +89,7 @@ export function EditTabDialog({ tab, open, onOpenChange }: EditTabDialogProps) {
               }}
             />
             {urlError && (
-              <p id="edit-tab-url-error" className="text-xs text-destructive">
+              <p id="edit-tab-url-error" className="text-destructive text-xs">
                 {urlError}
               </p>
             )}

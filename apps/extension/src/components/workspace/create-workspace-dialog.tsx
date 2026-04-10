@@ -53,7 +53,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <label htmlFor="ws-name" className="text-sm font-medium">
+            <label htmlFor="ws-name" className="font-medium text-sm">
               {t("dialog.create_workspace.name_label")}
             </label>
             <Input
@@ -69,7 +69,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
             />
           </div>
           <div className="space-y-2">
-            <span className="text-sm font-medium">{t("dialog.create_workspace.icon_label")}</span>
+            <span className="font-medium text-sm">{t("dialog.create_workspace.icon_label")}</span>
             <IconPicker value={icon} onChange={setIcon} />
           </div>
         </div>

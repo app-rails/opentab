@@ -109,7 +109,7 @@ export function WorkspaceItem({
           <Trash2 className="mr-2 size-4" />
           {t("workspace_item.delete")}
           {isLastWorkspace && (
-            <span className="ml-auto text-xs italic text-muted-foreground">
+            <span className="ml-auto text-muted-foreground text-xs italic">
               {t("workspace_item.last")}
             </span>
           )}
@@ -128,7 +128,7 @@ export function WorkspaceItem({
               className={cn(
                 "group flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground border border-sidebar-accent-foreground/10"
+                  ? "border border-sidebar-accent-foreground/10 bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50",
               )}
               onClick={onSelect}

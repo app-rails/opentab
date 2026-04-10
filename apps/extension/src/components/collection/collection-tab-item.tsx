@@ -78,7 +78,7 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
 
       <span
         className={cn(
-          "flex-1 min-w-0 text-xs leading-tight",
+          "min-w-0 flex-1 text-xs leading-tight",
           viewMode === "default" ? "ml-0.5 line-clamp-2" : "truncate",
         )}
         title={tab.url}
@@ -91,7 +91,7 @@ export function CollectionTabItem({ tab, viewMode, onRemove }: CollectionTabItem
           <Button
             variant="ghost"
             size="icon-xs"
-            className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+            className="shrink-0 opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
             onClick={(e) => e.stopPropagation()}
           >
             <EllipsisVertical className="size-3.5" />

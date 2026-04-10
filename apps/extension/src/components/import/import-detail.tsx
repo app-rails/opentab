@@ -38,10 +38,10 @@ export function ImportDetail({
   if (colDiff.status === "same") {
     return (
       <div>
-        <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+        <h3 className="mb-2 font-medium text-muted-foreground text-sm">
           {wsDiff.name} / {colDiff.name}
         </h3>
-        <p className="text-sm text-muted-foreground">{t("import_detail.identical")}</p>
+        <p className="text-muted-foreground text-sm">{t("import_detail.identical")}</p>
       </div>
     );
   }
@@ -49,7 +49,7 @@ export function ImportDetail({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">
+        <h3 className="font-medium text-muted-foreground text-sm">
           {wsDiff.name} / {colDiff.name}
         </h3>
 
@@ -86,7 +86,7 @@ export function ImportDetail({
 
       {colDiff.status === "new" && (
         <>
-          <h4 className="text-sm font-medium">
+          <h4 className="font-medium text-sm">
             {t("import_detail.tabs_to_import", { count: colDiff.allTabs.length })}
           </h4>
           <NewTabList tabs={colDiff.allTabs} />
@@ -97,14 +97,14 @@ export function ImportDetail({
         <>
           {colDiff.toAdd.length > 0 && (
             <>
-              <h4 className="text-sm font-medium">{t("import_detail.new_tabs")}</h4>
+              <h4 className="font-medium text-sm">{t("import_detail.new_tabs")}</h4>
               <NewTabList tabs={colDiff.toAdd} />
             </>
           )}
 
           {colPlan.extraExisting.length > 0 && (
             <>
-              <h4 className="text-sm font-medium">{t("import_detail.extra_tabs")}</h4>
+              <h4 className="font-medium text-sm">{t("import_detail.extra_tabs")}</h4>
               <ExtraExistingTabList
                 tabs={colPlan.extraExisting}
                 onDecision={(tabId, decision) =>
@@ -119,7 +119,7 @@ export function ImportDetail({
 
       {colDiff.status === "conflict" && colPlan.strategy === "new" && (
         <>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             {t("import_detail.create_message", { name: colDiff.name })}
           </p>
           <NewTabList tabs={colDiff.allTabs} />
@@ -127,7 +127,7 @@ export function ImportDetail({
       )}
 
       {colDiff.status === "conflict" && colPlan.strategy === "skip" && (
-        <p className="text-sm text-muted-foreground">{t("import_detail.skip_message")}</p>
+        <p className="text-muted-foreground text-sm">{t("import_detail.skip_message")}</p>
       )}
     </div>
   );

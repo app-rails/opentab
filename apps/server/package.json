@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch --env-file=.env src/index.ts",
     "build": "tsc",
-    "lint": "tsc --noEmit && biome check .",
+    "check-types": "tsc --noEmit",
+    "lint": "biome check .",
     "test": "vitest run",
     "db:migrate": "better-auth migrate"
   },

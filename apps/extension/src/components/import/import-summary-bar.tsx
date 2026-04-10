@@ -43,8 +43,8 @@ export function ImportSummaryBar({ plan, isImporting, onImport }: ImportSummaryB
   const hasWork = collections > 0 || tabs > 0;
 
   return (
-    <div className="flex items-center justify-between border-t border-border px-6 py-3">
-      <p className="text-sm text-muted-foreground">
+    <div className="flex items-center justify-between border-border border-t px-6 py-3">
+      <p className="text-muted-foreground text-sm">
         {t("import_summary.summary", { workspaces, collections, tabs })}
       </p>
       <Button onClick={onImport} disabled={!hasWork || isImporting}>

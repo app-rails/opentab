@@ -18,7 +18,7 @@ export function NewTabList({ tabs }: NewTabListProps) {
           <span className="font-medium text-green-700 dark:text-green-400">+</span>
           {tab.favIconUrl && <img src={tab.favIconUrl} alt="" className="size-4 shrink-0" />}
           <span className="flex-1 truncate">{tab.title}</span>
-          <span className="shrink-0 truncate text-xs text-muted-foreground max-w-[200px]">
+          <span className="max-w-[200px] shrink-0 truncate text-muted-foreground text-xs">
             {tab.url}
           </span>
         </div>
@@ -42,10 +42,10 @@ export function ExtraExistingTabList({
   if (tabs.length === 0) return null;
   return (
     <div className="space-y-1">
-      <div className="flex items-center gap-2 mb-1">
+      <div className="mb-1 flex items-center gap-2">
         <button
           type="button"
-          className="text-xs text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground text-xs hover:text-foreground"
           onClick={() => onBatchDecision("keep")}
         >
           {t("tab_diff.keep_all")}
@@ -53,7 +53,7 @@ export function ExtraExistingTabList({
         <span className="text-muted-foreground">·</span>
         <button
           type="button"
-          className="text-xs text-muted-foreground hover:text-destructive"
+          className="text-muted-foreground text-xs hover:text-destructive"
           onClick={() => onBatchDecision("delete")}
         >
           {t("tab_diff.delete_all")}

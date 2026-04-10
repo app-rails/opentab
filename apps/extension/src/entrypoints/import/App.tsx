@@ -248,15 +248,15 @@ export default function App() {
     <div className="flex h-screen flex-col bg-background text-foreground">
       <Toaster />
 
-      <header className="flex items-center justify-between border-b border-border px-6 py-3">
-        <h1 className="text-lg font-semibold">{t("import_page.title")}</h1>
+      <header className="flex items-center justify-between border-border border-b px-6 py-3">
+        <h1 className="font-semibold text-lg">{t("import_page.title")}</h1>
         <Button variant="ghost" size="sm" onClick={() => window.close()}>
           {t("import_page.cancel")}
         </Button>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-72 shrink-0 overflow-y-auto border-r border-border p-3">
+        <div className="w-72 shrink-0 overflow-y-auto border-border border-r p-3">
           <ImportTree
             diff={diff}
             plan={plan}

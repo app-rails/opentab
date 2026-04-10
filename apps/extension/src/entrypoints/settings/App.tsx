@@ -156,15 +156,15 @@ export default function App() {
   }
 
   return (
-    <div className="grid h-screen grid-cols-1 sm:grid-cols-[200px_1fr] bg-background text-foreground">
+    <div className="grid h-screen grid-cols-1 bg-background text-foreground sm:grid-cols-[200px_1fr]">
       {/* Left nav */}
-      <nav className="border-r border-border p-4">
-        <h1 className="mb-4 text-lg font-semibold">{t("settings.title")}</h1>
+      <nav className="border-border border-r p-4">
+        <h1 className="mb-4 font-semibold text-lg">{t("settings.title")}</h1>
         <div className="space-y-1">
           <button
             type="button"
             className={cn(
-              "w-full rounded-md px-3 py-1.5 text-left text-sm font-medium transition-colors",
+              "w-full rounded-md px-3 py-1.5 text-left font-medium text-sm transition-colors",
               activePanel === "import-export"
                 ? "bg-accent"
                 : "text-muted-foreground hover:bg-accent/50",
@@ -176,7 +176,7 @@ export default function App() {
           <button
             type="button"
             className={cn(
-              "w-full rounded-md px-3 py-1.5 text-left text-sm font-medium transition-colors",
+              "w-full rounded-md px-3 py-1.5 text-left font-medium text-sm transition-colors",
               activePanel === "general" ? "bg-accent" : "text-muted-foreground hover:bg-accent/50",
             )}
             onClick={() => setActivePanel("general")}
@@ -190,13 +190,13 @@ export default function App() {
       <main className="p-8">
         {activePanel === "general" && (
           <>
-            <h2 className="mb-6 text-xl font-semibold">{t("settings.nav.general")}</h2>
+            <h2 className="mb-6 font-semibold text-xl">{t("settings.nav.general")}</h2>
             <section className="max-w-md space-y-6">
-              <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
                 {t("settings.appearance.title")}
               </h3>
               <div className="space-y-2">
-                <span className="text-sm font-medium">{t("settings.appearance.theme")}</span>
+                <span className="font-medium text-sm">{t("settings.appearance.theme")}</span>
                 <div
                   className="flex gap-1 rounded-lg border border-border p-1"
                   role="radiogroup"
@@ -210,7 +210,7 @@ export default function App() {
                       role="radio"
                       aria-checked={themeMode === opt.value}
                       className={cn(
-                        "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                        "flex-1 rounded-md px-3 py-1.5 font-medium text-sm transition-colors",
                         themeMode === opt.value
                           ? "bg-primary text-primary-foreground"
                           : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
@@ -224,13 +224,13 @@ export default function App() {
               </div>
 
               <div className="space-y-2">
-                <span className="text-sm font-medium">{t("settings.appearance.language")}</span>
+                <span className="font-medium text-sm">{t("settings.appearance.language")}</span>
                 <div className="rounded-lg border border-border">
                   {LANGUAGE_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
                       type="button"
-                      className="flex w-full items-center justify-between px-3 py-2.5 text-sm transition-colors hover:bg-accent first:rounded-t-lg last:rounded-b-lg [&:not(:last-child)]:border-b border-border"
+                      className="flex w-full items-center justify-between border-border px-3 py-2.5 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg hover:bg-accent [&:not(:last-child)]:border-b"
                       onClick={() => setLocale(opt.value)}
                     >
                       <div className="flex items-center gap-2">
@@ -245,11 +245,11 @@ export default function App() {
                 </div>
               </div>
 
-              <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
                 {t("settings.server.title")}
               </h3>
               <div className="flex items-center justify-between">
-                <label htmlFor="server-sync" className="text-sm font-medium">
+                <label htmlFor="server-sync" className="font-medium text-sm">
                   {t("settings.server.enable")}
                 </label>
                 <Switch
@@ -261,7 +261,7 @@ export default function App() {
               {settings.server_enabled && (
                 <>
                   <div className="space-y-2">
-                    <label htmlFor="server-url" className="text-sm font-medium">
+                    <label htmlFor="server-url" className="font-medium text-sm">
                       {t("settings.server.url_label")}
                     </label>
                     <Input
@@ -288,7 +288,7 @@ export default function App() {
               )}
               {!settings.server_enabled && <StatusIndicator status="not_enabled" />}
 
-              <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
                 {t("settings.about.title")}
               </h3>
               <BuildInfo />
@@ -298,21 +298,21 @@ export default function App() {
 
         {activePanel === "import-export" && (
           <>
-            <h2 className="mb-6 text-xl font-semibold">{t("settings.nav.import_export")}</h2>
+            <h2 className="mb-6 font-semibold text-xl">{t("settings.nav.import_export")}</h2>
             <section className="max-w-md space-y-6">
-              <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
                 {t("settings.export.title")}
               </h3>
-              <p className="text-sm text-muted-foreground">{t("settings.export.description")}</p>
+              <p className="text-muted-foreground text-sm">{t("settings.export.description")}</p>
               <Button onClick={handleExport} disabled={isExporting} className="gap-2">
                 <Download className="size-4" />
                 {isExporting ? t("settings.export.exporting") : t("settings.export.button")}
               </Button>
 
-              <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
                 {t("settings.import.title")}
               </h3>
-              <p className="text-sm text-muted-foreground">{t("settings.import.description")}</p>
+              <p className="text-muted-foreground text-sm">{t("settings.import.description")}</p>
               <Button variant="outline" onClick={handleImport} className="gap-2">
                 <Upload className="size-4" />
                 {t("settings.import.button")}
@@ -338,7 +338,7 @@ function BuildInfo() {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground">{buildString}</span>
+      <span className="text-muted-foreground text-sm">{buildString}</span>
       <button
         type="button"
         className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -348,7 +348,7 @@ function BuildInfo() {
         {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
       </button>
       {copied && (
-        <span className="text-xs text-muted-foreground">{t("settings.about.copied")}</span>
+        <span className="text-muted-foreground text-xs">{t("settings.about.copied")}</span>
       )}
     </div>
   );
@@ -367,7 +367,7 @@ function StatusIndicator({ status }: { status: ConnectionStatus }) {
   }[status];
 
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="flex items-center gap-2 text-muted-foreground text-sm">
       <span className={`size-2 rounded-full ${config.color}`} />
       {config.text}
     </div>

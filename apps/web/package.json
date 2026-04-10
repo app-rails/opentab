@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --port 3002",
     "build": "vite build",
-    "lint": "tsc --noEmit && biome check ."
+    "check-types": "tsc --noEmit",
+    "lint": "biome check ."
   },
   "dependencies": {
     "@opentab/api": "workspace:*",

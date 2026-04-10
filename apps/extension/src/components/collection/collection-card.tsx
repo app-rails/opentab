@@ -104,11 +104,11 @@ export function CollectionCard({
       className={cn("transition-colors", isOver && "bg-primary/5")}
     >
       {/* Header */}
-      <div className="group flex items-center gap-1 px-4 pt-2 pb-3 border-b border-border">
+      <div className="group flex items-center gap-1 border-border border-b px-4 pt-2 pb-3">
         {/* Left group — drag handle */}
         <button
           type="button"
-          className="touch-none p-0 border-0 bg-transparent cursor-grab active:cursor-grabbing"
+          className="cursor-grab touch-none border-0 bg-transparent p-0 active:cursor-grabbing"
           {...attributes}
           {...listeners}
         >
@@ -125,12 +125,12 @@ export function CollectionCard({
               if (e.key === "Escape") setIsRenaming(false);
             }}
             onBlur={handleRenameConfirm}
-            className="h-6 text-sm font-medium"
+            className="h-6 font-medium text-sm"
           />
         ) : (
           <button
             type="button"
-            className="text-sm font-medium hover:bg-accent px-1 rounded cursor-pointer"
+            className="cursor-pointer rounded px-1 font-medium text-sm hover:bg-accent"
             onClick={() => {
               setRenameValue(collection.name);
               setIsRenaming(true);
@@ -155,14 +155,14 @@ export function CollectionCard({
         {/* Spacer — click to collapse */}
         <button
           type="button"
-          className="flex-1 h-8 cursor-pointer"
+          className="h-8 flex-1 cursor-pointer"
           onClick={() => setCollapsed(!collapsed)}
           aria-label={collapsed ? t("collection_card.expand") : t("collection_card.collapse")}
         />
 
         {/* Right group — visible on hover and keyboard focus within */}
         {!isRenaming && (
-          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
             <AddTabPopover onAdd={handleAddUrl} />
             {tabs.length > 0 && (
               <Button
@@ -243,7 +243,7 @@ export function CollectionCard({
                 ))}
               </div>
             ) : (
-              <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground/70">
+              <div className="rounded-lg border border-border border-dashed px-4 py-6 text-center text-muted-foreground/70 text-xs">
                 {t("collection_card.drag_tabs_here")}
               </div>
             )}

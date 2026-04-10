@@ -182,7 +182,7 @@ export function CollectionPanel({
       {/* Sticky topbar */}
       <div
         className={cn(
-          "sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background/70 px-6 backdrop-blur-md",
+          "sticky top-0 z-10 flex h-14 items-center justify-between border-border border-b bg-background/70 px-6 backdrop-blur-md",
           sidebarCollapsed && "pl-10",
         )}
       >
@@ -197,12 +197,12 @@ export function CollectionPanel({
               if (e.key === "Escape") setIsRenaming(false);
             }}
             onBlur={confirmRename}
-            className="h-8 w-48 text-lg font-semibold"
+            className="h-8 w-48 font-semibold text-lg"
           />
         ) : (
           <button
             type="button"
-            className="text-lg font-semibold truncate hover:bg-accent px-1 rounded cursor-pointer"
+            className="cursor-pointer truncate rounded px-1 font-semibold text-lg hover:bg-accent"
             onClick={startRename}
           >
             {workspaceName}

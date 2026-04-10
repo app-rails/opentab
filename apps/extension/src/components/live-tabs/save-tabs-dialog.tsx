@@ -141,7 +141,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
             ))}
           </div>
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-muted-foreground text-xs">
             <button
               type="button"
               className="underline-offset-2 hover:underline"

@@ -12,7 +12,7 @@ function statusBadge(status: string) {
     skip: "bg-muted text-muted-foreground",
   };
   return (
-    <span className={cn("rounded px-1.5 py-0.5 text-xs font-medium", styles[status] ?? "")}>
+    <span className={cn("rounded px-1.5 py-0.5 font-medium text-xs", styles[status] ?? "")}>
       {status}
     </span>
   );
@@ -38,7 +38,7 @@ export function ImportTree({
   const { t } = useTranslation();
   return (
     <div className="space-y-1">
-      <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <h2 className="mb-2 font-medium text-muted-foreground text-xs uppercase tracking-wide">
         {t("import_page.workspaces")}
       </h2>
       {diff.workspaces.map((ws, wi) => {
@@ -52,7 +52,7 @@ export function ImportTree({
               )}
             >
               <Checkbox checked={wsPlan.selected} onCheckedChange={() => onToggleWorkspace(wi)} />
-              <span className="flex-1 truncate text-sm font-medium">{ws.name}</span>
+              <span className="flex-1 truncate font-medium text-sm">{ws.name}</span>
               {statusBadge(ws.status)}
             </div>
 

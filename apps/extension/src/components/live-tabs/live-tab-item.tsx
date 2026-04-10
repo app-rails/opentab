@@ -41,7 +41,7 @@ export const LiveTabItem = memo(function LiveTabItem({ tab }: LiveTabItemProps) 
       }}
     >
       <TabFavicon url={tab.favIconUrl} size="md" />
-      <span className="flex-1 min-w-0 text-xs leading-tight line-clamp-2">
+      <span className="line-clamp-2 min-w-0 flex-1 text-xs leading-tight">
         {tab.title || tab.url || t("live_tab.new_tab")}
       </span>
     </div>
