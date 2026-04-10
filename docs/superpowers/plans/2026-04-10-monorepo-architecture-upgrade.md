@@ -37,7 +37,8 @@ packages/auth/              — better-auth factory (Phase 5)
 packages/api/               — tRPC router (Phase 6)
   package.json
   tsconfig.json
-  src/index.ts
+  src/trpc.ts              — initTRPC, publicProcedure, protectedProcedure (leaf module, no internal imports)
+  src/index.ts             — re-exports from trpc.ts + routers + context
   src/context.ts
   src/routers/index.ts
   src/routers/health.ts
@@ -83,7 +84,8 @@ app-server/tsconfig.json    — extends @opentab/config (Phase 2)
 packages/shared/tsconfig.json — extends @opentab/config (Phase 2)
 
 app-server/src/env.ts       — rewrite with t3-env + zod (Phase 3)
-app-server/src/index.ts     — full rewrite, wire all packages (Phase 8)
+app-server/src/app.ts       — full rewrite, wire all packages (Phase 8)
+app-server/src/index.ts     — serve() only, imports app from app.ts (Phase 8)
 app-server/package.json     — add/remove deps (Phase 3, 8)
 
 app-extension/src/lib/trpc.ts        — new tRPC client (Phase 9)
@@ -99,7 +101,6 @@ app-extension/src/components/ui/*    — delete all (Phase 9)
 ### Files to delete:
 ```
 tsconfig.base.json          — moved to packages/config (Phase 2)
-app-server/src/app.ts       — merged into index.ts (Phase 8)
 app-server/src/auth.ts      — moved to @opentab/auth (Phase 8)
 app-extension/src/components/ui/*.tsx — moved to @opentab/ui (Phase 9)
 ```
@@ -368,30 +369,65 @@ Replace the entire file with:
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
+const splitComma = (v: string | undefined) =>
+  v?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+
 export const env = createEnv({
   server: {
     BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_URL: z.string().url().default("http://localhost:3001"),
-    TRUSTED_ORIGINS: z
-      .string()
-      .optional()
-      .transform((v) => v?.split(",").map((s) => s.trim()).filter(Boolean) ?? []),
-    TRUSTED_EXTENSION_ORIGINS: z
-      .string()
-      .optional()
-      .transform((v) => v?.split(",").map((s) => s.trim()).filter(Boolean) ?? []),
+    TRUSTED_ORIGINS_RAW: z.string().optional(),
+    TRUSTED_EXTENSION_ORIGINS_RAW: z.string().optional(),
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   },
-  runtimeEnv: process.env,
+  runtimeEnvStrict: {
+    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+    TRUSTED_ORIGINS_RAW: process.env.TRUSTED_ORIGINS,
+    TRUSTED_EXTENSION_ORIGINS_RAW: process.env.TRUSTED_EXTENSION_ORIGINS,
+    NODE_ENV: process.env.NODE_ENV,
+  },
 });
+
+/**
+ * Merged trusted origins array — preserves the existing API contract.
+ * `app.ts` uses `env.TRUSTED_ORIGINS.includes(origin)` which continues to work.
+ */
+const TRUSTED_ORIGINS = [
+  ...splitComma(env.TRUSTED_ORIGINS_RAW),
+  ...splitComma(env.TRUSTED_EXTENSION_ORIGINS_RAW),
+];
+
+export { TRUSTED_ORIGINS };
 ```
 
-Key points:
-- `TRUSTED_ORIGINS` and `TRUSTED_EXTENSION_ORIGINS` use `.transform()` to return `string[]`, preserving the existing API contract (`env.TRUSTED_ORIGINS.includes(origin)` in `app.ts` continues to work).
-- `BETTER_AUTH_SECRET` now validates min 32 chars at startup.
-- `BETTER_AUTH_URL` defaults to `http://localhost:3001`.
+Note: We use `runtimeEnvStrict` to map env var names (e.g. `TRUSTED_ORIGINS` in `.env` → `TRUSTED_ORIGINS_RAW` in code), then compute the merged array outside `createEnv` since t3-env `.transform()` doesn't compose well with merging two vars. The exported `TRUSTED_ORIGINS` is `string[]`, same as the current contract.
 
-- [ ] **Step 3: Verify server starts with valid env**
+Also update `app-server/src/app.ts` to import the new export:
+
+Replace `env.TRUSTED_ORIGINS` with the named import:
+```typescript
+import { env, TRUSTED_ORIGINS } from "./env.js";
+// ...
+if (TRUSTED_ORIGINS.includes(origin)) return origin;
+// ...
+trustedOrigins: TRUSTED_ORIGINS,
+```
+
+- [ ] **Step 3: Update vitest config secret to meet min 32 chars**
+
+The current `BETTER_AUTH_SECRET` in `app-server/vitest.config.ts` is `"test-secret-for-vitest"` (22 chars). Update to 32+ chars:
+
+In `app-server/vitest.config.ts`, change:
+```typescript
+BETTER_AUTH_SECRET: "test-secret-for-vitest",
+```
+to:
+```typescript
+BETTER_AUTH_SECRET: "test-secret-for-vitest-min-32-chars!!",
+```
+
+- [ ] **Step 4: Verify server starts with valid env**
 
 ```bash
 cd app-server && pnpm dev
@@ -399,18 +435,18 @@ cd app-server && pnpm dev
 
 Expected: Server starts on port 3001. If `.env` is missing `BETTER_AUTH_SECRET`, it should fail immediately with a Zod validation error.
 
-- [ ] **Step 4: Run existing tests**
+- [ ] **Step 5: Run existing tests**
 
 ```bash
 cd app-server && pnpm test
 ```
 
-Expected: All 3 tests in `auth.test.ts` pass. The `env.TRUSTED_ORIGINS` type hasn't changed (still `string[]`), so `app.ts` works unchanged.
+Expected: All 3 tests in `auth.test.ts` pass.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add app-server/src/env.ts app-server/package.json pnpm-lock.yaml
+git add app-server/src/env.ts app-server/src/app.ts app-server/vitest.config.ts app-server/package.json pnpm-lock.yaml
 git commit -m "refactor: replace hand-written env validation with t3-env + zod"
 ```
 
@@ -475,14 +511,18 @@ git commit -m "refactor: replace hand-written env validation with t3-env + zod"
 - [ ] **Step 3: Create `packages/db/drizzle.config.ts`**
 
 ```typescript
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "drizzle-kit";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   schema: "./src/schema/index.ts",
   out: "./drizzle",
   dialect: "sqlite",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "../app-server/data/auth.db",
+    url: process.env.DATABASE_URL ?? resolve(__dirname, "../../app-server/data/auth.db"),
   },
 });
 ```
@@ -798,7 +838,7 @@ git commit -m "feat: add @opentab/auth package with email/password and OAuth sup
 }
 ```
 
-- [ ] **Step 3: Create `packages/api/src/index.ts`**
+- [ ] **Step 3: Create `packages/api/src/trpc.ts`** (leaf module — no internal imports, avoids circular deps)
 
 ```typescript
 import { initTRPC, TRPCError } from "@trpc/server";
@@ -815,7 +855,12 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   }
   return next({ ctx: { ...ctx, session: ctx.session, user: ctx.user! } });
 });
+```
 
+- [ ] **Step 4: Create `packages/api/src/index.ts`** (pure re-export barrel — imports from trpc.ts and routers, no definitions here)
+
+```typescript
+export { router, publicProcedure, protectedProcedure } from "./trpc.js";
 export { appRouter, type AppRouter } from "./routers/index.js";
 export { createContextFactory, type Context } from "./context.js";
 ```
@@ -841,10 +886,10 @@ export function createContextFactory(auth: Auth) {
 }
 ```
 
-- [ ] **Step 5: Create `packages/api/src/routers/health.ts`**
+- [ ] **Step 6: Create `packages/api/src/routers/health.ts`**
 
 ```typescript
-import { publicProcedure, router } from "../index.js";
+import { publicProcedure, router } from "../trpc.js";
 
 export const healthRouter = router({
   check: publicProcedure.query(() => ({
@@ -854,10 +899,10 @@ export const healthRouter = router({
 });
 ```
 
-- [ ] **Step 6: Create `packages/api/src/routers/index.ts`**
+- [ ] **Step 7: Create `packages/api/src/routers/index.ts`**
 
 ```typescript
-import { router } from "../index.js";
+import { router } from "../trpc.js";
 import { healthRouter } from "./health.js";
 
 export const appRouter = router({
@@ -867,7 +912,7 @@ export const appRouter = router({
 export type AppRouter = typeof appRouter;
 ```
 
-- [ ] **Step 7: Install and verify**
+- [ ] **Step 8: Install and verify**
 
 ```bash
 pnpm install
@@ -876,7 +921,7 @@ cd packages/api && npx tsc --noEmit
 
 Expected: No TypeScript errors.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add packages/api/
@@ -1190,12 +1235,11 @@ pnpm --filter @opentab/server add @opentab/auth@workspace:* @opentab/db@workspac
 pnpm --filter @opentab/server remove better-sqlite3 @types/better-sqlite3
 ```
 
-- [ ] **Step 2: Rewrite `app-server/src/index.ts`**
+- [ ] **Step 2: Rewrite `app-server/src/app.ts`** (pure app construction — no `serve()`, safe to import in tests)
 
 Replace the entire file with:
 
 ```typescript
-import { serve } from "@hono/node-server";
 import { trpcServer } from "@hono/trpc-server";
 import { createAuth } from "@opentab/auth";
 import { createDb } from "@opentab/db";
@@ -1203,7 +1247,7 @@ import { appRouter, createContextFactory } from "@opentab/api";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { env } from "./env.js";
+import { env, TRUSTED_ORIGINS } from "./env.js";
 
 // Wire up: db → auth → api context
 const db = createDb({
@@ -1216,7 +1260,7 @@ const auth = createAuth({
   dbProvider: env.DB_DRIVER,
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
-  trustedOrigins: [...env.TRUSTED_ORIGINS, ...env.TRUSTED_EXTENSION_ORIGINS],
+  trustedOrigins: TRUSTED_ORIGINS,
   socialProviders: {
     ...(env.GOOGLE_CLIENT_ID && {
       google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET! },
@@ -1241,8 +1285,7 @@ app.use(
   cors({
     origin: (origin) => {
       if (!origin) return null;
-      const trusted = [...env.TRUSTED_ORIGINS, ...env.TRUSTED_EXTENSION_ORIGINS];
-      if (trusted.includes(origin)) return origin;
+      if (TRUSTED_ORIGINS.includes(origin)) return origin;
       return null;
     },
     allowHeaders: ["Content-Type", "Authorization"],
@@ -1261,21 +1304,28 @@ app.use("/trpc/*", trpcServer({
 app.get("/api/health", (c) =>
   c.json({ status: "ok" as const, timestamp: Date.now() }),
 );
+```
+
+- [ ] **Step 3: Rewrite `app-server/src/index.ts`** (entry point — only `serve()`, kept separate so tests import `app.ts` without side effects)
+
+Replace the entire file with:
+
+```typescript
+import { serve } from "@hono/node-server";
+import { app } from "./app.js";
 
 serve({ fetch: app.fetch, port: 3001 }, (info) => {
   console.log(`Server running at http://localhost:${info.port}`);
 });
 ```
 
-Note: `export const app` is kept so the test file can import it for `app.request()`.
+- [ ] **Step 4: Update test file**
 
-- [ ] **Step 3: Update test file**
-
-The test file `app-server/src/__tests__/auth.test.ts` imports `{ app } from "../app.js"`. Update to import from `"../index.js"`:
+The test file `app-server/src/__tests__/auth.test.ts` keeps importing from `"../app.js"` (no side effects). Update test content to add tRPC + health tests:
 
 ```typescript
 import { describe, expect, it } from "vitest";
-import { app } from "../index.js";
+import { app } from "../app.js";
 
 describe("anonymous auth", () => {
   it("POST /api/auth/sign-in/anonymous returns user and token", async () => {
@@ -1337,13 +1387,13 @@ describe("anonymous auth", () => {
 });
 ```
 
-- [ ] **Step 4: Delete old files**
+- [ ] **Step 5: Delete old auth file**
 
 ```bash
-rm app-server/src/app.ts app-server/src/auth.ts
+rm app-server/src/auth.ts
 ```
 
-- [ ] **Step 5: Run tests**
+- [ ] **Step 6: Run tests**
 
 ```bash
 cd app-server && pnpm test
@@ -1351,11 +1401,11 @@ cd app-server && pnpm test
 
 Expected: All 5 tests pass (3 original + 2 new: health + tRPC).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add app-server/
-git rm app-server/src/app.ts app-server/src/auth.ts
+git rm app-server/src/auth.ts
 git commit -m "refactor: rewrite app-server as thin shell consuming db/auth/api packages"
 ```
 
