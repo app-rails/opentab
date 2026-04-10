@@ -2,7 +2,7 @@ import type { HealthResponse } from "@opentab/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { auth } from "./auth.js";
-import { env } from "./env.js";
+import { TRUSTED_ORIGINS } from "./env.js";
 
 export const app = new Hono();
 
@@ -11,7 +11,7 @@ app.use(
   cors({
     origin: (origin) => {
       if (!origin) return null;
-      if (env.TRUSTED_ORIGINS.includes(origin)) return origin;
+      if (TRUSTED_ORIGINS.includes(origin)) return origin;
       return null;
     },
     allowHeaders: ["Content-Type", "Authorization"],
