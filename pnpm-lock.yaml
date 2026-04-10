@@ -155,6 +155,28 @@ importers:
         specifier: ^4.1.1
         version: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(msw@2.12.14(@types/node@22.19.15)(typescript@5.9.3))(vite@8.0.3(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0))
 
+  packages/api:
+    dependencies:
+      '@opentab/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@opentab/db':
+        specifier: workspace:*
+        version: link:../db
+      '@trpc/server':
+        specifier: ^11.13.4
+        version: 11.16.0(typescript@5.9.3)
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+    devDependencies:
+      '@opentab/config':
+        specifier: workspace:*
+        version: link:../config
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   packages/auth:
     dependencies:
       '@opentab/db':
@@ -2130,6 +2152,12 @@ packages:
     resolution: {integrity: sha512-mEiF5HO1QqCLXoNEfXVA1Tzo+cYsrqV7w9Juj2wdUFyW07JRenqMG225MvPwr3ZD9N1bFQj46X7r33iHxLUW0w==}
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
+
+  '@trpc/server@11.16.0':
+    resolution: {integrity: sha512-XgGuUMddrUTd04+za/WE5GFuZ1/YU9XQG0t3VL5WOIu2JspkOlq6k4RYEiqS6HSJt+S0RXaPdIoE2anIP/BBRQ==}
+    hasBin: true
+    peerDependencies:
+      typescript: '>=5.7.2'
 
   '@ts-morph/common@0.27.0':
     resolution: {integrity: sha512-Wf29UqxWDpc+i61k3oIOzcUfQt79PIT9y/MWfAGlrkjg6lBC1hwDECLXPVJAhWjiGbfBCxZd65F/LIZF3+jeJQ==}
@@ -7030,6 +7058,10 @@ snapshots:
       '@tailwindcss/oxide': 4.2.2
       tailwindcss: 4.2.2
       vite: 8.0.3(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)
+
+  '@trpc/server@11.16.0(typescript@5.9.3)':
+    dependencies:
+      typescript: 5.9.3
 
   '@ts-morph/common@0.27.0':
     dependencies:

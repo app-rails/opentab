@@ -1,0 +1,19 @@
+{
+  "name": "@opentab/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@opentab/auth": "workspace:*",
+    "@opentab/db": "workspace:*",
+    "@trpc/server": "^11.13.4",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@opentab/config": "workspace:*",
+    "typescript": "^5"
+  }
+}
