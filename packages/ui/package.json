@@ -18,6 +18,10 @@
     "./lib/utils": "./src/lib/utils.ts",
     "./globals.css": "./src/styles/globals.css"
   },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "biome check ."
+  },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

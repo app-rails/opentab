@@ -37,7 +37,7 @@ export function createAuth(config: AuthConfig) {
     advanced: {
       defaultCookieAttributes: {
         sameSite: config.cookies?.sameSite ?? "lax",
-        secure: config.cookies?.secure ?? true,
+        secure: config.cookies?.secure ?? process.env.NODE_ENV === "production",
         httpOnly: true,
       },
     },

@@ -6,6 +6,10 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "biome check ."
+  },
   "dependencies": {
     "@opentab/auth": "workspace:*",
     "@opentab/db": "workspace:*",
