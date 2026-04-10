@@ -6,10 +6,12 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "format": "biome format --write .",
-    "check": "biome check ."
+    "check": "biome check .",
+    "postinstall": "lefthook install"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.9",
+    "lefthook": "^2.1.5",
     "turbo": "^2",
     "typescript": "^5"
   },
