@@ -6,6 +6,16 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Button } from "@opentab/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@opentab/ui/components/dropdown-menu";
+import { Input } from "@opentab/ui/components/input";
+import { cn } from "@opentab/ui/lib/utils";
 import {
   ChevronRight,
   EllipsisVertical,
@@ -16,19 +26,9 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import type { CollectionTab, TabCollection } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
 import { faviconUrl } from "@/lib/url";
-import { cn } from "@/lib/utils";
 import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
 import { AddTabPopover } from "./add-tab-popover";

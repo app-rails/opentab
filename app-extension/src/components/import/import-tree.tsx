@@ -1,7 +1,7 @@
+import { Checkbox } from "@opentab/ui/components/checkbox";
+import { cn } from "@opentab/ui/lib/utils";
 import { useTranslation } from "react-i18next";
-import { Checkbox } from "@/components/ui/checkbox";
 import type { DiffResult, ImportPlan } from "@/lib/import/types";
-import { cn } from "@/lib/utils";
 
 function statusBadge(status: string) {
   const styles: Record<string, string> = {

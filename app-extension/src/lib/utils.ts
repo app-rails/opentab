@@ -1,10 +1,4 @@
-import { type ClassValue, clsx } from "clsx";
 import { generateKeyBetween } from "fractional-indexing";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export function compareByOrder<T extends { order: string }>(a: T, b: T): number {
   return a.order < b.order ? -1 : a.order > b.order ? 1 : 0;

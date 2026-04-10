@@ -1,8 +1,8 @@
+import { Button } from "@opentab/ui/components/button";
 import { FolderOpen } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SaveTabsDialog } from "@/components/live-tabs/save-tabs-dialog";
-import { Button } from "@/components/ui/button";
 import { isValidTab } from "@/lib/tab-utils";
 import { useAppStore } from "@/stores/app-store";
 

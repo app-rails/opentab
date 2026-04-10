@@ -1,10 +1,10 @@
+import { Button } from "@opentab/ui/components/button";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Toaster, toast } from "sonner";
 import { ImportDetail } from "@/components/import/import-detail";
 import { ImportSummaryBar } from "@/components/import/import-summary-bar";
 import { ImportTree } from "@/components/import/import-tree";
-import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { computeDiff } from "@/lib/import/diff";
 import { executeImport } from "@/lib/import/execute";

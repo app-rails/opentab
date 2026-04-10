@@ -1,5 +1,5 @@
+import { Button } from "@opentab/ui/components/button";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
 import type { ImportPlan } from "@/lib/import/types";
 
 function computeSummary(plan: ImportPlan) {

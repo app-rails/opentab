@@ -1,6 +1,4 @@
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
+import { Button } from "@opentab/ui/components/button";
 import {
   Dialog,
   DialogContent,
@@ -8,8 +6,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from "@opentab/ui/components/dialog";
+import { Input } from "@opentab/ui/components/input";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
 import { useAppStore } from "@/stores/app-store";
 

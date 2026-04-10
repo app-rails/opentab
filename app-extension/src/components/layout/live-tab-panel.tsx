@@ -1,11 +1,11 @@
+import { Button } from "@opentab/ui/components/button";
+import { cn } from "@opentab/ui/lib/utils";
 import { ArrowDownUp, ChevronRight, Save } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LiveTabItem } from "@/components/live-tabs/live-tab-item";
 import { SaveTabsDialog } from "@/components/live-tabs/save-tabs-dialog";
-import { Button } from "@/components/ui/button";
 import { isValidTab } from "@/lib/tab-utils";
-import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
 interface LiveTabPanelProps {

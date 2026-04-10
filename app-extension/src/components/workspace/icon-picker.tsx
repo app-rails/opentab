@@ -1,5 +1,5 @@
+import { cn } from "@opentab/ui/lib/utils";
 import { WORKSPACE_ICON_OPTIONS } from "@/lib/constants";
-import { cn } from "@/lib/utils";
 import { WORKSPACE_ICONS } from "@/lib/workspace-icons";
 
 interface IconPickerProps {

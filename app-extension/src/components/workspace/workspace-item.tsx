@@ -1,26 +1,26 @@
-import { Ellipsis, ImagePlus, Pencil, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
+import { Button } from "@opentab/ui/components/button";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+} from "@opentab/ui/components/context-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+} from "@opentab/ui/components/dropdown-menu";
+import { Input } from "@opentab/ui/components/input";
+import { Popover, PopoverAnchor, PopoverContent } from "@opentab/ui/components/popover";
+import { cn } from "@opentab/ui/lib/utils";
+import { Ellipsis, ImagePlus, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
 import type { Workspace } from "@/lib/db";
-import { cn } from "@/lib/utils";
 import { WORKSPACE_ICONS } from "@/lib/workspace-icons";
 import { useAppStore } from "@/stores/app-store";
 import { IconPicker } from "./icon-picker";

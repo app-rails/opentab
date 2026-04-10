@@ -1,9 +1,5 @@
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import { TabFavicon } from "@/components/tab-favicon";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@opentab/ui/components/button";
+import { Checkbox } from "@opentab/ui/components/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -11,8 +7,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from "@opentab/ui/components/dialog";
+import { Input } from "@opentab/ui/components/input";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { TabFavicon } from "@/components/tab-favicon";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
 import { useAppStore } from "@/stores/app-store";
 

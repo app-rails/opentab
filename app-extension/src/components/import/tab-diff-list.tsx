@@ -1,6 +1,6 @@
+import { cn } from "@opentab/ui/lib/utils";
 import { useTranslation } from "react-i18next";
 import type { ExistingTabDecision, ExtraTabDecision, ImportTab } from "@/lib/import/types";
-import { cn } from "@/lib/utils";
 
 interface NewTabListProps {
   tabs: ImportTab[];

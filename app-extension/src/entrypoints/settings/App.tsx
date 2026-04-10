@@ -1,9 +1,10 @@
+import { Button } from "@opentab/ui/components/button";
+import { Input } from "@opentab/ui/components/input";
+import { Switch } from "@opentab/ui/components/switch";
+import { cn } from "@opentab/ui/lib/utils";
 import { Check, Copy, Download, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { checkHealth } from "@/lib/api";
 import { getBuildString } from "@/lib/build-info";
 import { db } from "@/lib/db";
@@ -20,7 +21,6 @@ import {
   type ThemeMode,
 } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
-import { cn } from "@/lib/utils";
 
 type SettingsPanel = "general" | "import-export";
 type ConnectionStatus = "not_enabled" | "testing" | "connected" | "disconnected";

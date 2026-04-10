@@ -1,9 +1,9 @@
+import { Button } from "@opentab/ui/components/button";
+import { Input } from "@opentab/ui/components/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@opentab/ui/components/popover";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { normalizeUrl } from "@/lib/url";
 
 interface AddTabPopoverProps {

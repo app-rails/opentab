@@ -1,5 +1,3 @@
-import { Trash2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,7 +7,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@opentab/ui/components/alert-dialog";
+import { Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/stores/app-store";
 
 interface DeleteWorkspaceDialogProps {

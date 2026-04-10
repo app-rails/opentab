@@ -1,7 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import opentabLogo from "@/assets/opentab-logo.webp";
-import { Button } from "@/components/ui/button";
+import { Button } from "@opentab/ui/components/button";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +6,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@opentab/ui/components/dialog";
+import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import opentabLogo from "@/assets/opentab-logo.webp";
 import { MSG } from "@/lib/constants";
 import { getSettings, saveSettings } from "@/lib/settings";
 
