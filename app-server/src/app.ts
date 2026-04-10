@@ -58,7 +58,7 @@ app.use(
   "/trpc/*",
   trpcServer({
     router: appRouter,
-    createContext: ({ req }) => createContext(req),
+    createContext: ({ req }) => createContext(req) as unknown as Record<string, unknown>,
   }),
 );
 
