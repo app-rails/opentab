@@ -37,17 +37,16 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
 3. Update `biome.json` to enable Tailwind class sorting:
    ```json
    {
-     "css": {
-       "linter": {
-         "rules": {
-           "nursery": {
-             "useSortedClasses": "warn"
-           }
+     "linter": {
+       "rules": {
+         "nursery": {
+           "useSortedClasses": "warn"
          }
        }
      }
    }
    ```
+   Note: `useSortedClasses` is a JS/JSX linter rule (sorts `className` attribute strings), not a CSS rule. It belongs under `linter.rules.nursery`, not `css.linter.rules.nursery`.
 
 **Notes:**
 - This repo may be a git worktree (`.git` is a file pointing to main repo). Verify lefthook handles this correctly during installation.
@@ -377,7 +376,7 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
      - `@source "../../../packages/ui"` (Tailwind v4 source scanning for packages/ui classes)
      - `@custom-variant dark (...)`
      - Any extension-specific style overrides (if any)
-   - **`apps/web/src/app.css`** (Phase 10, same pattern):
+   - **`app-web/src/app.css`** (Phase 10, same pattern):
      - `@import "@opentab/ui/globals.css"`
      - `@source "../../../packages/ui"`
      - Web-app-specific overrides
@@ -457,13 +456,19 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
    app.get("/api/health", (c) => c.json({ status: "ok", timestamp: Date.now() }));
    ```
 
-2. Remove inline better-auth config (moved to `@opentab/auth`)
-3. Remove direct `better-sqlite3` import (moved to `@opentab/db`)
-4. Add dependency: `@hono/trpc-server`
-5. Remove direct dependency: `better-sqlite3` (now via `@opentab/db`)
-6. Update existing vitest tests to work with new imports
+2. Consolidate `src/app.ts` (Hono app, CORS, routes) and `src/auth.ts` (better-auth config) into `src/index.ts`. Current codebase splits across three files:
+   - `src/index.ts` — only the `serve()` call (6 lines)
+   - `src/app.ts` — Hono app, CORS middleware, auth routes, health endpoint (32 lines)
+   - `src/auth.ts` — better-auth configuration (13 lines)
 
-**Files modified:** `app-server/src/index.ts`, `app-server/package.json`
+   After refactor: `src/index.ts` contains the full wired-up app + `serve()`. `src/app.ts` and `src/auth.ts` are deleted (logic moved to `@opentab/auth`, `@opentab/api`, and the new `src/index.ts`).
+
+3. Add dependency: `@hono/trpc-server`
+4. Remove direct dependency: `better-sqlite3` (now via `@opentab/db`)
+5. Update existing vitest tests to work with new imports
+
+**Files modified:** `app-server/src/index.ts`, `app-server/src/env.ts`, `app-server/package.json`
+**Files deleted:** `app-server/src/app.ts` (merged into index.ts), `app-server/src/auth.ts` (moved to `@opentab/auth`)
 **Depends on:** Phase 3, 4, 5, 6
 
 ---
@@ -529,7 +534,7 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
 
 ---
 
-## Phase 10: `apps/web` — Lightweight Management Panel
+## Phase 10: `app-web` — Lightweight Management Panel
 
 **Goal:** Browser-based read-only view of synced data + account management.
 
@@ -544,7 +549,7 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
 
 **Directory structure:**
 ```
-apps/web/
+app-web/
   package.json
   tsconfig.json             — extends @opentab/config/tsconfig.base.json
   vite.config.ts            — @tailwindcss/vite + @tanstack/router-plugin + @vitejs/plugin-react
