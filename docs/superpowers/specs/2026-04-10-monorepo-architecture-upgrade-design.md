@@ -114,8 +114,8 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
      server: {
        BETTER_AUTH_SECRET: z.string().min(32),
        BETTER_AUTH_URL: z.string().url().default("http://localhost:3001"),
-       TRUSTED_ORIGINS: z.string().optional(),
-       TRUSTED_EXTENSION_ORIGINS: z.string().optional(),
+       TRUSTED_ORIGINS: z.string().optional().transform((v) => v?.split(",").filter(Boolean) ?? []),
+       TRUSTED_EXTENSION_ORIGINS: z.string().optional().transform((v) => v?.split(",").filter(Boolean) ?? []),
        NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
        // Added in Phase 5:
        // GOOGLE_CLIENT_ID: z.string().optional(),
@@ -131,7 +131,7 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
 
 3. Update all `process.env.*` references in `app-server` to use `env.*`.
 
-**Files modified:** `app-server/src/env.ts`, `app-server/package.json`, any file referencing `process.env` directly
+**Files modified:** `app-server/src/env.ts`, `app-server/src/app.ts` (CORS origin check — now uses `string[]` from transform, so `env.TRUSTED_ORIGINS.includes(origin)` continues to work), `app-server/package.json`, any file referencing `process.env` directly
 
 ---
 
@@ -237,7 +237,7 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
          cookieCache: { enabled: true, maxAge: 5 * 60 },
        },
        advanced: {
-         cookies: {
+         defaultCookieAttributes: {
            sameSite: config.cookies?.sameSite ?? "lax",
            secure: config.cookies?.secure ?? true,
            httpOnly: true,
@@ -365,8 +365,24 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
    - `alert-dialog.tsx` importing Button: same pattern
 
 4. CSS responsibility split:
-   - **`packages/ui/src/styles/globals.css`**: `@import "tailwindcss"`, `@import "tw-animate-css"`, `@theme inline { ... }` with oklch color tokens, radius scale, shadcn design tokens. Pure design system, no app-specific styles.
-   - **`app-extension/src/assets/main.css`**: `@import "@opentab/ui/globals.css"`, `@source "../../../packages/ui"` (Tailwind v4 source scanning), `@custom-variant dark (...)`, `@layer base { ... }`. App-level overrides and Tailwind source directive.
+   - **`packages/ui/src/styles/globals.css`** (complete design system):
+     - `@import "tailwindcss"`
+     - `@import "tw-animate-css"`
+     - `@import "shadcn/tailwind.css"`
+     - `@theme inline { ... }` with oklch color tokens, radius scale, shadcn vars
+     - `:root { ... }` and `.dark { ... }` CSS custom property blocks (70+ variables: --background, --foreground, --primary, --card, --popover, --muted, --accent, --destructive, --border, --ring, --sidebar-*, --chart-*, etc.)
+     - `@layer base { ... }` rules (border-border defaults, body bg/text)
+   - **`app-extension/src/assets/main.css`** (app-level only):
+     - `@import "@opentab/ui/globals.css"`
+     - `@source "../../../packages/ui"` (Tailwind v4 source scanning for packages/ui classes)
+     - `@custom-variant dark (...)`
+     - Any extension-specific style overrides (if any)
+   - **`apps/web/src/app.css`** (Phase 10, same pattern):
+     - `@import "@opentab/ui/globals.css"`
+     - `@source "../../../packages/ui"`
+     - Web-app-specific overrides
+
+   This ensures both extension and web app inherit all design tokens from the shared package.
 
 5. `app-extension/src/lib/utils.ts` retains `compareByOrder()` and `computeOrderBetween()` (business logic, not UI).
 
@@ -400,8 +416,8 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
      secret: env.BETTER_AUTH_SECRET,
      baseURL: env.BETTER_AUTH_URL,
      trustedOrigins: [
-       ...env.TRUSTED_ORIGINS?.split(",") ?? [],
-       ...env.TRUSTED_EXTENSION_ORIGINS?.split(",") ?? [],
+       ...env.TRUSTED_ORIGINS,
+       ...env.TRUSTED_EXTENSION_ORIGINS,
      ],
      socialProviders: {
        ...(env.GOOGLE_CLIENT_ID && {
@@ -422,10 +438,7 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
 
    app.use("*", logger());
    app.use("*", cors({
-     origin: [
-       ...env.TRUSTED_ORIGINS?.split(",") ?? [],
-       ...env.TRUSTED_EXTENSION_ORIGINS?.split(",") ?? [],
-     ],
+     origin: [...env.TRUSTED_ORIGINS, ...env.TRUSTED_EXTENSION_ORIGINS],
      credentials: true,
      allowHeaders: ["Content-Type", "Authorization"],
      allowMethods: ["GET", "POST", "OPTIONS"],
@@ -468,11 +481,14 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
    import { getSettings } from "./settings";
    import { getAuthState } from "./auth-storage";
 
-   export function createExtensionTRPCClient() {
+   export async function createExtensionTRPCClient() {
+     // Pre-fetch settings (async) so url callback can be synchronous
+     const settings = await getSettings();
+
      return createTRPCClient<AppRouter>({
        links: [
          httpLink({
-           url: () => `${getSettings().server_url}/trpc`,
+           url: `${settings.server_url}/trpc`,
            headers: async () => {
              const auth = await getAuthState();
              if (auth?.mode === "online") {
@@ -486,6 +502,7 @@ Comprehensive upgrade of the OpenTab monorepo, inspired by the shiprails-ext (Be
    }
    ```
    - Uses `httpLink` (not `httpBatchLink`) to avoid batch CORS issues with chrome-extension:// origin.
+   - `getSettings()` is async (Dexie), so settings are pre-fetched at client creation time rather than in the synchronous `url` callback. If server_url changes, the client must be re-created.
 
 2. Replace hand-written fetch in `src/lib/api.ts`:
    - `checkServerHealth()` → `trpcClient.healthCheck.query()`
