@@ -63,13 +63,8 @@ app-web/                    — lightweight web panel (Phase 10)
   src/routes/__root.tsx
   src/routes/index.tsx
   src/routes/login.tsx
-  src/routes/signup.tsx
   src/routes/dashboard.tsx
   src/components/header.tsx
-  src/components/sign-in-form.tsx
-  src/components/sign-up-form.tsx
-  src/components/user-menu.tsx
-  src/components/theme-toggle.tsx
 ```
 
 ### Files to modify:
@@ -403,13 +398,18 @@ export { TRUSTED_ORIGINS };
 
 Note: We use `runtimeEnvStrict` to map env var names (e.g. `TRUSTED_ORIGINS` in `.env` → `TRUSTED_ORIGINS_RAW` in code), then compute the merged array outside `createEnv` since t3-env `.transform()` doesn't compose well with merging two vars. The exported `TRUSTED_ORIGINS` is `string[]`, same as the current contract.
 
-Also update `app-server/src/app.ts` to import the new export:
+Also update both consumers of `env.TRUSTED_ORIGINS`:
 
-Replace `env.TRUSTED_ORIGINS` with the named import:
+**`app-server/src/app.ts`** — CORS check:
 ```typescript
 import { env, TRUSTED_ORIGINS } from "./env.js";
-// ...
+// ...in CORS origin callback:
 if (TRUSTED_ORIGINS.includes(origin)) return origin;
+```
+
+**`app-server/src/auth.ts`** — trustedOrigins config (line 11 currently uses `env.TRUSTED_ORIGINS`):
+```typescript
+import { env, TRUSTED_ORIGINS } from "./env.js";
 // ...
 trustedOrigins: TRUSTED_ORIGINS,
 ```
@@ -539,6 +539,7 @@ export const user = sqliteTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: integer("emailVerified", { mode: "boolean" }).notNull().default(false),
   image: text("image"),
+  isAnonymous: integer("isAnonymous", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("createdAt", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
 });
@@ -1231,7 +1232,7 @@ Remove from devDependencies:
 (These are now provided by `@opentab/db`.)
 
 ```bash
-pnpm --filter @opentab/server add @opentab/auth@workspace:* @opentab/db@workspace:* @opentab/api@workspace:* @hono/trpc-server
+pnpm --filter @opentab/server add '@opentab/auth@workspace:*' '@opentab/db@workspace:*' '@opentab/api@workspace:*' @hono/trpc-server
 pnpm --filter @opentab/server remove better-sqlite3 @types/better-sqlite3
 ```
 
@@ -1423,7 +1424,7 @@ git commit -m "refactor: rewrite app-server as thin shell consuming db/auth/api 
 - [ ] **Step 1: Install @trpc/client**
 
 ```bash
-pnpm --filter @opentab/extension add @trpc/client @opentab/api@workspace:*
+pnpm --filter @opentab/extension add @trpc/client '@opentab/api@workspace:*'
 ```
 
 - [ ] **Step 2: Create `app-extension/src/lib/trpc.ts`**
@@ -1527,7 +1528,7 @@ git commit -m "feat: add tRPC client to extension, use for health check"
 - [ ] **Step 1: Add @opentab/ui dependency**
 
 ```bash
-pnpm --filter @opentab/extension add @opentab/ui@workspace:*
+pnpm --filter @opentab/extension add '@opentab/ui@workspace:*'
 ```
 
 - [ ] **Step 2: Update `app-extension/src/lib/utils.ts`**
@@ -1765,10 +1766,12 @@ export default defineConfig({
 
 - [ ] **Step 5: Create `app-web/src/app.css`**
 
+Note: `app-web/src/` is 2 levels from root (not 3 like `app-extension/src/assets/`), so the path is `../../packages/ui`.
+
 ```css
 @import "@opentab/ui/globals.css";
 
-@source "../../../packages/ui";
+@source "../../packages/ui";
 
 @custom-variant dark (&:is(.dark *));
 ```
