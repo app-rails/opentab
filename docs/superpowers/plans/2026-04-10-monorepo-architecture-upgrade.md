@@ -773,6 +773,19 @@ Add these fields inside the `server` object, after `NODE_ENV`:
     COOKIE_SECURE: z.coerce.boolean().optional(),
 ```
 
+**Also add the corresponding `runtimeEnvStrict` entries** (Phase 3 uses `runtimeEnvStrict`, so every new `server` key must have a mapping):
+
+```typescript
+    DB_DRIVER: process.env.DB_DRIVER,
+    DATABASE_URL: process.env.DATABASE_URL,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
+    GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
+    COOKIE_SAME_SITE: process.env.COOKIE_SAME_SITE,
+    COOKIE_SECURE: process.env.COOKIE_SECURE,
+```
+
 - [ ] **Step 5: Install and verify**
 
 ```bash
@@ -866,7 +879,7 @@ export { appRouter, type AppRouter } from "./routers/index.js";
 export { createContextFactory, type Context } from "./context.js";
 ```
 
-- [ ] **Step 4: Create `packages/api/src/context.ts`**
+- [ ] **Step 5: Create `packages/api/src/context.ts`**
 
 ```typescript
 import type { Auth } from "@opentab/auth";
@@ -1204,10 +1217,10 @@ git commit -m "feat: add @opentab/ui with migrated shadcn components and design 
 
 **Files:**
 - Modify: `app-server/package.json`
-- Modify: `app-server/src/index.ts`
+- Modify: `app-server/src/app.ts` (full rewrite — wire db/auth/api packages)
+- Modify: `app-server/src/index.ts` (slim to serve() only)
 - Modify: `app-server/src/__tests__/auth.test.ts`
-- Delete: `app-server/src/app.ts`
-- Delete: `app-server/src/auth.ts`
+- Delete: `app-server/src/auth.ts` (moved to @opentab/auth)
 
 - [ ] **Step 1: Update `app-server/package.json` dependencies**
 
@@ -1863,9 +1876,6 @@ git commit -m "feat: add query client, tRPC proxy, and auth client for web app"
 - Create: `app-web/src/routes/login.tsx`
 - Create: `app-web/src/routes/dashboard.tsx`
 - Create: `app-web/src/components/header.tsx`
-- Create: `app-web/src/components/theme-toggle.tsx`
-- Create: `app-web/src/components/sign-in-form.tsx`
-- Create: `app-web/src/components/user-menu.tsx`
 
 - [ ] **Step 1: Create `app-web/src/main.tsx`**
 
