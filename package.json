@@ -16,5 +16,10 @@
     "turbo": "^2",
     "typescript": "^5"
   },
-  "packageManager": "pnpm@10.8.0"
+  "packageManager": "pnpm@10.8.0",
+  "pnpm": {
+    "overrides": {
+      "@vitejs/plugin-react": "^5"
+    }
+  }
 }
