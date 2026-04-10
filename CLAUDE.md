@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OpenTab is a Chrome extension for managing browser tabs with workspaces and collections. It runs **local-first** (IndexedDB via Dexie) with optional server sync (Hono + better-auth).
 
-**Monorepo layout**: `app-extension/` (Chrome extension), `app-server/` (backend), `packages/shared/` (types).
+**Monorepo layout**: `apps/extension/` (Chrome extension), `apps/server/` (backend), `apps/web/` (management panel), `packages/` (shared libraries: config, db, auth, api, ui, shared).
 
 ## Commands
 
@@ -21,11 +21,11 @@ pnpm format                                 # Auto-format with Biome
 pnpm check                                  # Check formatting with Biome
 
 # Server tests
-cd app-server && pnpm test                  # Run all vitest tests
-cd app-server && pnpm vitest run <file>     # Run a single test file
+cd apps/server && pnpm test                 # Run all vitest tests
+cd apps/server && pnpm vitest run <file>    # Run a single test file
 ```
 
-Build output: `app-extension/.output/chrome-mv3/` — load unpacked in `chrome://extensions/`.
+Build output: `apps/extension/.output/chrome-mv3/` — load unpacked in `chrome://extensions/`.
 
 ## Code Style (Biome)
 
@@ -36,23 +36,25 @@ Build output: `app-extension/.output/chrome-mv3/` — load unpacked in `chrome:/
 
 ## Architecture
 
-### Extension (`app-extension/`)
+### Extension (`apps/extension/`)
 
 - **WXT** (v0.20) bundles the extension; entry points live in `src/entrypoints/`
 - **Zustand** store in `src/stores/app-store.ts` is the single source of truth for workspaces, collections, tabs, and live browser tabs
 - **Dexie** schema in `src/lib/db.ts` defines IndexedDB tables: Accounts, Workspaces, TabCollections, CollectionTabs, Settings, ImportSessions
 - **Fractional indexing** for drag-and-drop ordering (via `fractional-indexing` package)
 - **@dnd-kit** for drag-and-drop interactions
-- **shadcn/ui** components in `src/components/ui/` (Radix UI primitives)
+- **shadcn/ui** components in `packages/ui/` (shared across apps)
 - **i18next** for internationalization; locale files in `src/locales/`
 - Path alias: `@/` maps to `./src/`
 
-### Server (`app-server/`)
+### Server (`apps/server/`)
 
 - **Hono** HTTP framework on port 3001
-- **better-auth** with anonymous + bearer plugins for authentication
-- **better-sqlite3** for the auth database (`data/auth.db`)
+- **better-auth** via `@opentab/auth` package (anonymous + bearer + email/password + OAuth)
+- **Drizzle ORM** via `@opentab/db` package (SQLite default, optional PostgreSQL)
+- **tRPC** via `@opentab/api` package (type-safe API layer)
 - CORS configured via `TRUSTED_ORIGINS` and `TRUSTED_EXTENSION_ORIGINS` env vars
+- Environment validation via `@t3-oss/env-core` + Zod
 
 ### Auth Flow
 

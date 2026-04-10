@@ -9,6 +9,6 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "sqlite",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? resolve(__dirname, "../../app-server/data/auth.db"),
+    url: process.env.DATABASE_URL ?? resolve(__dirname, "../../apps/server/data/auth.db"),
   },
 });

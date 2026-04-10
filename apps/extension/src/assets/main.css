@@ -3,6 +3,6 @@
 @import "shadcn/tailwind.css";
 @import "@opentab/ui/globals.css";
 
-@source "../../packages/ui";
+@source "../../../../packages/ui";
 
 @custom-variant dark (&:is(.dark *));

@@ -21,7 +21,7 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  app-extension:
+  apps/extension:
     dependencies:
       '@dnd-kit/core':
         specifier: ^6.3.1
@@ -34,13 +34,13 @@ importers:
         version: 3.2.2(react@19.2.4)
       '@opentab/api':
         specifier: workspace:^
-        version: link:../packages/api
+        version: link:../../packages/api
       '@opentab/shared':
         specifier: workspace:*
-        version: link:../packages/shared
+        version: link:../../packages/shared
       '@opentab/ui':
         specifier: workspace:^
-        version: link:../packages/ui
+        version: link:../../packages/ui
       '@trpc/client':
         specifier: ^11.16.0
         version: 11.16.0(@trpc/server@11.16.0(typescript@5.9.3))(typescript@5.9.3)
@@ -89,7 +89,7 @@ importers:
     devDependencies:
       '@opentab/config':
         specifier: workspace:^
-        version: link:../packages/config
+        version: link:../../packages/config
       '@tailwindcss/vite':
         specifier: ^4
         version: 4.2.2(vite@8.0.3(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0))
@@ -118,7 +118,7 @@ importers:
         specifier: ^0.20
         version: 0.20.20(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(rollup@4.60.1)(tsx@4.21.0)
 
-  app-server:
+  apps/server:
     dependencies:
       '@hono/node-server':
         specifier: ^1
@@ -128,16 +128,16 @@ importers:
         version: 0.4.2(@trpc/server@11.16.0(typescript@5.9.3))(hono@4.12.9)
       '@opentab/api':
         specifier: workspace:^
-        version: link:../packages/api
+        version: link:../../packages/api
       '@opentab/auth':
         specifier: workspace:^
-        version: link:../packages/auth
+        version: link:../../packages/auth
       '@opentab/db':
         specifier: workspace:^
-        version: link:../packages/db
+        version: link:../../packages/db
       '@opentab/shared':
         specifier: workspace:*
-        version: link:../packages/shared
+        version: link:../../packages/shared
       '@t3-oss/env-core':
         specifier: ^0.13.11
         version: 0.13.11(typescript@5.9.3)(zod@4.3.6)
@@ -156,7 +156,7 @@ importers:
         version: 1.4.21(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-call@1.1.8(zod@4.3.6))(drizzle-kit@0.31.10)(jose@6.2.2)(kysely@0.28.14)(magicast@0.5.2)(nanostores@1.2.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@4.1.1(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(msw@2.12.14(@types/node@22.19.15)(typescript@5.9.3))(vite@8.0.3(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)))
       '@opentab/config':
         specifier: workspace:^
-        version: link:../packages/config
+        version: link:../../packages/config
       '@types/node':
         specifier: ^22
         version: 22.19.15
@@ -170,14 +170,14 @@ importers:
         specifier: ^4.1.1
         version: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(msw@2.12.14(@types/node@22.19.15)(typescript@5.9.3))(vite@8.0.3(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0))
 
-  app-web:
+  apps/web:
     dependencies:
       '@opentab/api':
         specifier: workspace:*
-        version: link:../packages/api
+        version: link:../../packages/api
       '@opentab/ui':
         specifier: workspace:*
-        version: link:../packages/ui
+        version: link:../../packages/ui
       '@tanstack/react-query':
         specifier: ^5.90.12
         version: 5.97.0(react@19.2.4)
@@ -217,7 +217,7 @@ importers:
     devDependencies:
       '@opentab/config':
         specifier: workspace:*
-        version: link:../packages/config
+        version: link:../../packages/config
       '@tailwindcss/vite':
         specifier: ^4
         version: 4.2.2(vite@6.4.2(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0))
