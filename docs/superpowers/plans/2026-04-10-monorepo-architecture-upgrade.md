@@ -446,7 +446,7 @@ Expected: All 3 tests in `auth.test.ts` pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add app-server/src/env.ts app-server/src/app.ts app-server/vitest.config.ts app-server/package.json pnpm-lock.yaml
+git add app-server/src/env.ts app-server/src/app.ts app-server/src/auth.ts app-server/vitest.config.ts app-server/package.json pnpm-lock.yaml
 git commit -m "refactor: replace hand-written env validation with t3-env + zod"
 ```
 
@@ -811,6 +811,7 @@ git commit -m "feat: add @opentab/auth package with email/password and OAuth sup
 **Files:**
 - Create: `packages/api/package.json`
 - Create: `packages/api/tsconfig.json`
+- Create: `packages/api/src/trpc.ts`
 - Create: `packages/api/src/index.ts`
 - Create: `packages/api/src/context.ts`
 - Create: `packages/api/src/routers/index.ts`
