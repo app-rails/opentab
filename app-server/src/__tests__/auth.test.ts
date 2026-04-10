@@ -25,7 +25,6 @@ describe("anonymous auth", () => {
       body: JSON.stringify({}),
     });
     const signInBody = await signInRes.json();
-    // bearer plugin exposes token in set-auth-token header and body.token
     const token = signInRes.headers.get("set-auth-token") ?? signInBody.token;
 
     const sessionRes = await app.request("/api/auth/get-session", {
@@ -42,7 +41,21 @@ describe("anonymous auth", () => {
   it("GET /api/auth/get-session without token returns no session", async () => {
     const res = await app.request("/api/auth/get-session");
     const body = await res.json();
-    // better-auth returns null body when no valid session
     expect(body === null || body?.session === null).toBe(true);
+  });
+
+  it("GET /api/health returns ok", async () => {
+    const res = await app.request("/api/health");
+    expect(res.ok).toBe(true);
+    const body = await res.json();
+    expect(body.status).toBe("ok");
+    expect(body.timestamp).toBeTypeOf("number");
+  });
+
+  it("GET /trpc/health.check returns ok via tRPC", async () => {
+    const res = await app.request("/trpc/health.check");
+    expect(res.ok).toBe(true);
+    const body = await res.json();
+    expect(body.result.data.status).toBe("ok");
   });
 });

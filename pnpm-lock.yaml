@@ -114,6 +114,18 @@ importers:
       '@hono/node-server':
         specifier: ^1
         version: 1.19.11(hono@4.12.9)
+      '@hono/trpc-server':
+        specifier: ^0.4.2
+        version: 0.4.2(@trpc/server@11.16.0(typescript@5.9.3))(hono@4.12.9)
+      '@opentab/api':
+        specifier: workspace:^
+        version: link:../packages/api
+      '@opentab/auth':
+        specifier: workspace:^
+        version: link:../packages/auth
+      '@opentab/db':
+        specifier: workspace:^
+        version: link:../packages/db
       '@opentab/shared':
         specifier: workspace:*
         version: link:../packages/shared
@@ -123,9 +135,6 @@ importers:
       better-auth:
         specifier: ^1.5.6
         version: 1.5.6(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(better-sqlite3@12.8.0)(drizzle-kit@0.31.10)(drizzle-orm@0.41.0(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(better-sqlite3@12.8.0)(kysely@0.28.14)(pg@8.20.0))(pg@8.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@4.1.1(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(msw@2.12.14(@types/node@22.19.15)(typescript@5.9.3))(vite@8.0.3(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)))
-      better-sqlite3:
-        specifier: ^12.8.0
-        version: 12.8.0
       hono:
         specifier: ^4
         version: 4.12.9
@@ -139,9 +148,6 @@ importers:
       '@opentab/config':
         specifier: workspace:^
         version: link:../packages/config
-      '@types/better-sqlite3':
-        specifier: ^7.6.13
-        version: 7.6.13
       '@types/node':
         specifier: ^22
         version: 22.19.15
@@ -1136,6 +1142,13 @@ packages:
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: ^4
+
+  '@hono/trpc-server@0.4.2':
+    resolution: {integrity: sha512-3TDrc42CZLgcTFkXQba+y7JlRWRiyw1AqhLqztWyNS2IFT+3bHld0lxKdGBttCtGKHYx0505dM67RMazjhdZqw==}
+    engines: {node: '>=16.0.0'}
+    peerDependencies:
+      '@trpc/server': ^10.10.0 || >11.0.0-rc
+      hono: '>=4.0.0'
 
   '@inquirer/ansi@1.0.2':
     resolution: {integrity: sha512-S8qNSZiYzFd0wAcyG5AXCvUHC5Sr7xpZ9wZ2py9XR88jUz8wooStVx5M6dRzczbBWjic9NP7+rY0Xi7qqK/aMQ==}
@@ -6068,6 +6081,11 @@ snapshots:
 
   '@hono/node-server@1.19.11(hono@4.12.9)':
     dependencies:
+      hono: 4.12.9
+
+  '@hono/trpc-server@0.4.2(@trpc/server@11.16.0(typescript@5.9.3))(hono@4.12.9)':
+    dependencies:
+      '@trpc/server': 11.16.0(typescript@5.9.3)
       hono: 4.12.9
 
   '@inquirer/ansi@1.0.2': {}
