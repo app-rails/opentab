@@ -25,9 +25,10 @@ Thumbs.db
 .wxt/
 
 # SQLite databases
-app-server/data/*.db
-app-server/data/*.db-journal
-app-server/data/*.db-wal
+apps/server/data/*.db
+apps/server/data/*.db-journal
+apps/server/data/*.db-wal
+apps/server/data/*.db-shm
 
 # Context (conductor)
 .context/
@@ -52,4 +53,4 @@ worker-configuration.d.ts
 /*.png
 icons/
 .gstack/
-app-extension/smoke-screenshots/*.png
+apps/extension/smoke-screenshots/*.png

@@ -4,14 +4,22 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
+    "check-types": "turbo check-types",
     "lint": "turbo lint",
     "format": "biome format --write .",
-    "check": "biome check ."
+    "check": "biome check .",
+    "postinstall": "lefthook install"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.9",
+    "lefthook": "^2.1.5",
     "turbo": "^2",
     "typescript": "^5"
   },
-  "packageManager": "pnpm@10.8.0"
+  "packageManager": "pnpm@10.8.0",
+  "pnpm": {
+    "overrides": {
+      "@vitejs/plugin-react": "^5"
+    }
+  }
 }

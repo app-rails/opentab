@@ -27,7 +27,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "BUILD_TIME=$(date -u +%Y-%m-%d)" >> "$GITHUB_ENV"
-          cd app-extension && npm pkg set version="$VERSION"
+          cd apps/extension && npm pkg set version="$VERSION"
 
       - name: Build
         run: pnpm build
@@ -38,7 +38,7 @@ jobs:
 
       - name: Package extension
         run: |
-          cd app-extension/.output
+          cd apps/extension/.output
           zip -r "../../opentab-chrome-extension-v${VERSION}.zip" chrome-mv3/
 
       - name: Create release

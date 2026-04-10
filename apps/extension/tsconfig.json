@@ -1,0 +1,13 @@
+{
+  "extends": "@opentab/config/tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", ".wxt/wxt.d.ts"],
+  "exclude": ["node_modules", ".output"]
+}
