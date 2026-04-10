@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@better-auth/cli": "^1.4.21",
+    "@opentab/config": "workspace:^",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22",
     "tsx": "^4",
