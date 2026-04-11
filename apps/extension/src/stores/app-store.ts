@@ -224,8 +224,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!validName) return;
     const { workspaces } = get();
     const sorted = [...workspaces].sort(compareByOrder);
-    const lastOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : null;
-    const newOrder = generateKeyBetween(lastOrder, null);
+    const firstOrder = sorted.length > 0 ? sorted[0].order : null;
+    const newOrder = generateKeyBetween(null, firstOrder);
 
     const now = Date.now();
     const workspace: Workspace = {
@@ -372,8 +372,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (activeWorkspaceId == null) return;
 
     const sorted = [...collections].sort(compareByOrder);
-    const lastOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : null;
-    const newOrder = generateKeyBetween(lastOrder, null);
+    const firstOrder = sorted.length > 0 ? sorted[0].order : null;
+    const newOrder = generateKeyBetween(null, firstOrder);
 
     const now = Date.now();
     const collection: TabCollection = {
@@ -572,8 +572,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (activeWorkspaceId == null) return;
 
     const sorted = [...collections].sort(compareByOrder);
-    const lastCollectionOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : null;
-    const collectionOrder = generateKeyBetween(lastCollectionOrder, null);
+    const firstCollectionOrder = sorted.length > 0 ? sorted[0].order : null;
+    const collectionOrder = generateKeyBetween(null, firstCollectionOrder);
 
     const now = Date.now();
     const collection: TabCollection = {
