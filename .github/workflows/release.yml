@@ -39,7 +39,7 @@ jobs:
       - name: Package extension
         run: |
           cd apps/extension/.output
-          zip -r "../../opentab-chrome-extension-v${VERSION}.zip" chrome-mv3/
+          zip -r "${GITHUB_WORKSPACE}/opentab-chrome-extension-v${VERSION}.zip" chrome-mv3/
 
       - name: Create release
         uses: softprops/action-gh-release@v2
