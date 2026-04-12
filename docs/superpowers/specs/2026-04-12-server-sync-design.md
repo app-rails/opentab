@@ -220,6 +220,8 @@ Located in `packages/db/src/schema/sync.ts`, exported from `packages/db/src/sche
 
 **Column naming convention: camelCase** — matching existing auth schema in `packages/db/src/schema/auth.ts` (e.g. `emailVerified`, `userId`, `createdAt`). Drizzle uses the string argument as the actual SQLite column name, so consistency prevents raw SQL errors.
 
+**Timestamp mode: `{ mode: "timestamp_ms" }`** — the extension client uses `Date.now()` (milliseconds) for all timestamps, and LWW comparison is numeric on these values. The auth schema uses `{ mode: "timestamp" }` (seconds, auto-converts to/from `Date` objects) — sync tables intentionally diverge because LWW requires millisecond precision and raw numeric comparison. Do NOT use `{ mode: "timestamp" }` for sync tables.
+
 **Entity tables** (workspaces, tabCollections, collectionTabs):
 
 | Column | Type | Notes |
@@ -317,9 +319,28 @@ Per-op transaction: `insert appliedOps` → `applyOp` → `insert changeLog`.
 
 All write paths set `lastOpId = op.opId`.
 
-- **create**: `INSERT ... ON CONFLICT(userId, syncId) DO UPDATE` with LWW condition: `incoming.updatedAt > row.updatedAt OR (equal AND incoming.opId > coalesce(row.lastOpId, ''))`.
+- **create**: `INSERT ... ON CONFLICT(userId, syncId) DO UPDATE` with LWW condition.
 - **update**: `UPDATE WHERE syncId = ? AND userId = ?` with same LWW condition.
 - **delete**: `UPDATE SET deletedAt = ? WHERE ...` with same LWW condition.
+
+Drizzle API mapping (using `onConflictDoUpdate` with `setWhere` for conditional upsert):
+
+```typescript
+// create example
+await tx.insert(workspaces).values({ ... }).onConflictDoUpdate({
+  target: [workspaces.userId, workspaces.syncId],
+  set: { name: op.payload.name, order: op.payload.order, updatedAt: op.payload.updatedAt, lastOpId: op.opId },
+  setWhere: or(
+    lt(workspaces.updatedAt, op.payload.updatedAt),
+    and(
+      eq(workspaces.updatedAt, op.payload.updatedAt),
+      lt(sql`coalesce(${workspaces.lastOpId}, '')`, op.opId)
+    )
+  ),
+})
+```
+
+LWW condition: `incoming.updatedAt > row.updatedAt OR (equal updatedAt AND incoming.opId > coalesce(row.lastOpId, ''))`. Same condition used for create/update/delete.
 
 ### 2.5 pullChanges
 
@@ -447,6 +468,7 @@ sync():
 2. Call `trpc.sync.push.mutate({ ops })`
 3. Mark accepted + duplicate opIds as `status: "synced", syncedAt: now`
 4. On network error: mark as `status: "failed"`, increment `attemptCount`, set `nextRetryAt` with exponential backoff (max 5min)
+5. **On UNAUTHORIZED error**: do NOT mark ops as failed. Instead call `clearAuthState()` then `initializeAuth()` to re-authenticate (anonymous sign-in gets a fresh token). If re-auth succeeds, retry the push immediately. If re-auth fails, pause sync and broadcast `MSG.SYNC_AUTH_REQUIRED` so the UI can show a status indicator. Do not retry until re-auth succeeds.
 
 ### 3.5 Pull Flow
 
@@ -465,9 +487,11 @@ sync():
 
 ### 3.6 fullReset (cursor expired)
 
+**Serialization with user writes:** fullReset's Dexie transaction operates on `[db.workspaces, db.tabCollections, db.collectionTabs, db.syncMeta]` — the same stores used by `mutateWithOutbox`. Dexie serializes overlapping `"rw"` transactions on the same stores, so a concurrent `mutateWithOutbox` call will block until fullReset's transaction completes (and vice versa). This provides implicit write serialization without needing an additional application-level lock for user writes. The TTL lease lock in syncMeta only guards against concurrent fullReset calls (e.g. from duplicate alarm triggers), not user writes.
+
 1. Acquire TTL lease lock via syncMeta (`lock:fullReset`, 30s TTL)
-2. Call `trpc.sync.snapshot.query()`
-3. In single Dexie transaction:
+2. Call `trpc.sync.snapshot.query()` (network call, outside transaction)
+3. In single Dexie `"rw"` transaction on `[db.workspaces, db.tabCollections, db.collectionTabs, db.syncMeta]`:
    - Clear entity tables (do NOT touch syncOutbox)
    - Write workspaces → build `syncId → localId` map
    - Write collections using map → build second map
@@ -476,6 +500,8 @@ sync():
 4. Run `push()` to flush any remaining pending outbox ops
 5. Broadcast `SYNC_APPLIED`
 6. Release lock
+
+**Service worker termination safety:** If the service worker is killed during fullReset, the Dexie transaction rolls back (no data corruption) and the TTL lock expires after 30s. Next sync attempt retries fullReset.
 
 ### 3.7 Retry Failed Ops
 
@@ -493,6 +519,7 @@ Add to `apps/extension/src/lib/constants.ts`:
 SYNC_REQUEST: "SYNC_REQUEST"
 SYNC_APPLIED: "SYNC_APPLIED"
 SYNC_INTERVAL_CHANGED: "SYNC_INTERVAL_CHANGED"
+SYNC_AUTH_REQUIRED: "SYNC_AUTH_REQUIRED"
 ```
 
 ### 3.10 Background Integration
