@@ -6,6 +6,7 @@ import { MSG } from "./constants";
 import type { CollectionTab, SyncOp, TabCollection, Workspace } from "./db";
 import { db } from "./db";
 import { activeCollections, activeTabs, activeWorkspaces } from "./db-queries";
+import { newPendingOp, type SyncOpInput } from "./mutate-with-outbox";
 import { resolveAccountId } from "./resolve-account-id";
 import { getSettings } from "./settings";
 import { getExtensionTRPCClient } from "./trpc";
@@ -60,6 +61,17 @@ function isUnauthorizedError(err: unknown): boolean {
 
 function backoffMs(attempt: number): number {
   return Math.min(1000 * 2 ** attempt, 300_000);
+}
+
+function toWireOp(op: SyncOp) {
+  return {
+    opId: op.opId,
+    entityType: op.entityType,
+    entitySyncId: op.entitySyncId,
+    action: op.action,
+    payload: op.payload as never,
+    timestamp: op.createdAt,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -127,42 +139,49 @@ export class SyncEngine {
     const failedOps = await db.syncOutbox
       .where("[status+nextRetryAt]")
       .between(["failed", Dexie.minKey], ["failed", now])
+      .limit(100)
       .toArray();
 
-    for (const op of failedOps) {
-      if (op.attemptCount >= MAX_ATTEMPT_COUNT) {
-        await db.syncOutbox.update(op.id!, { status: "dead" });
-        continue;
-      }
+    if (failedOps.length === 0) return;
 
-      try {
-        const trpc = await this.getTRPC();
-        await trpc.sync.push.mutate({
-          ops: [
-            {
-              opId: op.opId,
-              entityType: op.entityType,
-              entitySyncId: op.entitySyncId,
-              action: op.action,
-              payload: op.payload as never,
-              timestamp: op.createdAt,
-            },
-          ],
-        });
-        await db.syncOutbox.update(op.id!, { status: "synced", syncedAt: Date.now() });
-      } catch (err) {
+    // Mark ops that exceed max attempts as dead
+    const deadOps = failedOps.filter((op) => op.attemptCount >= MAX_ATTEMPT_COUNT);
+    const retryableOps = failedOps.filter((op) => op.attemptCount < MAX_ATTEMPT_COUNT);
+
+    if (deadOps.length > 0) {
+      const deadIds = deadOps.map((op) => op.id!);
+      await db.syncOutbox.where("id").anyOf(deadIds).modify({ status: "dead" });
+    }
+
+    if (retryableOps.length === 0) return;
+
+    const trpc = await this.getTRPC();
+    try {
+      const result = await trpc.sync.push.mutate({
+        ops: retryableOps.map(toWireOp),
+      });
+
+      // Mark synced
+      const syncedOpIds = new Set([...result.applied, ...result.duplicates]);
+      const idsToSync = retryableOps.filter((op) => syncedOpIds.has(op.opId)).map((op) => op.id!);
+      if (idsToSync.length > 0) {
+        await db.syncOutbox
+          .where("id")
+          .anyOf(idsToSync)
+          .modify({ status: "synced", syncedAt: now });
+      }
+    } catch {
+      // Increment attempt count for all retryable ops
+      for (const op of retryableOps) {
         const newAttempt = op.attemptCount + 1;
         if (newAttempt >= MAX_ATTEMPT_COUNT) {
-          await db.syncOutbox.update(op.id!, {
-            status: "dead",
-            attemptCount: newAttempt,
-            lastError: String(err),
-          });
+          await db.syncOutbox.update(op.id!, { status: "dead" });
         } else {
           await db.syncOutbox.update(op.id!, {
+            status: "failed",
             attemptCount: newAttempt,
-            lastError: String(err),
-            nextRetryAt: Date.now() + backoffMs(newAttempt),
+            lastError: "retry failed",
+            nextRetryAt: now + backoffMs(newAttempt),
           });
         }
       }
@@ -217,10 +236,7 @@ export class SyncEngine {
 
     // Generate create ops in parent-first order
     const now = Date.now();
-    const ops: Omit<
-      SyncOp,
-      "id" | "status" | "attemptCount" | "lastError" | "nextRetryAt" | "syncedAt"
-    >[] = [];
+    const ops: SyncOpInput[] = [];
 
     for (const ws of workspaces) {
       ops.push({
@@ -277,16 +293,7 @@ export class SyncEngine {
 
     // Insert into outbox
     if (ops.length > 0) {
-      await db.syncOutbox.bulkAdd(
-        ops.map((op) => ({
-          ...op,
-          status: "pending" as const,
-          attemptCount: 0,
-          lastError: null,
-          nextRetryAt: null,
-          syncedAt: null,
-        })),
-      );
+      await db.syncOutbox.bulkAdd(ops.map(newPendingOp));
     }
 
     await db.syncMeta.put({ key: "initialPushCompleted", value: true });
@@ -309,6 +316,7 @@ export class SyncEngine {
 
   private async push(): Promise<void> {
     const startTime = Date.now();
+    const trpc = await this.getTRPC();
 
     for (let batch = 0; batch < PUSH_LOOP_BATCH_LIMIT; batch++) {
       if (Date.now() - startTime > PUSH_LOOP_TIME_LIMIT) break;
@@ -322,39 +330,40 @@ export class SyncEngine {
       if (pendingOps.length === 0) break;
 
       try {
-        const trpc = await this.getTRPC();
         const result = await trpc.sync.push.mutate({
-          ops: pendingOps.map((op) => ({
-            opId: op.opId,
-            entityType: op.entityType,
-            entitySyncId: op.entitySyncId,
-            action: op.action,
-            payload: op.payload as never,
-            timestamp: op.createdAt,
-          })),
+          ops: pendingOps.map(toWireOp),
         });
 
         // Mark accepted + duplicates as synced
         const syncedOpIds = new Set([...result.applied, ...result.duplicates]);
         const now = Date.now();
-        for (const op of pendingOps) {
-          if (syncedOpIds.has(op.opId)) {
-            await db.syncOutbox.update(op.id!, { status: "synced", syncedAt: now });
-          }
+
+        const idsToSync = pendingOps.filter((op) => syncedOpIds.has(op.opId)).map((op) => op.id!);
+        if (idsToSync.length > 0) {
+          await db.syncOutbox
+            .where("id")
+            .anyOf(idsToSync)
+            .modify({ status: "synced", syncedAt: now });
         }
 
         // Handle partial failure
         if (result.error) {
-          // Mark remaining non-synced ops as failed
-          for (const op of pendingOps) {
-            if (!syncedOpIds.has(op.opId)) {
-              await db.syncOutbox.update(op.id!, {
-                status: "failed",
-                attemptCount: op.attemptCount + 1,
+          const failedIds = pendingOps
+            .filter((op) => !syncedOpIds.has(op.opId))
+            .map((op) => op.id!);
+          if (failedIds.length > 0) {
+            // Use first op's attemptCount as representative (all same batch)
+            const newAttempt = pendingOps[0].attemptCount + 1;
+            const backoff = backoffMs(newAttempt);
+            await db.syncOutbox
+              .where("id")
+              .anyOf(failedIds)
+              .modify({
+                status: "failed" as const,
+                attemptCount: newAttempt,
                 lastError: result.error,
-                nextRetryAt: Date.now() + backoffMs(op.attemptCount + 1),
+                nextRetryAt: Date.now() + backoff,
               });
-            }
           }
           break;
         }
@@ -373,14 +382,22 @@ export class SyncEngine {
         }
 
         // Network / other error: mark all as failed with backoff
-        for (const op of pendingOps) {
-          const newAttempt = op.attemptCount + 1;
-          await db.syncOutbox.update(op.id!, {
-            status: newAttempt >= MAX_ATTEMPT_COUNT ? "dead" : "failed",
-            attemptCount: newAttempt,
-            lastError: String(err),
-            nextRetryAt: Date.now() + backoffMs(newAttempt),
-          });
+        const now = Date.now();
+        const failedIds = pendingOps.map((op) => op.id!);
+        const newAttempt = pendingOps[0].attemptCount + 1;
+        if (newAttempt >= MAX_ATTEMPT_COUNT) {
+          await db.syncOutbox.where("id").anyOf(failedIds).modify({ status: "dead" });
+        } else {
+          const backoff = backoffMs(newAttempt);
+          await db.syncOutbox
+            .where("id")
+            .anyOf(failedIds)
+            .modify({
+              status: "failed" as const,
+              attemptCount: newAttempt,
+              lastError: String(err),
+              nextRetryAt: now + backoff,
+            });
         }
         break;
       }
@@ -392,10 +409,10 @@ export class SyncEngine {
   private async pull(): Promise<number> {
     let totalApplied = 0;
     let cursor = await this.getCursor();
+    const trpc = await this.getTRPC();
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const trpc = await this.getTRPC();
       let result: Awaited<ReturnType<typeof trpc.sync.pull.query>>;
       try {
         result = await trpc.sync.pull.query({ cursor, limit: 100 });
@@ -421,13 +438,18 @@ export class SyncEngine {
 
       if (result.changes.length === 0) break;
 
+      // Pre-fetch opIds for self-echo check
+      const batchOpIds = result.changes.map((c) => c.opId);
+      const localOps = await db.syncOutbox.where("opId").anyOf(batchOpIds).toArray();
+      const localOpIdSet = new Set(localOps.map((o) => o.opId));
+
       // Two-pass deferred handling
       const deferred: ChangeEntry[] = [];
       let batchMaxSeq = cursor;
 
       for (const change of result.changes) {
         if (change.seq > batchMaxSeq) batchMaxSeq = change.seq;
-        const applied = await this.applyRemoteChange(change);
+        const applied = await this.applyRemoteChange(change, localOpIdSet);
         if (!applied) {
           deferred.push(change);
         } else {
@@ -439,7 +461,7 @@ export class SyncEngine {
       if (deferred.length > 0) {
         let firstUnresolvedSeq: number | null = null;
         for (const change of deferred) {
-          const applied = await this.applyRemoteChange(change);
+          const applied = await this.applyRemoteChange(change, localOpIdSet);
           if (applied) {
             totalApplied++;
           } else if (firstUnresolvedSeq === null) {
@@ -470,10 +492,12 @@ export class SyncEngine {
   /**
    * Returns true if applied, false if deferred (e.g. parent not found yet).
    */
-  private async applyRemoteChange(change: ChangeEntry): Promise<boolean> {
+  private async applyRemoteChange(
+    change: ChangeEntry,
+    localOpIdSet: Set<string>,
+  ): Promise<boolean> {
     // Self-echo skip: check if this opId exists in our outbox
-    const existing = await db.syncOutbox.where("opId").equals(change.opId).first();
-    if (existing) return true; // Already handled locally
+    if (localOpIdSet.has(change.opId)) return true; // Already handled locally
 
     if (change.action === "delete") {
       return this.applyDelete(change);

@@ -6,6 +6,17 @@ export type SyncOpInput = Omit<
   "id" | "status" | "attemptCount" | "lastError" | "nextRetryAt" | "syncedAt"
 >;
 
+export function newPendingOp(op: SyncOpInput): SyncOp {
+  return {
+    ...op,
+    status: "pending" as const,
+    attemptCount: 0,
+    lastError: null,
+    nextRetryAt: null,
+    syncedAt: null,
+  };
+}
+
 export async function mutateWithOutbox(
   mutations: () => Promise<void>,
   ops: SyncOpInput[],
@@ -15,15 +26,8 @@ export async function mutateWithOutbox(
     [db.workspaces, db.tabCollections, db.collectionTabs, db.syncOutbox],
     async () => {
       await mutations();
-      for (const op of ops) {
-        await db.syncOutbox.add({
-          ...op,
-          status: "pending",
-          attemptCount: 0,
-          lastError: null,
-          nextRetryAt: null,
-          syncedAt: null,
-        });
+      if (ops.length > 0) {
+        await db.syncOutbox.bulkAdd(ops.map(newPendingOp));
       }
     },
   );
@@ -33,28 +37,5 @@ export async function mutateWithOutbox(
   });
 }
 
-export async function bulkMutateWithOutbox(
-  mutations: () => Promise<void>,
-  ops: SyncOpInput[],
-): Promise<void> {
-  await db.transaction(
-    "rw",
-    [db.workspaces, db.tabCollections, db.collectionTabs, db.syncOutbox],
-    async () => {
-      await mutations();
-      if (ops.length > 0) {
-        await db.syncOutbox.bulkAdd(
-          ops.map((op) => ({
-            ...op,
-            status: "pending" as const,
-            attemptCount: 0,
-            lastError: null,
-            nextRetryAt: null,
-            syncedAt: null,
-          })),
-        );
-      }
-    },
-  );
-  chrome.runtime.sendMessage({ type: MSG.SYNC_REQUEST }).catch(() => {});
-}
+// Alias for backwards compat
+export const bulkMutateWithOutbox = mutateWithOutbox;

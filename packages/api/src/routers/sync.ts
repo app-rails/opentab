@@ -31,7 +31,7 @@ const tabPayload = z.object({
 
 const deletePayload = z.object({
   syncId: z.string(),
-  deletedAt: z.number(),
+  deletedAt: z.number().nullable().optional(),
 });
 
 const syncOpSchema = z.union([

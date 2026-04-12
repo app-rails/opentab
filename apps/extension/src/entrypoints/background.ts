@@ -111,9 +111,7 @@ export default defineBackground(() => {
         }
       })();
     } else if (message.type === MSG.SYNC_REQUEST) {
-      syncEngine.syncIfNeeded().catch((err) => {
-        console.error("[bg] SYNC_REQUEST error:", err);
-      });
+      syncEngine.notifyChange();
     } else if (message.type === MSG.SYNC_INTERVAL_CHANGED) {
       (async () => {
         await browser.alarms.clear(SYNC_POLL_ALARM);
