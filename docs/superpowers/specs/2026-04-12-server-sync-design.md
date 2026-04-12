@@ -232,6 +232,7 @@ Located in `packages/db/src/schema/sync.ts`, exported from `packages/db/src/sche
 | `name` | text NOT NULL | (workspaces, collections) |
 | `url`, `title`, `favIconUrl` | text | (tabs only) |
 | `icon` | text | (workspaces only) |
+| `viewMode` | text | (workspaces only, nullable — "default" \| "compact") |
 | `order` | text NOT NULL | Fractional indexing string |
 | `workspaceSyncId` | text | (collections: FK to workspaces.syncId) |
 | `collectionSyncId` | text | (tabs: FK to tabCollections.syncId) |
@@ -359,7 +360,7 @@ export const syncRouter = router({
 })
 ```
 
-**Strongly typed payload** — `z.union([...])` with 9 variants (3 entityTypes x 3 actions). Each create/update variant requires: `syncId`, `parentSyncId` (collections/tabs), `name`/`url`/`title` (per type), `order`, `updatedAt`, `deletedAt`. Delete variant requires: `syncId`, `updatedAt`.
+**Strongly typed payload** — `z.union([...])` with 9 variants (3 entityTypes x 3 actions). Each create/update variant requires: `syncId`, `parentSyncId` (collections/tabs), `name`/`url`/`title` (per type), `order`, `updatedAt`, `deletedAt`. Workspace create/update also includes `icon` and `viewMode` (nullable). Delete variant requires: `syncId`, `updatedAt`.
 
 Validation: if `payload.syncId !== entitySyncId`, reject with BAD_REQUEST.
 
@@ -480,10 +481,18 @@ sync():
 6. Continue while `hasMore`
 
 **applyRemoteChange**:
-- Skip if `change.opId` exists in local outbox (self-echo)
+- Skip if `change.opId` exists in local outbox (self-echo — this is a performance optimization; LWW upsert is idempotent, so re-applying one's own change is harmless)
 - Apply LWW with `(updatedAt, lastOpId)` — same rules as server
-- For create: look up parent entity by `parentSyncId` to rebuild local integer FK (`workspaceId`/`collectionId`). If parent not found, skip (out-of-order arrival; next pull will retry)
+- For create: look up parent entity by `parentSyncId` to rebuild local integer FK (`workspaceId`/`collectionId`). If parent not found, **defer** (not skip) — see deferred change handling below
+- When applying a remote workspace create, set `accountId` from the current device's `resolveAccountId()`. Since the server scopes all data by `userId` (which equals the extension's `accountId`), this is always the authenticated user's ID.
+- After applying a remote delete, check if active (non-deleted) workspaces count is zero. If so, auto-create a default workspace (same as first-run behavior) to prevent empty UI state.
 - All writes go through Dexie transactions
+
+**Deferred change handling within a batch:**
+Changes are processed in seq order within each batch. If a create is deferred because its parent doesn't exist yet:
+1. First pass: process all changes in seq order, collect deferred items
+2. Second pass: retry deferred items (parents from earlier in the batch should now exist)
+3. Cursor advancement: set `lastPulledCursor` to `min(firstUnresolvedSeq - 1, batchMaxSeq)`. If all resolved, advance to batch max seq. If deferred items remain unresolved after retry, log a warning and do NOT advance cursor past them — next pull will re-fetch.
 
 ### 3.6 fullReset (cursor expired)
 
