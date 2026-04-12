@@ -84,8 +84,8 @@ interface SyncOp {
   entitySyncId: string      // references entity's syncId
   action: "create" | "update" | "delete"
   payload: Record<string, unknown>  // strongly typed per entityType+action
-  status: "pending" | "synced" | "failed"
-  attemptCount: number
+  status: "pending" | "synced" | "failed" | "dead"
+  attemptCount: number              // max 20, then status → "dead"
   lastError: string | null
   nextRetryAt: number | null
   createdAt: number
@@ -301,11 +301,18 @@ interface ChangeEntry {
 }
 
 interface SnapshotResult {
-  workspaces: WorkspaceSnapshot[]
-  collections: CollectionSnapshot[]
-  tabs: TabSnapshot[]
+  workspaces: WorkspaceSnapshot[]   // includes soft-deleted (with deletedAt set)
+  collections: CollectionSnapshot[] // includes soft-deleted
+  tabs: TabSnapshot[]               // includes soft-deleted
   cursor: number  // current max seq
 }
+```
+
+**Snapshot includes soft-deleted entities.** This is necessary because after fullReset:
+- Entity tables are cleared and replaced from snapshot
+- Pending outbox delete ops reference entities by `entitySyncId`
+- If soft-deleted entities are excluded from snapshot, those `entitySyncId` values have no local record
+- Including them ensures the client retains a complete entity picture; active query helpers filter them from UI
 ```
 
 ### 2.3 SqliteSyncRepository.pushOps
@@ -347,7 +354,7 @@ LWW condition: `incoming.updatedAt > row.updatedAt OR (equal updatedAt AND incom
 
 - Query `changeLog WHERE userId = ? AND seq > cursor ORDER BY seq LIMIT limit+1`
 - `hasMore = results.length > limit`
-- If `cursor > 0 AND cursor < minRetainedSeq` → return `resetRequired: true`
+- **resetRequired**: This iteration has no changeLog retention/compaction, so `minRetainedSeq` is effectively 0 and `resetRequired` is always `false`. Implement `pullChanges` to always return `resetRequired: false` with a TODO comment referencing future retention work. The client-side fullReset codepath should still exist (tested with a forced `resetRequired: true` in tests) so it's ready when retention is added.
 
 ### 2.6 tRPC Router
 
@@ -434,8 +441,15 @@ background SyncEngine ──push──> tRPC sync.push
                        ──apply─> Dexie
                        ──broadcast──> sendMessage(SYNC_APPLIED)
                                                     │
-tabs page (useSync hook) ──listener──> store.initialize()
+tabs page (useSync hook) ──listener──> store.refreshAfterSync()
 ```
+
+**Important: `SYNC_APPLIED` must NOT call `store.initialize()`**. `initialize()` resets `activeWorkspaceId` to the first workspace (`app-store.ts:140`), which would kick the user out of their current view on every sync poll. Instead, define a new `store.refreshAfterSync()` method that:
+
+1. Reloads workspaces from Dexie (with `deletedAt` filter via active query helpers)
+2. **Preserves `activeWorkspaceId`** if that workspace still exists (not soft-deleted); falls back to first workspace only if the active workspace was deleted
+3. Reloads only the active workspace's collections and tabs
+4. Does NOT set `isLoading: true` (avoids UI flicker during background sync)
 
 ### 3.2 Trigger Points
 
@@ -579,6 +593,22 @@ When `server_enabled = true`, show sync configuration block in settings page:
 | `server_enabled` toggled OFF | Clear alarm |
 | `sync_polling_interval` changed | Clear + recreate alarm |
 
+### 4.2.1 Outbox Behavior When Sync Is Disabled
+
+**`mutateWithOutbox` always writes to outbox regardless of `server_enabled` state.** This is intentional:
+- When `server_enabled = false`, ops accumulate in outbox with `status: "pending"`
+- When sync is re-enabled, all accumulated ops are pushed on next sync cycle
+- No data is lost during the disabled period
+
+**Max retry limit:** Failed ops have a maximum of **20 attempts**. After exceeding `maxAttemptCount = 20`, mark ops as `status: "dead"`. Dead ops are not retried but are kept for debugging. Outbox cleanup (Section 3.8) deletes dead ops after 7 days along with synced ops.
+
+**UI indicator when sync is off:** If `server_enabled = false` and pending outbox count > 0, the Settings UI should show a notice: "N changes pending — will sync when server is re-enabled." This prevents user surprise when re-enabling sync weeks later.
+
+Update `SyncOp.status` type to include `"dead"`:
+```
+status: "pending" | "synced" | "failed" | "dead"
+```
+
 ### 4.3 Dexie v3 → v4 Migration Test Cases
 
 ```
@@ -600,7 +630,7 @@ test: push create conflict — same syncId different opId → onConflictDoUpdate
 test: push transaction rollback — applyOp fails → appliedOps also rolls back → retry works
 test: pull cursor — push 3 ops, pull(cursor=0) → 3 changes, pull again → 0
 test: pull resetRequired — cursor below retention window → resetRequired=true
-test: snapshot — returns all non-deleted entities for user + current max seq
+test: snapshot — returns all entities (including soft-deleted) for user + current max seq
 test: push cascade delete — workspace + children all recorded in changeLog
 test: push payload validation — mismatched payload.syncId vs entitySyncId → BAD_REQUEST
 ```
@@ -696,3 +726,4 @@ All execute.ts writes (#17-22) are inside a single `db.transaction("rw", ...)` a
 - **Field-level conflict resolution**: upgrade from entity-level LWW
 - **Change log retention + compaction**: define retention window, implement compaction job
 - **Multi-account support**: query isolation by accountId across all paths
+- **Order collision detection**: detect duplicate fractional indexing order values within a parent scope after pull and regenerate to resolve ties (two devices inserting between the same neighbors produce identical order strings)
