@@ -1398,7 +1398,9 @@ import { db } from "./db";
 import { getSettings } from "./settings";
 import { MSG } from "./constants";
 import { getExtensionTRPCClient } from "./trpc";
-import { resolveAccountId, resolveAuthState, clearAuthState, initializeAuth } from "./auth-manager";
+import { resolveAccountId } from "./auth-manager";
+import { initializeAuth } from "./auth-manager";
+import { getAuthState, clearAuthState } from "./auth-storage";
 import { activeWorkspaces, activeCollections, activeTabs } from "./db-queries";
 
 const MAX_ATTEMPT_COUNT = 20;
@@ -1426,8 +1428,8 @@ export class SyncEngine {
 
   async sync(): Promise<void> {
     if (this.isSyncing) return;
-    const authState = await resolveAuthState();
-    if (authState.mode !== "online") return;
+    const authState = await getAuthState();
+    if (!authState || authState.mode !== "online") return;
 
     this.isSyncing = true;
     try {
@@ -1482,8 +1484,9 @@ export class SyncEngine {
       } catch (e: unknown) {
         // Check for UNAUTHORIZED
         if (isUnauthorizedError(e)) {
+          const settings = await getSettings();
           await clearAuthState();
-          await initializeAuth();
+          await initializeAuth(settings.server_url);
           continue; // Retry with new token
         }
         // Network/other error — mark batch as failed
