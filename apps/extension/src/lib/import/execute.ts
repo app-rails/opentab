@@ -2,7 +2,7 @@ import Dexie from "dexie";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "@/lib/db";
 import { bulkMutateWithOutbox, type SyncOpInput } from "@/lib/mutate-with-outbox";
-import { resolveAccountId } from "@/stores/app-store";
+import { resolveAccountId } from "@/lib/resolve-account-id";
 import type { ImportPlan, ImportTab } from "./types";
 
 export interface ImportResult {

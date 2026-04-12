@@ -1,5 +1,5 @@
-import Dexie from "dexie";
 import { db } from "@/lib/db";
+import { activeCollections, activeTabs } from "@/lib/db-queries";
 
 export async function exportAllData(): Promise<void> {
   const workspaces = await db.workspaces
@@ -12,11 +12,7 @@ export async function exportAllData(): Promise<void> {
     exportedAt: new Date().toISOString(),
     workspaces: await Promise.all(
       workspaces.map(async (ws) => {
-        const collections = await db.tabCollections
-          .where("[workspaceId+order]")
-          .between([ws.id!, Dexie.minKey], [ws.id!, Dexie.maxKey])
-          .filter((c) => !c.deletedAt)
-          .toArray();
+        const collections = await activeCollections(ws.id!).sortBy("order");
 
         return {
           id: ws.id!,
@@ -28,11 +24,7 @@ export async function exportAllData(): Promise<void> {
           updatedAt: ws.updatedAt,
           collections: await Promise.all(
             collections.map(async (col) => {
-              const tabs = await db.collectionTabs
-                .where("[collectionId+order]")
-                .between([col.id!, Dexie.minKey], [col.id!, Dexie.maxKey])
-                .filter((t) => !t.deletedAt)
-                .toArray();
+              const tabs = await activeTabs(col.id!).sortBy("order");
 
               return {
                 id: col.id!,

@@ -51,8 +51,6 @@ function buildLiveTabUrls(tabs: chrome.tabs.Tab[]): Set<string> {
 
 import { resolveAccountId } from "@/lib/resolve-account-id";
 
-export { resolveAccountId };
-
 interface AppState {
   workspaces: Workspace[];
   activeWorkspaceId: number | null;
