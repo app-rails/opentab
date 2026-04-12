@@ -56,18 +56,17 @@
 Add after the existing interfaces in `apps/extension/src/lib/db.ts`:
 
 ```typescript
-// Add to Workspace interface
+// Add to Workspace interface (keep existing ViewMode import)
 export interface Workspace {
   id?: number;
   accountId: string;
   name: string;
   icon: string;
   order: string;
-  viewMode?: string;
+  viewMode?: ViewMode;
   syncId: string;
   deletedAt: number | null;
   lastOpId: string;
-  workspaceSyncId?: undefined; // workspaces have no parent
   createdAt: number;
   updatedAt: number;
 }
@@ -186,11 +185,11 @@ db.version(4)
 
 - [ ] **Step 4: Add table accessors to the Dexie subclass**
 
-Add to the `OpenTabDatabase` class:
+Add to the `OpenTabDatabase` class (using `EntityTable` to match existing pattern in `db.ts:55`):
 
 ```typescript
-syncOutbox!: Dexie.Table<SyncOp, number>;
-syncMeta!: Dexie.Table<SyncMeta, string>;
+syncOutbox: EntityTable<SyncOp, "id">;
+syncMeta: EntityTable<SyncMeta, "key">;
 ```
 
 - [ ] **Step 5: Verify build**
@@ -455,8 +454,9 @@ createWorkspace: async (name: string, icon: string) => {
     updatedAt: now,
   };
 
-  // Optimistic update
-  const tempId = -(workspaces.length + 1);
+  // Optimistic update — use monotonic counter to avoid collision under rapid calls
+  // (define at module scope: let _nextTempId = -1; function nextTempId() { return _nextTempId--; })
+  const tempId = nextTempId();
   set({ workspaces: [{ ...workspace, id: tempId }, ...workspaces], activeWorkspaceId: tempId });
 
   try {
@@ -570,28 +570,33 @@ Generate an update op for the tab with new parentSyncId.
 
 ```typescript
 refreshAfterSync: async () => {
-  const accountId = await resolveAccountId();
-  const workspaces = await activeWorkspaces(accountId).sortBy("order");
+  try {
+    const accountId = await resolveAccountId();
+    const workspaces = await activeWorkspaces(accountId).sortBy("order");
 
-  const currentActiveId = get().activeWorkspaceId;
-  const activeStillExists = workspaces.some((w) => w.id === currentActiveId);
-  const activeWorkspaceId = activeStillExists
-    ? currentActiveId
-    : workspaces[0]?.id ?? null;
+    const currentActiveId = get().activeWorkspaceId;
+    const activeStillExists = workspaces.some((w) => w.id === currentActiveId);
+    const activeWorkspaceId = activeStillExists
+      ? currentActiveId
+      : workspaces[0]?.id ?? null;
 
-  let collections: TabCollection[] = [];
-  const tabsByCollection = new Map<number, CollectionTab[]>();
+    let collections: TabCollection[] = [];
+    const tabsByCollection = new Map<number, CollectionTab[]>();
 
-  if (activeWorkspaceId) {
-    collections = await activeCollections(activeWorkspaceId).sortBy("order");
-    for (const col of collections) {
-      const tabs = await activeTabs(col.id!).sortBy("order");
-      tabsByCollection.set(col.id!, tabs);
+    if (activeWorkspaceId) {
+      collections = await activeCollections(activeWorkspaceId).sortBy("order");
+      for (const col of collections) {
+        const tabs = await activeTabs(col.id!).sortBy("order");
+        tabsByCollection.set(col.id!, tabs);
+      }
     }
-  }
 
-  // Do NOT set isLoading — avoid UI flicker
-  set({ workspaces, activeWorkspaceId, collections, tabsByCollection });
+    // Do NOT set isLoading — avoid UI flicker
+    set({ workspaces, activeWorkspaceId, collections, tabsByCollection });
+  } catch {
+    // Auth state may be unavailable during token refresh — skip silently
+    console.warn("[store] refreshAfterSync skipped — auth state unavailable");
+  }
 },
 ```
 
@@ -837,11 +842,11 @@ export { SqliteSyncRepository } from "./sqlite-sync-repository.js";
 
 ```typescript
 // packages/db/src/repo/sqlite-sync-repository.ts
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { Db } from "../index.js";
 import type { PushOp, PushResult, PullResult, SnapshotResult, SyncRepository } from "./sync-repository.js";
 
 export class SqliteSyncRepository implements SyncRepository {
-  constructor(private db: BetterSQLite3Database) {}
+  constructor(private db: Db) {}
 
   async pushOps(userId: string, ops: PushOp[]): Promise<PushResult> {
     // Implemented in Task 7
@@ -909,6 +914,11 @@ import {
   syncTabCollections,
   syncCollectionTabs,
 } from "../schema/sync.js";
+
+// Helper: better-sqlite3 uses SQLITE_CONSTRAINT_UNIQUE for unique violations
+function isUniqueConstraintError(e: unknown): boolean {
+  return e instanceof Error && "code" in e && (e as any).code === "SQLITE_CONSTRAINT_UNIQUE";
+}
 
 async pushOps(userId: string, ops: PushOp[]): Promise<PushResult> {
   let accepted = 0;
@@ -1091,14 +1101,16 @@ git commit -m "feat(db): implement SqliteSyncRepository with LWW, pullChanges, s
 
 - [ ] **Step 1: Update context.ts**
 
+Keep the existing inferred types for session/user (they capture plugin-extended fields from better-auth). Only add `syncRepo` and change the factory signature:
+
 ```typescript
 // packages/api/src/context.ts
-import type { Auth, Session, User } from "better-auth";
+import type { Auth } from "@opentab/auth";
 import type { SyncRepository } from "@opentab/db/repo";
 
 export interface Context {
-  session: Session | null;
-  user: User | null;
+  session: Awaited<ReturnType<Auth["api"]["getSession"]>>;
+  user: NonNullable<Awaited<ReturnType<Auth["api"]["getSession"]>>>["user"] | null;
   syncRepo: SyncRepository;
 }
 
@@ -1108,7 +1120,7 @@ interface CreateContextOptions {
 }
 
 export function createContextFactory({ auth, syncRepo }: CreateContextOptions) {
-  return async ({ req }: { req: Request }): Promise<Context> => {
+  return async function createContext(req: Request): Promise<Context> {
     const session = await auth.api.getSession({ headers: req.headers });
     return {
       session,
