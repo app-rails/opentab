@@ -1,6 +1,7 @@
 import Dexie from "dexie";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "@/lib/db";
+import { bulkMutateWithOutbox, type SyncOpInput } from "@/lib/mutate-with-outbox";
 import { resolveAccountId } from "@/stores/app-store";
 import type { ImportPlan, ImportTab } from "./types";
 
@@ -28,7 +29,12 @@ async function getLastOrder(
   return last?.order ?? null;
 }
 
-async function addTabsToCollection(collectionId: number, tabs: ImportTab[]): Promise<void> {
+async function addTabsToCollection(
+  collectionId: number,
+  collectionSyncId: string,
+  tabs: ImportTab[],
+  ops: SyncOpInput[],
+): Promise<void> {
   let lastOrder = await getLastOrder("collectionTabs", {
     field: "collectionId",
     value: collectionId,
@@ -51,6 +57,26 @@ async function addTabsToCollection(collectionId: number, tabs: ImportTab[]): Pro
   });
 
   await db.collectionTabs.bulkAdd(records);
+
+  for (const rec of records) {
+    ops.push({
+      opId: crypto.randomUUID(),
+      entityType: "tab",
+      entitySyncId: rec.syncId,
+      action: "create",
+      payload: {
+        syncId: rec.syncId,
+        parentSyncId: collectionSyncId,
+        url: rec.url,
+        title: rec.title,
+        favIconUrl: rec.favIconUrl,
+        order: rec.order,
+        updatedAt: rec.updatedAt,
+        deletedAt: null,
+      },
+      createdAt: now,
+    });
+  }
 }
 
 export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
@@ -59,26 +85,50 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
   let collectionCount = 0;
   let tabCount = 0;
 
-  await db.transaction("rw", [db.workspaces, db.tabCollections, db.collectionTabs], async () => {
+  const ops: SyncOpInput[] = [];
+
+  await bulkMutateWithOutbox(async () => {
     for (const wsPlan of plan.workspaces) {
       if (!wsPlan.selected) continue;
 
       let wsId: number;
+      let wsSyncId: string;
       if (wsPlan.existingWorkspaceId != null) {
         wsId = wsPlan.existingWorkspaceId;
+        const existingWs = await db.workspaces.get(wsId);
+        wsSyncId = existingWs!.syncId;
       } else {
         const lastWsOrder = await getLastOrder("workspaces");
         const now = Date.now();
+        const newOrder = generateKeyBetween(lastWsOrder, null);
+        const syncId = crypto.randomUUID();
         wsId = (await db.workspaces.add({
           accountId,
           name: wsPlan.name,
           icon: wsPlan.icon ?? "folder",
-          order: generateKeyBetween(lastWsOrder, null),
-          syncId: crypto.randomUUID(),
+          order: newOrder,
+          syncId,
           createdAt: now,
           updatedAt: now,
         })) as number;
+        wsSyncId = syncId;
         workspaceCount++;
+
+        ops.push({
+          opId: crypto.randomUUID(),
+          entityType: "workspace",
+          entitySyncId: syncId,
+          action: "create",
+          payload: {
+            syncId,
+            name: wsPlan.name,
+            icon: wsPlan.icon ?? "folder",
+            order: newOrder,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        });
       }
 
       // Get last collection order once, then chain locally to avoid
@@ -95,45 +145,104 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
           const order = generateKeyBetween(lastColOrder, null);
           lastColOrder = order;
           const now = Date.now();
+          const colSyncId = crypto.randomUUID();
           const colId = (await db.tabCollections.add({
             workspaceId: wsId,
             name: colPlan.name,
             order,
-            syncId: crypto.randomUUID(),
+            syncId: colSyncId,
             createdAt: now,
             updatedAt: now,
           })) as number;
           collectionCount++;
 
-          await addTabsToCollection(colId, colPlan.allTabs);
+          ops.push({
+            opId: crypto.randomUUID(),
+            entityType: "collection",
+            entitySyncId: colSyncId,
+            action: "create",
+            payload: {
+              syncId: colSyncId,
+              parentSyncId: wsSyncId,
+              name: colPlan.name,
+              order,
+              updatedAt: now,
+              deletedAt: null,
+            },
+            createdAt: now,
+          });
+
+          await addTabsToCollection(colId, colSyncId, colPlan.allTabs, ops);
           tabCount += colPlan.allTabs.length;
         } else {
           // Merge into existing collection
           let merged = false;
 
+          // Look up existing collection's syncId for tab ops
+          const existingCol = await db.tabCollections.get(colPlan.existingCollectionId);
+          const colSyncId = existingCol!.syncId;
+
           if (colPlan.toAdd.length > 0) {
-            await addTabsToCollection(colPlan.existingCollectionId, colPlan.toAdd);
+            await addTabsToCollection(colPlan.existingCollectionId, colSyncId, colPlan.toAdd, ops);
             tabCount += colPlan.toAdd.length;
             merged = true;
           }
 
-          // Delete extra existing tabs user chose to remove
-          const toDeleteIds = colPlan.extraExisting
-            .filter((t) => t.decision === "delete")
-            .map((t) => t.id);
-          if (toDeleteIds.length > 0) {
-            await db.collectionTabs.bulkDelete(toDeleteIds);
+          // Soft-delete extra existing tabs user chose to remove
+          const toDeleteEntries = colPlan.extraExisting.filter((t) => t.decision === "delete");
+          if (toDeleteEntries.length > 0) {
+            const now = Date.now();
+            const toDeleteIds = toDeleteEntries.map((t) => t.id);
+            // Look up syncIds before modifying
+            const tabsToDelete = await db.collectionTabs.where("id").anyOf(toDeleteIds).toArray();
+            await db.collectionTabs
+              .where("id")
+              .anyOf(toDeleteIds)
+              .modify({ deletedAt: now, updatedAt: now });
+
+            for (const tab of tabsToDelete) {
+              ops.push({
+                opId: crypto.randomUUID(),
+                entityType: "tab",
+                entitySyncId: tab.syncId,
+                action: "delete",
+                payload: { syncId: tab.syncId, updatedAt: now },
+                createdAt: now,
+              });
+            }
             merged = true;
           }
 
           // Apply metadata updates (newer title/favIconUrl from import)
           if (colPlan.metadataUpdates.length > 0) {
             for (const update of colPlan.metadataUpdates) {
+              const now = Date.now();
               await db.collectionTabs.update(update.existingTabId, {
                 title: update.title,
                 favIconUrl: update.favIconUrl,
-                updatedAt: Date.now(),
+                updatedAt: now,
               });
+              // Look up the tab's syncId for the update op
+              const tab = await db.collectionTabs.get(update.existingTabId);
+              if (tab) {
+                ops.push({
+                  opId: crypto.randomUUID(),
+                  entityType: "tab",
+                  entitySyncId: tab.syncId,
+                  action: "update",
+                  payload: {
+                    syncId: tab.syncId,
+                    parentSyncId: colSyncId,
+                    url: tab.url,
+                    title: update.title,
+                    favIconUrl: update.favIconUrl,
+                    order: tab.order,
+                    updatedAt: now,
+                    deletedAt: null,
+                  },
+                  createdAt: now,
+                });
+              }
             }
             merged = true;
           }
@@ -148,7 +257,7 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
         }
       }
     }
-  });
+  }, ops);
 
   return { workspaceCount, collectionCount, tabCount };
 }
