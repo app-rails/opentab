@@ -1,6 +1,5 @@
 import { generateKeyBetween } from "fractional-indexing";
 import { create } from "zustand";
-import { getAuthState } from "@/lib/auth-storage";
 import {
   DEFAULT_ICON,
   WORKSPACE_ICON_OPTIONS,
@@ -49,12 +48,9 @@ function buildLiveTabUrls(tabs: chrome.tabs.Tab[]): Set<string> {
   return new Set(tabs.map((t) => t.url).filter((u): u is string => u != null));
 }
 
-export async function resolveAccountId(): Promise<string> {
-  const authState = await getAuthState();
-  if (authState?.mode === "online") return authState.accountId;
-  if (authState?.mode === "offline") return authState.localUuid;
-  throw new Error("Cannot resolve accountId: auth state is not available");
-}
+import { resolveAccountId } from "@/lib/resolve-account-id";
+
+export { resolveAccountId };
 
 interface AppState {
   workspaces: Workspace[];

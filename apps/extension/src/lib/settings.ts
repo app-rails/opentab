@@ -13,6 +13,7 @@ export interface AppSettings {
   welcome_dismissed: boolean;
   sidebar_collapsed: boolean;
   right_panel_collapsed: boolean;
+  sync_polling_interval: number;
 }
 
 const DEFAULTS: AppSettings = {
@@ -23,6 +24,7 @@ const DEFAULTS: AppSettings = {
   welcome_dismissed: false,
   sidebar_collapsed: false,
   right_panel_collapsed: false,
+  sync_polling_interval: 600_000, // 10 minutes, clamped [60_000, 3_600_000]
 };
 
 const KEYS = Object.keys(DEFAULTS) as (keyof AppSettings)[];
