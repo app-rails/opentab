@@ -9,6 +9,7 @@ import {
 import type { CollectionTab, TabCollection, Workspace } from "@/lib/db";
 import { db } from "@/lib/db";
 import { activeCollections, activeTabs } from "@/lib/db-queries";
+import { mutateWithOutbox, type SyncOpInput } from "@/lib/mutate-with-outbox";
 import { compareByOrder } from "@/lib/utils";
 import type { ViewMode } from "@/lib/view-mode";
 
@@ -113,6 +114,9 @@ interface AppState {
     name: string,
     tabs: { url: string; title: string; favIconUrl?: string }[],
   ) => Promise<void>;
+
+  // Sync
+  refreshAfterSync: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -230,13 +234,32 @@ export const useAppStore = create<AppState>((set, get) => ({
       createdAt: now,
       updatedAt: now,
     };
-    const id = await db.workspaces.add(workspace);
-    workspace.id = id as number;
+    let newId: number;
+    await mutateWithOutbox(async () => {
+      newId = (await db.workspaces.add(workspace)) as number;
+    }, [
+      {
+        opId: crypto.randomUUID(),
+        entityType: "workspace",
+        entitySyncId: workspace.syncId,
+        action: "create",
+        payload: {
+          syncId: workspace.syncId,
+          name: validName,
+          icon: validatedIcon(icon),
+          order: newOrder,
+          updatedAt: now,
+          deletedAt: null,
+        },
+        createdAt: now,
+      },
+    ]);
+    workspace.id = newId!;
     const updatedWorkspaces = [...get().workspaces, workspace];
     set({ workspaces: updatedWorkspaces });
 
     if (get().activeWorkspaceId == null) {
-      get().setActiveWorkspace(id as number);
+      get().setActiveWorkspace(newId!);
     }
   },
 
@@ -255,7 +278,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     try {
-      await db.workspaces.update(id, { name: validName, updatedAt: now });
+      await mutateWithOutbox(async () => {
+        await db.workspaces.update(id, { name: validName, updatedAt: now });
+      }, [
+        {
+          opId: crypto.randomUUID(),
+          entityType: "workspace",
+          entitySyncId: prev.syncId,
+          action: "update",
+          payload: { syncId: prev.syncId, name: validName, updatedAt: now, deletedAt: null },
+          createdAt: now,
+        },
+      ]);
     } catch (err) {
       console.error("[store] failed to rename workspace:", err);
       set({ workspaces: workspaces.map((w) => (w.id === id ? prev : w)) });
@@ -276,7 +310,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     try {
-      await db.workspaces.update(id, { icon: validIcon, updatedAt: now });
+      await mutateWithOutbox(async () => {
+        await db.workspaces.update(id, { icon: validIcon, updatedAt: now });
+      }, [
+        {
+          opId: crypto.randomUUID(),
+          entityType: "workspace",
+          entitySyncId: prev.syncId,
+          action: "update",
+          payload: { syncId: prev.syncId, icon: validIcon, updatedAt: now, deletedAt: null },
+          createdAt: now,
+        },
+      ]);
     } catch (err) {
       console.error("[store] failed to change workspace icon:", err);
       set({ workspaces: workspaces.map((w) => (w.id === id ? prev : w)) });
@@ -297,7 +342,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     try {
-      await db.workspaces.update(id, { viewMode: mode, updatedAt: now });
+      await mutateWithOutbox(async () => {
+        await db.workspaces.update(id, { viewMode: mode, updatedAt: now });
+      }, [
+        {
+          opId: crypto.randomUUID(),
+          entityType: "workspace",
+          entitySyncId: prev.syncId,
+          action: "update",
+          payload: {
+            syncId: prev.syncId,
+            viewMode: mode,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        },
+      ]);
     } catch (err) {
       console.error("[store] failed to set workspace view mode:", err);
       set({ workspaces: workspaces.map((w) => (w.id === id ? prev : w)) });
@@ -307,22 +368,66 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteWorkspace: async (id) => {
     const { workspaces, activeWorkspaceId } = get();
     const target = workspaces.find((w) => w.id === id);
-    if (!target || workspaces.length <= 1) return;
+    if (!target || workspaces.filter((w) => !w.deletedAt).length <= 1) return;
+
+    const now = Date.now();
+    // Query children BEFORE transaction
+    const collections = await db.tabCollections
+      .where("workspaceId")
+      .equals(id)
+      .filter((c) => !c.deletedAt)
+      .toArray();
+    const collectionIds = collections.map((c) => c.id!);
+    const tabs =
+      collectionIds.length > 0
+        ? await db.collectionTabs
+            .where("collectionId")
+            .anyOf(collectionIds)
+            .filter((t) => !t.deletedAt)
+            .toArray()
+        : [];
+
+    const ops: SyncOpInput[] = [
+      {
+        opId: crypto.randomUUID(),
+        entityType: "workspace",
+        entitySyncId: target.syncId,
+        action: "delete",
+        payload: { syncId: target.syncId, updatedAt: now },
+        createdAt: now,
+      },
+      ...collections.map((c) => ({
+        opId: crypto.randomUUID(),
+        entityType: "collection" as const,
+        entitySyncId: c.syncId,
+        action: "delete" as const,
+        payload: { syncId: c.syncId, updatedAt: now },
+        createdAt: now,
+      })),
+      ...tabs.map((t) => ({
+        opId: crypto.randomUUID(),
+        entityType: "tab" as const,
+        entitySyncId: t.syncId,
+        action: "delete" as const,
+        payload: { syncId: t.syncId, updatedAt: now },
+        createdAt: now,
+      })),
+    ];
 
     try {
-      await db.transaction(
-        "rw",
-        [db.workspaces, db.tabCollections, db.collectionTabs],
-        async () => {
-          const collections = await db.tabCollections.where("workspaceId").equals(id).toArray();
-          const collectionIds = collections.map((c) => c.id!);
-          if (collectionIds.length > 0) {
-            await db.collectionTabs.where("collectionId").anyOf(collectionIds).delete();
-          }
-          await db.tabCollections.where("workspaceId").equals(id).delete();
-          await db.workspaces.delete(id);
-        },
-      );
+      await mutateWithOutbox(async () => {
+        await db.workspaces.update(id, { deletedAt: now, updatedAt: now });
+        await db.tabCollections
+          .where("workspaceId")
+          .equals(id)
+          .modify({ deletedAt: now, updatedAt: now });
+        if (collectionIds.length > 0) {
+          await db.collectionTabs
+            .where("collectionId")
+            .anyOf(collectionIds)
+            .modify({ deletedAt: now, updatedAt: now });
+        }
+      }, ops);
     } catch (err) {
       console.error("[store] failed to delete workspace:", err);
       return;
@@ -351,7 +456,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ workspaces: updated });
 
     try {
-      await db.workspaces.update(id, { order: newOrder, updatedAt: now });
+      await mutateWithOutbox(async () => {
+        await db.workspaces.update(id, { order: newOrder, updatedAt: now });
+      }, [
+        {
+          opId: crypto.randomUUID(),
+          entityType: "workspace",
+          entitySyncId: prev.syncId,
+          action: "update",
+          payload: { syncId: prev.syncId, order: newOrder, updatedAt: now, deletedAt: null },
+          createdAt: now,
+        },
+      ]);
     } catch (err) {
       console.error("[store] failed to reorder workspace:", err);
       set({ workspaces: [...workspaces].sort(compareByOrder) });
@@ -362,8 +478,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   createCollection: async (name) => {
     const validName = validateName(name);
     if (!validName) return;
-    const { activeWorkspaceId, collections } = get();
+    const { activeWorkspaceId, collections, workspaces } = get();
     if (activeWorkspaceId == null) return;
+
+    const parentWs = workspaces.find((w) => w.id === activeWorkspaceId);
 
     const sorted = [...collections].sort(compareByOrder);
     const firstOrder = sorted.length > 0 ? sorted[0].order : null;
@@ -378,12 +496,31 @@ export const useAppStore = create<AppState>((set, get) => ({
       createdAt: now,
       updatedAt: now,
     };
-    const id = await db.tabCollections.add(collection);
-    collection.id = id as number;
+    let newId: number;
+    await mutateWithOutbox(async () => {
+      newId = (await db.tabCollections.add(collection)) as number;
+    }, [
+      {
+        opId: crypto.randomUUID(),
+        entityType: "collection",
+        entitySyncId: collection.syncId,
+        action: "create",
+        payload: {
+          syncId: collection.syncId,
+          parentSyncId: parentWs!.syncId,
+          name: validName,
+          order: newOrder,
+          updatedAt: now,
+          deletedAt: null,
+        },
+        createdAt: now,
+      },
+    ]);
+    collection.id = newId!;
 
     const { tabsByCollection } = get();
     const newMap = new Map(tabsByCollection);
-    newMap.set(id as number, []);
+    newMap.set(newId!, []);
     set({
       collections: [...get().collections, collection],
       tabsByCollection: newMap,
@@ -405,7 +542,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     try {
-      await db.tabCollections.update(id, { name: validName, updatedAt: now });
+      await mutateWithOutbox(async () => {
+        await db.tabCollections.update(id, { name: validName, updatedAt: now });
+      }, [
+        {
+          opId: crypto.randomUUID(),
+          entityType: "collection",
+          entitySyncId: prev.syncId,
+          action: "update",
+          payload: {
+            syncId: prev.syncId,
+            parentSyncId: prev.workspaceSyncId ?? "",
+            name: validName,
+            order: prev.order,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        },
+      ]);
     } catch (err) {
       console.error("[store] failed to rename collection:", err);
       set({ collections: collections.map((c) => (c.id === id ? prev : c)) });
@@ -417,11 +572,40 @@ export const useAppStore = create<AppState>((set, get) => ({
     const collection = collections.find((c) => c.id === id);
     if (!collection) return;
 
+    const now = Date.now();
+    const tabs = await db.collectionTabs
+      .where("collectionId")
+      .equals(id)
+      .filter((t) => !t.deletedAt)
+      .toArray();
+
+    const ops: SyncOpInput[] = [
+      {
+        opId: crypto.randomUUID(),
+        entityType: "collection",
+        entitySyncId: collection.syncId,
+        action: "delete",
+        payload: { syncId: collection.syncId, updatedAt: now },
+        createdAt: now,
+      },
+      ...tabs.map((t) => ({
+        opId: crypto.randomUUID(),
+        entityType: "tab" as const,
+        entitySyncId: t.syncId,
+        action: "delete" as const,
+        payload: { syncId: t.syncId, updatedAt: now },
+        createdAt: now,
+      })),
+    ];
+
     try {
-      await db.transaction("rw", [db.tabCollections, db.collectionTabs], async () => {
-        await db.collectionTabs.where("collectionId").equals(id).delete();
-        await db.tabCollections.delete(id);
-      });
+      await mutateWithOutbox(async () => {
+        await db.tabCollections.update(id, { deletedAt: now, updatedAt: now });
+        await db.collectionTabs
+          .where("collectionId")
+          .equals(id)
+          .modify({ deletedAt: now, updatedAt: now });
+      }, ops);
     } catch (err) {
       console.error("[store] failed to delete collection:", err);
       return;
@@ -448,7 +632,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ collections: updated });
 
     try {
-      await db.tabCollections.update(id, { order: newOrder, updatedAt: now });
+      await mutateWithOutbox(async () => {
+        await db.tabCollections.update(id, { order: newOrder, updatedAt: now });
+      }, [
+        {
+          opId: crypto.randomUUID(),
+          entityType: "collection",
+          entitySyncId: prev.syncId,
+          action: "update",
+          payload: {
+            syncId: prev.syncId,
+            parentSyncId: prev.workspaceSyncId ?? "",
+            name: prev.name,
+            order: newOrder,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        },
+      ]);
     } catch (err) {
       console.error("[store] failed to reorder collection:", err);
       set({ collections: [...collections].sort(compareByOrder) });
@@ -457,10 +659,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Tab mutations
   addTabToCollection: async (collectionId, tab) => {
-    const { tabsByCollection } = get();
+    const { tabsByCollection, collections } = get();
     const existingTabs = tabsByCollection.get(collectionId) ?? [];
 
     if (existingTabs.some((t) => t.url === tab.url)) return;
+
+    const parentCol = collections.find((c) => c.id === collectionId);
 
     const lastOrder = existingTabs.length > 0 ? existingTabs[existingTabs.length - 1].order : null;
     const newOrder = generateKeyBetween(lastOrder, null);
@@ -476,8 +680,29 @@ export const useAppStore = create<AppState>((set, get) => ({
       createdAt: now,
       updatedAt: now,
     };
-    const id = await db.collectionTabs.add(newTab);
-    newTab.id = id as number;
+    let newId: number;
+    await mutateWithOutbox(async () => {
+      newId = (await db.collectionTabs.add(newTab)) as number;
+    }, [
+      {
+        opId: crypto.randomUUID(),
+        entityType: "tab",
+        entitySyncId: newTab.syncId,
+        action: "create",
+        payload: {
+          syncId: newTab.syncId,
+          parentSyncId: parentCol!.syncId,
+          url: tab.url,
+          title: tab.title,
+          favIconUrl: tab.favIconUrl,
+          order: newOrder,
+          updatedAt: now,
+          deletedAt: null,
+        },
+        createdAt: now,
+      },
+    ]);
+    newTab.id = newId!;
 
     const newMap = new Map(get().tabsByCollection);
     newMap.set(collectionId, [...(newMap.get(collectionId) ?? []), newTab]);
@@ -488,6 +713,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { tabsByCollection, collections } = get();
     const prevTabs = tabsByCollection.get(collectionId);
     if (!prevTabs) return;
+
+    const tab = prevTabs.find((t) => t.id === tabId);
+    if (!tab) return;
+
+    const parentCol = collections.find((c) => c.id === collectionId);
+    if (!parentCol) return;
 
     const now = Date.now();
     const newMap = new Map(tabsByCollection);
@@ -501,8 +732,34 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     try {
-      await db.collectionTabs.delete(tabId);
-      await db.tabCollections.update(collectionId, { updatedAt: now });
+      await mutateWithOutbox(async () => {
+        await db.collectionTabs.update(tabId, { deletedAt: now, updatedAt: now });
+        await db.tabCollections.update(collectionId, { updatedAt: now });
+      }, [
+        {
+          opId: crypto.randomUUID(),
+          entityType: "tab",
+          entitySyncId: tab.syncId,
+          action: "delete",
+          payload: { syncId: tab.syncId, updatedAt: now },
+          createdAt: now,
+        },
+        {
+          opId: crypto.randomUUID(),
+          entityType: "collection",
+          entitySyncId: parentCol.syncId,
+          action: "update",
+          payload: {
+            syncId: parentCol.syncId,
+            parentSyncId: parentCol.workspaceSyncId ?? "",
+            name: parentCol.name,
+            order: parentCol.order,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        },
+      ]);
     } catch (err) {
       console.error("[store] failed to remove tab:", err);
       const revertMap = new Map(get().tabsByCollection);
@@ -526,7 +783,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ tabsByCollection: newMap });
 
     try {
-      await db.collectionTabs.update(tabId, { order: newOrder, updatedAt: now });
+      const tab = prevTabs.find((t) => t.id === tabId);
+      await mutateWithOutbox(async () => {
+        await db.collectionTabs.update(tabId, { order: newOrder, updatedAt: now });
+      }, [
+        {
+          opId: crypto.randomUUID(),
+          entityType: "tab",
+          entitySyncId: tab!.syncId,
+          action: "update",
+          payload: {
+            syncId: tab!.syncId,
+            order: newOrder,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        },
+      ]);
     } catch (err) {
       console.error("[store] failed to reorder tab:", err);
       const revertMap = new Map(get().tabsByCollection);
@@ -552,7 +826,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ tabsByCollection: newMap });
 
     try {
-      await db.collectionTabs.update(tabId, { ...updates, updatedAt: now });
+      const tab = prevTabs[tabIndex];
+      await mutateWithOutbox(async () => {
+        await db.collectionTabs.update(tabId, { ...updates, updatedAt: now });
+      }, [
+        {
+          opId: crypto.randomUUID(),
+          entityType: "tab",
+          entitySyncId: tab.syncId,
+          action: "update",
+          payload: {
+            syncId: tab.syncId,
+            ...updates,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        },
+      ]);
     } catch (err) {
       console.error("[store] failed to update tab:", err);
       const revertMap = new Map(get().tabsByCollection);
@@ -564,8 +855,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   saveTabsAsCollection: async (name, tabs) => {
     const validName = validateName(name);
     if (!validName || tabs.length === 0) return;
-    const { activeWorkspaceId, collections } = get();
+    const { activeWorkspaceId, collections, workspaces } = get();
     if (activeWorkspaceId == null) return;
+
+    const parentWs = workspaces.find((w) => w.id === activeWorkspaceId);
 
     const sorted = [...collections].sort(compareByOrder);
     const firstCollectionOrder = sorted.length > 0 ? sorted[0].order : null;
@@ -598,25 +891,56 @@ export const useAppStore = create<AppState>((set, get) => ({
       prevTabOrder = tabOrder;
     }
 
-    try {
-      const collectionId = await db.transaction(
-        "rw",
-        [db.tabCollections, db.collectionTabs],
-        async () => {
-          const id = (await db.tabCollections.add(collection)) as number;
-          const withId = collectionTabs.map((t) => ({ ...t, collectionId: id }));
-          await db.collectionTabs.bulkAdd(withId);
-          return id;
+    const ops: SyncOpInput[] = [
+      {
+        opId: crypto.randomUUID(),
+        entityType: "collection",
+        entitySyncId: collection.syncId,
+        action: "create",
+        payload: {
+          syncId: collection.syncId,
+          parentSyncId: parentWs!.syncId,
+          name: validName,
+          order: collectionOrder,
+          updatedAt: now,
+          deletedAt: null,
         },
-      );
+        createdAt: now,
+      },
+      ...collectionTabs.map((t) => ({
+        opId: crypto.randomUUID(),
+        entityType: "tab" as const,
+        entitySyncId: t.syncId,
+        action: "create" as const,
+        payload: {
+          syncId: t.syncId,
+          parentSyncId: collection.syncId,
+          url: t.url,
+          title: t.title,
+          favIconUrl: t.favIconUrl,
+          order: t.order,
+          updatedAt: now,
+          deletedAt: null,
+        },
+        createdAt: now,
+      })),
+    ];
 
-      collection.id = collectionId;
+    try {
+      let collectionId: number;
+      await mutateWithOutbox(async () => {
+        collectionId = (await db.tabCollections.add(collection)) as number;
+        const withId = collectionTabs.map((t) => ({ ...t, collectionId: collectionId }));
+        await db.collectionTabs.bulkAdd(withId);
+      }, ops);
+
+      collection.id = collectionId!;
 
       // Reload from DB to get correct auto-increment IDs
-      const freshTabs = await activeTabs(collectionId).sortBy("order");
+      const freshTabs = await activeTabs(collectionId!).sortBy("order");
 
       const newMap = new Map(get().tabsByCollection);
-      newMap.set(collectionId, freshTabs);
+      newMap.set(collectionId!, freshTabs);
       set({
         collections: [...get().collections, collection],
         tabsByCollection: newMap,
@@ -664,11 +988,31 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ tabsByCollection: newMap });
 
     try {
-      await db.collectionTabs.update(tabId, {
-        collectionId: targetCollectionId,
-        order: targetOrder,
-        updatedAt: now,
-      });
+      const { collections } = get();
+      const targetCol = collections.find((c) => c.id === targetCollectionId);
+      await mutateWithOutbox(async () => {
+        await db.collectionTabs.update(tabId, {
+          collectionId: targetCollectionId,
+          order: targetOrder,
+          updatedAt: now,
+        });
+      }, [
+        {
+          opId: crypto.randomUUID(),
+          entityType: "tab",
+          entitySyncId: tab.syncId,
+          action: "update",
+          payload: {
+            syncId: tab.syncId,
+            parentSyncId: targetCol!.syncId,
+            collectionId: targetCollectionId,
+            order: targetOrder,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        },
+      ]);
     } catch (err) {
       console.error("[store] failed to move tab:", err);
       const revertMap = new Map(get().tabsByCollection);
@@ -701,6 +1045,29 @@ export const useAppStore = create<AppState>((set, get) => ({
       );
     } catch (err) {
       console.error("[store] failed to restore collection:", err);
+    }
+  },
+
+  refreshAfterSync: async () => {
+    try {
+      const workspaces = await db.workspaces
+        .orderBy("order")
+        .filter((w) => !w.deletedAt)
+        .toArray();
+      const currentActiveId = get().activeWorkspaceId;
+      const activeStillExists = workspaces.some((w) => w.id === currentActiveId);
+      const activeWorkspaceId = activeStillExists ? currentActiveId : (workspaces[0]?.id ?? null);
+
+      let collections: TabCollection[] = [];
+      const tabsByCollection = new Map<number, CollectionTab[]>();
+      if (activeWorkspaceId) {
+        collections = await loadCollections(activeWorkspaceId);
+        const loaded = await loadTabsByCollection(collections);
+        for (const [k, v] of loaded) tabsByCollection.set(k, v);
+      }
+      set({ workspaces, activeWorkspaceId, collections, tabsByCollection });
+    } catch {
+      console.warn("[store] refreshAfterSync skipped — auth state unavailable");
     }
   },
 }));
