@@ -135,6 +135,34 @@ async function mutateWithOutbox(
 
 After `mutateWithOutbox` succeeds, call `syncEngine.notifyChange()` via message to background.
 
+#### 1.6.1 Bulk Import Integration
+
+`import/execute.ts` currently uses a single large `db.transaction("rw", ...)` that creates workspaces, collections, and tabs in bulk (`execute.ts:61-148`). Converting to outbox-aware writes requires:
+
+1. **Generate `syncId`** for each newly created entity during import
+2. **Collect ops** as entities are created within the transaction
+3. **Write all ops to outbox** within the same transaction
+4. Consider a `bulkMutateWithOutbox` variant for efficiency:
+
+```typescript
+async function bulkMutateWithOutbox(
+  mutations: () => Promise<void>,
+  ops: SyncOpInput[]
+): Promise<void> {
+  await db.transaction("rw",
+    [db.workspaces, db.tabCollections, db.collectionTabs, db.syncOutbox],
+    async () => {
+      await mutations()
+      await db.syncOutbox.bulkAdd(
+        ops.map(op => ({ ...op, status: "pending", attemptCount: 0, lastError: null, nextRetryAt: null, syncedAt: null }))
+      )
+    }
+  )
+}
+```
+
+A single import can generate hundreds of ops. This is acceptable — the outbox is designed for batch processing (push sends up to 100 at a time, multiple rounds). The periodic cleanup (7 days after synced) prevents unbounded growth.
+
 ### 1.7 Soft Delete Cascade
 
 Deleting a workspace must soft-delete all children in the same transaction. Outbox ops are generated for each entity (workspace + all collections + all tabs):
@@ -145,7 +173,7 @@ Deleting a workspace must soft-delete all children in the same transaction. Outb
 
 ### 1.8 Active Query Helpers
 
-Unified `db-queries.ts` module used by app-store, export.ts, diff.ts, search-dialog.tsx:
+Unified `db-queries.ts` module. Create this module first, then do a single sweep to convert all consumers.
 
 ```typescript
 function activeWorkspaces(accountId: string) {
@@ -157,6 +185,18 @@ function activeWorkspaces(accountId: string) {
 // activeCollections(workspaceId), activeTabs(collectionId) — same pattern
 ```
 
+**Consumer audit — every call site that needs conversion:**
+
+| File | Line | Current Pattern | Required Change |
+|------|------|-----------------|-----------------|
+| `src/stores/app-store.ts` | Multiple | `db.workspaces.*`, `db.tabCollections.*`, `db.collectionTabs.*` | Use active helpers for all reads |
+| `src/components/layout/search-dialog.tsx` | :39 | `db.collectionTabs.filter(...)` — no deletedAt check | Use `activeTabs()` or add `.filter(!deletedAt)` |
+| `src/lib/export.ts` | :5 | `db.workspaces.orderBy("order").toArray()` — no deletedAt check | Use `activeWorkspaces()` |
+| `src/lib/import/diff.ts` | :3+ | Queries all three tables for diff | Use active helpers for all reads |
+| `src/lib/import/execute.ts` | :52+ | `db.collectionTabs.bulkAdd()` — writes without syncId/deletedAt | See Section 1.6.1 for bulk import integration |
+
+After conversion, run `pnpm lint` and grep for direct `db.workspaces`/`db.tabCollections`/`db.collectionTabs` reads outside of `db-queries.ts` and `mutateWithOutbox` to catch any remaining unconverted consumers.
+
 JS-layer `.filter(!deletedAt)` is acceptable because soft-deleted records are a tiny fraction. Periodic physical cleanup (7 days after synced) keeps the ratio low.
 
 ### 1.9 Settings Extension
@@ -167,6 +207,8 @@ interface AppSettings {
   sync_polling_interval: number  // default: 600_000 (10min), clamped [60_000, 3_600_000]
 }
 ```
+
+Add to `DEFAULTS` object and `KEYS` array in `settings.ts`. No DB migration needed — `getSettings()` already spreads `DEFAULTS` over stored values, so existing users without this key get the default automatically.
 
 ---
 
@@ -300,14 +342,47 @@ Validation: if `payload.syncId !== entitySyncId`, reject with BAD_REQUEST.
 
 ### 2.7 Context Extension
 
-Extend `packages/api/src/context.ts` to include `syncRepo: SyncRepository`. Follows existing `createContextFactory` pattern. Server injects `new SqliteSyncRepository(db)` at startup.
+Current `createContextFactory` only accepts `auth: Auth` (`packages/api/src/context.ts:8`). Must change to accept `{ auth, syncRepo }`:
+
+```typescript
+// packages/api/src/context.ts
+interface CreateContextOptions {
+  auth: Auth
+  syncRepo: SyncRepository
+}
+
+export function createContextFactory({ auth, syncRepo }: CreateContextOptions) {
+  return async ({ req }: { req: Request }): Promise<Context> => {
+    const session = await auth.api.getSession({ headers: req.headers })
+    return {
+      session,
+      user: session?.user ?? null,
+      syncRepo,
+    }
+  }
+}
+```
+
+`apps/server/src/app.ts` must instantiate `SqliteSyncRepository` and pass it:
+
+```typescript
+// apps/server/src/app.ts
+const syncRepo = new SqliteSyncRepository(db)
+const createContext = createContextFactory({ auth, syncRepo })
+```
 
 Router uses `ctx.user!.id` (guaranteed non-null by `protectedProcedure`).
 
 ### 2.8 Package Exports
 
+Currently `packages/db/package.json` only exports `"."` and `"./schema"`. The following must all land in the same implementation step to avoid broken imports:
+
+1. Create `packages/db/src/schema/sync.ts` with full schema (replace placeholder)
+2. Uncomment `export * from "./sync.js"` in `packages/db/src/schema/index.ts`
+3. Create `packages/db/src/repo/` directory with `index.ts`, `sync-repository.ts` (interface), `sqlite-sync-repository.ts`
+4. Add new export paths to `packages/db/package.json`:
+
 ```jsonc
-// packages/db/package.json exports
 {
   ".": "./src/index.ts",
   "./schema": "./src/schema/index.ts",
@@ -315,6 +390,8 @@ Router uses `ctx.user!.id` (guaranteed non-null by `protectedProcedure`).
   "./repo": "./src/repo/index.ts"
 }
 ```
+
+5. Run `pnpm lint` across the monorepo to verify no broken imports before proceeding.
 
 ---
 
@@ -511,18 +588,21 @@ test: broadcastSyncApplied — SYNC_APPLIED message sent after pull with changes
 ## Implementation Order
 
 1. **Dexie v4 schema + migration** (Section 1.1-1.3)
-2. **Active query helpers + soft delete cascade** (Section 1.7-1.8) — must land before any app-store changes
-3. **mutateWithOutbox + app-store integration** (Section 1.6) — convert all write paths including import
-4. **Server Drizzle schema + migration** (Section 2.1)
-5. **SqliteSyncRepository** (Section 2.2-2.5)
-6. **tRPC sync router + context extension** (Section 2.6-2.7)
-7. **Server E2E tests** (Section 4.4)
-8. **SyncEngine** (Section 3.2-3.8)
-9. **Background integration + MSG constants** (Section 3.9-3.10)
-10. **useSync hook + tabs integration** (Section 3.1)
-11. **Settings UI + alarm lifecycle** (Section 4.1-4.2)
-12. **SyncEngine integration tests** (Section 4.5)
-13. **Migration regression tests** (Section 4.3)
+2. **Active query helpers** (Section 1.8) — create `db-queries.ts`, convert all consumers (see audit list)
+3. **Soft delete cascade** (Section 1.7) — must land before app-store outbox integration
+4. **mutateWithOutbox + app-store integration** (Section 1.6) — convert all write paths
+5. **Bulk import integration** (Section 1.6.1) — convert `execute.ts` to use `bulkMutateWithOutbox`
+6. **Server Drizzle schema + package exports** (Section 2.1, 2.8) — schema, uncomment re-export, create repo dir, update package.json exports — all in one step. Run `pnpm lint` to verify.
+7. **SqliteSyncRepository** (Section 2.2-2.5)
+8. **Context factory extension** (Section 2.7) — change `createContextFactory` signature, update `apps/server/src/app.ts` to pass `syncRepo`
+9. **tRPC sync router** (Section 2.6) — depends on context having `syncRepo`
+10. **Server E2E tests** (Section 4.4)
+11. **SyncEngine** (Section 3.2-3.8)
+12. **Background integration + MSG constants** (Section 3.9-3.10)
+13. **useSync hook + tabs integration** (Section 3.1)
+14. **Settings UI + alarm lifecycle** (Section 4.1-4.2)
+15. **SyncEngine integration tests** (Section 4.5)
+16. **Migration regression tests** (Section 4.3)
 
 ## Future Iterations
 
