@@ -2,6 +2,7 @@ import { trpcServer } from "@hono/trpc-server";
 import { appRouter, createContextFactory } from "@opentab/api";
 import { createAuth } from "@opentab/auth";
 import { createDb } from "@opentab/db";
+import { SqliteSyncRepository } from "@opentab/db/repo";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -33,7 +34,8 @@ const auth = createAuth({
   },
 });
 
-const createContext = createContextFactory(auth);
+const syncRepo = new SqliteSyncRepository(db);
+const createContext = createContextFactory({ auth, syncRepo });
 
 export const app = new Hono();
 

@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema/index.ts"
+    "./schema": "./src/schema/index.ts",
+    "./schema/sync": "./src/schema/sync.ts",
+    "./repo": "./src/repo/index.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",
