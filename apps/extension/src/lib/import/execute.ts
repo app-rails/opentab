@@ -44,6 +44,7 @@ async function addTabsToCollection(collectionId: number, tabs: ImportTab[]): Pro
       title: tab.title,
       favIconUrl: tab.favIconUrl,
       order,
+      syncId: crypto.randomUUID(),
       createdAt: now,
       updatedAt: now,
     };
@@ -73,6 +74,7 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
           name: wsPlan.name,
           icon: wsPlan.icon ?? "folder",
           order: generateKeyBetween(lastWsOrder, null),
+          syncId: crypto.randomUUID(),
           createdAt: now,
           updatedAt: now,
         })) as number;
@@ -97,6 +99,7 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
             workspaceId: wsId,
             name: colPlan.name,
             order,
+            syncId: crypto.randomUUID(),
             createdAt: now,
             updatedAt: now,
           })) as number;

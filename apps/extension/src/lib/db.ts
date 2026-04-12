@@ -16,6 +16,9 @@ export interface Workspace {
   icon: string;
   order: string;
   viewMode?: ViewMode;
+  syncId: string;
+  deletedAt?: number | null;
+  lastOpId?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -25,6 +28,10 @@ export interface TabCollection {
   workspaceId: number;
   name: string;
   order: string;
+  syncId: string;
+  workspaceSyncId?: string;
+  deletedAt?: number | null;
+  lastOpId?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -36,8 +43,32 @@ export interface CollectionTab {
   title: string;
   favIconUrl?: string;
   order: string;
+  syncId: string;
+  collectionSyncId?: string;
+  deletedAt?: number | null;
+  lastOpId?: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface SyncOp {
+  id?: number;
+  opId: string;
+  entityType: "workspace" | "collection" | "tab";
+  entitySyncId: string;
+  action: "create" | "update" | "delete";
+  payload: Record<string, unknown>;
+  status: "pending" | "synced" | "failed" | "dead";
+  attemptCount: number;
+  lastError: string | null;
+  nextRetryAt: number | null;
+  createdAt: number;
+  syncedAt: number | null;
+}
+
+export interface SyncMeta {
+  key: string;
+  value: unknown;
 }
 
 export interface Setting {
@@ -58,6 +89,8 @@ const db = new Dexie("OpenTabDB") as Dexie & {
   collectionTabs: EntityTable<CollectionTab, "id">;
   settings: EntityTable<Setting, "key">;
   importSessions: EntityTable<ImportSession, "id">;
+  syncOutbox: EntityTable<SyncOp, "id">;
+  syncMeta: EntityTable<SyncMeta, "key">;
 };
 
 db.version(1).stores({
@@ -141,6 +174,60 @@ db.version(3)
       for (const r of records) {
         await tx.table(tableName).update(r.id, { updatedAt: r.createdAt });
       }
+    }
+  });
+
+db.version(4)
+  .stores({
+    accounts: "++id, accountId",
+    workspaces: "++id, &syncId, accountId, order, [accountId+order], deletedAt",
+    tabCollections: "++id, &syncId, workspaceId, workspaceSyncId, [workspaceId+order], deletedAt",
+    collectionTabs:
+      "++id, &syncId, collectionId, collectionSyncId, [collectionId+order], deletedAt",
+    settings: "key",
+    importSessions: "++id, createdAt",
+    syncOutbox: "++id, &opId, [status+createdAt], [status+nextRetryAt], [status+syncedAt]",
+    syncMeta: "key",
+  })
+  .upgrade(async (tx) => {
+    // Step 1: Workspaces — generate syncId, backfill deletedAt/lastOpId
+    const workspaces = await tx.table("workspaces").toArray();
+    for (const ws of workspaces) {
+      await tx.table("workspaces").update(ws.id, {
+        syncId: crypto.randomUUID(),
+        deletedAt: null,
+        lastOpId: "",
+      });
+    }
+
+    // Step 2: Collections — generate syncId, look up workspace.syncId for workspaceSyncId
+    const wsMap = new Map<number, string>();
+    const updatedWs = await tx.table("workspaces").toArray();
+    for (const ws of updatedWs) wsMap.set(ws.id, ws.syncId);
+
+    const collections = await tx.table("tabCollections").toArray();
+    for (const col of collections) {
+      await tx.table("tabCollections").update(col.id, {
+        syncId: crypto.randomUUID(),
+        workspaceSyncId: wsMap.get(col.workspaceId) ?? "",
+        deletedAt: null,
+        lastOpId: "",
+      });
+    }
+
+    // Step 3: Tabs — generate syncId, look up collection.syncId for collectionSyncId
+    const colMap = new Map<number, string>();
+    const updatedCols = await tx.table("tabCollections").toArray();
+    for (const col of updatedCols) colMap.set(col.id, col.syncId);
+
+    const tabs = await tx.table("collectionTabs").toArray();
+    for (const tab of tabs) {
+      await tx.table("collectionTabs").update(tab.id, {
+        syncId: crypto.randomUUID(),
+        collectionSyncId: colMap.get(tab.collectionId) ?? "",
+        deletedAt: null,
+        lastOpId: "",
+      });
     }
   });
 

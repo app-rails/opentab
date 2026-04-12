@@ -233,6 +233,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       name: validName,
       icon: validatedIcon(icon),
       order: newOrder,
+      syncId: crypto.randomUUID(),
       createdAt: now,
       updatedAt: now,
     };
@@ -380,6 +381,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       workspaceId: activeWorkspaceId,
       name: validName,
       order: newOrder,
+      syncId: crypto.randomUUID(),
       createdAt: now,
       updatedAt: now,
     };
@@ -477,6 +479,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       title: tab.title,
       favIconUrl: tab.favIconUrl,
       order: newOrder,
+      syncId: crypto.randomUUID(),
       createdAt: now,
       updatedAt: now,
     };
@@ -580,6 +583,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       workspaceId: activeWorkspaceId,
       name: validName,
       order: collectionOrder,
+      syncId: crypto.randomUUID(),
       createdAt: now,
       updatedAt: now,
     };
@@ -594,6 +598,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         title: tab.title,
         favIconUrl: tab.favIconUrl,
         order: tabOrder,
+        syncId: crypto.randomUUID(),
         createdAt: now,
         updatedAt: now,
       });
