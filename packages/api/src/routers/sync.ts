@@ -34,7 +34,7 @@ const deletePayload = z.object({
   deletedAt: z.number(),
 });
 
-const syncOpSchema = z.discriminatedUnion("entityType", [
+const syncOpSchema = z.union([
   z.object({
     opId: z.string(),
     entityType: z.literal("workspace"),
