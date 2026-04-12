@@ -540,7 +540,9 @@ Changes are processed in seq order within each batch. If a create is deferred be
 
 ### 3.6 fullReset (cursor expired)
 
-**Serialization with user writes:** fullReset's Dexie transaction operates on `[db.workspaces, db.tabCollections, db.collectionTabs, db.syncMeta]` — the same stores used by `mutateWithOutbox`. Dexie serializes overlapping `"rw"` transactions on the same stores, so a concurrent `mutateWithOutbox` call will block until fullReset's transaction completes (and vice versa). This provides implicit write serialization without needing an additional application-level lock for user writes. The TTL lease lock in syncMeta only guards against concurrent fullReset calls (e.g. from duplicate alarm triggers), not user writes.
+**Serialization with user writes:** fullReset's Dexie transaction (step 3) operates on `[db.workspaces, db.tabCollections, db.collectionTabs, db.syncMeta]` — the same stores used by `mutateWithOutbox`. Dexie serializes overlapping `"rw"` transactions on the same stores, so during step 3, concurrent `mutateWithOutbox` calls block until the transaction completes. The TTL lease lock in syncMeta only guards against concurrent fullReset calls (e.g. from duplicate alarm triggers).
+
+**Note: step 2 (snapshot fetch) is NOT protected.** Between snapshot fetch and the Dexie transaction, user writes via `mutateWithOutbox` are NOT blocked. A concurrent write during this window will be cleared from Dexie by step 3, but preserved in the outbox — the server receives the op via push (step 4), and the next pull restores the entity locally. This is a brief local inconsistency (entity invisible until next pull), not data loss.
 
 1. Acquire TTL lease lock via syncMeta (`lock:fullReset`, 30s TTL)
 2. Call `trpc.sync.snapshot.query()` (network call, outside transaction)
@@ -715,7 +717,9 @@ test: refreshAfterSync — falls back to first workspace when active workspace d
 
 ## Appendix A: Write Path Conversion Checklist
 
-Every write to sync-enabled tables must go through `mutateWithOutbox` (or `bulkMutateWithOutbox` for import). This is the exhaustive list of call sites.
+Every **user-initiated** write to sync-enabled tables must go through `mutateWithOutbox` (or `bulkMutateWithOutbox` for import). This is the exhaustive list of call sites.
+
+**Exception: SyncEngine writes are exempt.** `applyRemoteChange` (Section 3.5), `fullReset` (Section 3.6), and auto-create default workspace (Section 3.5 delete edge case) write directly to Dexie without `mutateWithOutbox`. These are incoming sync state, not user mutations — generating outbox ops for them would create an infinite sync loop (pull applies changes → outbox ops generated → pushed back → re-pulled → ...).
 
 ### app-store.ts — Standalone writes (need wrapping in mutateWithOutbox)
 
