@@ -281,6 +281,7 @@ interface SyncRepository {
 interface PushResult {
   accepted: number
   duplicates: string[]  // opIds that were already applied
+  error: { opId: string; message: string } | null  // null if all succeeded; set if op N failed
 }
 
 interface PullResult {
@@ -322,6 +323,17 @@ Per-op transaction: `insert appliedOps` → `applyOp` → `insert changeLog`.
 - `appliedOps` unique constraint violation → catch error → record as duplicate → skip
 - If `applyOp` succeeds but `changeLog` insert fails → entire transaction rolls back → `appliedOps` also rolls back → client can safely retry
 - If `applyOp` fails → transaction rolls back → `appliedOps` also rolls back → client can retry
+
+**Partial failure behavior:** `pushOps` processes all ops sequentially. If op N fails (non-duplicate error), remaining ops N+1..M are skipped. Returns `{ accepted: <count before failure>, duplicates: [...], error: { opId, message } | null }`. The client marks accepted + duplicate ops as synced, and only the failed op + unprocessed ops remain for retry. This avoids retrying already-accepted ops.
+
+Update `PushResult`:
+```typescript
+interface PushResult {
+  accepted: number
+  duplicates: string[]
+  error: { opId: string; message: string } | null  // null if all succeeded
+}
+```
 
 ### 2.4 applyOp — LWW Rules
 
@@ -369,7 +381,17 @@ export const syncRouter = router({
 
 **Strongly typed payload** — `z.union([...])` with 9 variants (3 entityTypes x 3 actions). Each create/update variant requires: `syncId`, `parentSyncId` (collections/tabs), `name`/`url`/`title` (per type), `order`, `updatedAt`, `deletedAt`. Workspace create/update also includes `icon` and `viewMode` (nullable). Delete variant requires: `syncId`, `updatedAt`.
 
-Validation: if `payload.syncId !== entitySyncId`, reject with BAD_REQUEST.
+**Validation rules:**
+- If `payload.syncId !== entitySyncId`, reject with BAD_REQUEST.
+- For collection create/update: verify `payload.parentSyncId` (workspaceSyncId) exists in `workspaces` table for `ctx.user.id`. Reject with BAD_REQUEST if parent not found or owned by different user.
+- For tab create/update: verify `payload.parentSyncId` (collectionSyncId) exists in `tabCollections` table for `ctx.user.id`. Reject with BAD_REQUEST if parent not found or owned by different user.
+- This prevents cross-user reference attacks where a malicious client sets parentSyncId to another user's entity UUID.
+
+**Server-side rate limiting** (per authenticated userId):
+- `sync.push`: max 10 requests/minute, `ops.length <= 100` enforced server-side (in addition to Zod `.max(100)`)
+- `sync.pull`: max 6 requests/minute
+- `sync.snapshot`: max 1 request/5 minutes
+- Implementation: in-memory counter per userId (simple Map with TTL cleanup), or `hono-rate-limiter` middleware. Rate limit errors return tRPC `TOO_MANY_REQUESTS` code; client should respect `Retry-After` header.
 
 ### 2.7 Context Extension
 
@@ -479,11 +501,19 @@ sync():
 
 ### 3.4 Push Flow
 
-1. Query outbox: `[status+createdAt]` between `["pending", minKey]` and `["pending", maxKey]`, limit 100
-2. Call `trpc.sync.push.mutate({ ops })`
-3. Mark accepted + duplicate opIds as `status: "synced", syncedAt: now`
-4. On network error: mark as `status: "failed"`, increment `attemptCount`, set `nextRetryAt` with exponential backoff (max 5min)
-5. **On UNAUTHORIZED error**: do NOT mark ops as failed. Instead call `clearAuthState()` then `initializeAuth()` to re-authenticate (anonymous sign-in gets a fresh token). If re-auth succeeds, retry the push immediately. If re-auth fails, pause sync and broadcast `MSG.SYNC_AUTH_REQUIRED` so the UI can show a status indicator. Do not retry until re-auth succeeds.
+Push loops until the outbox is drained or a time/error limit is hit:
+
+1. **Loop**: Query outbox `[status+createdAt]` between `["pending", minKey]` and `["pending", maxKey]`, limit 100
+2. If no pending ops, exit loop
+3. Call `trpc.sync.push.mutate({ ops })`
+4. Mark accepted + duplicate opIds as `status: "synced", syncedAt: now`
+5. If `result.error`: mark the failed op + remaining unprocessed ops for retry (see Section 2.3 partial failure), exit loop
+6. On network error: mark batch as `status: "failed"`, increment `attemptCount`, set `nextRetryAt` with exponential backoff (max 5min), exit loop
+7. **On UNAUTHORIZED error**: do NOT mark ops as failed. Instead call `clearAuthState()` then `initializeAuth()` to re-authenticate (anonymous sign-in gets a fresh token). If re-auth succeeds, retry the push immediately. If re-auth fails, pause sync and broadcast `MSG.SYNC_AUTH_REQUIRED` so the UI can show a status indicator. Do not retry until re-auth succeeds.
+8. **Safety bound**: exit loop after 30 seconds total elapsed or 10 consecutive batches, whichever comes first. Remaining ops are picked up on next sync cycle.
+9. Continue loop (back to step 1)
+
+This ensures large outbox backlogs (e.g. after import or initial bootstrap) drain in a single sync cycle rather than waiting for polling intervals.
 
 ### 3.5 Pull Flow
 
@@ -532,9 +562,28 @@ Query `[status+nextRetryAt]` between `["failed", minKey]` and `["failed", now]`.
 
 ### 3.8 Outbox Cleanup
 
-Periodic (on alarm): delete synced ops where `syncedAt < now - 7 days`. Uses `[status+syncedAt]` index.
+Periodic (on alarm): delete synced and dead ops where `syncedAt < now - 7 days` (synced) or `createdAt < now - 7 days` (dead). Uses `[status+syncedAt]` index.
 
-### 3.9 MSG Constants
+### 3.9 Initial Sync Bootstrap
+
+When `server_enabled` is toggled ON for the first time (or when `lastPulledCursor` is null/absent AND outbox is empty), the user's pre-existing local data must be uploaded to the server. Without this step, only changes made after enabling sync would be pushed — pre-existing workspaces, collections, and tabs would remain local-only.
+
+**Bootstrap procedure:**
+
+1. Check guard: `syncMeta.get("initialPushCompleted")`. If truthy, skip.
+2. Query all active entities from Dexie (using active query helpers):
+   - All workspaces for current accountId
+   - All collections for those workspaces
+   - All tabs for those collections
+3. Generate `"create"` ops in parent-first order (workspaces → collections → tabs) to ensure server-side parent references are valid
+4. Insert all ops into `syncOutbox` via `bulkMutateWithOutbox` (single transaction, no entity mutations — only outbox writes)
+5. Set `syncMeta.put({ key: "initialPushCompleted", value: true })`
+6. Trigger `sync()` to push them
+
+**This is a one-time operation.** The `initialPushCompleted` flag prevents re-generation on subsequent service worker restarts. If the user disables and re-enables sync, the flag persists — their data was already pushed during the first enable.
+
+### 3.10 MSG Constants
+
 
 Add to `apps/extension/src/lib/constants.ts`:
 
@@ -545,7 +594,7 @@ SYNC_INTERVAL_CHANGED: "SYNC_INTERVAL_CHANGED"
 SYNC_AUTH_REQUIRED: "SYNC_AUTH_REQUIRED"
 ```
 
-### 3.10 Background Integration
+### 3.11 Background Integration
 
 ```typescript
 // background.ts additions:
@@ -633,6 +682,10 @@ test: pull resetRequired — cursor below retention window → resetRequired=tru
 test: snapshot — returns all entities (including soft-deleted) for user + current max seq
 test: push cascade delete — workspace + children all recorded in changeLog
 test: push payload validation — mismatched payload.syncId vs entitySyncId → BAD_REQUEST
+test: push parentSyncId validation — collection with non-existent parent → BAD_REQUEST
+test: push parentSyncId cross-user — collection referencing other user's workspace → BAD_REQUEST
+test: push partial failure — op 3 of 5 fails → accepted=2, error set, ops 4-5 unprocessed
+test: push rate limit — 11th push within 1 minute → TOO_MANY_REQUESTS
 ```
 
 ### 4.5 SyncEngine Integration Tests (mock tRPC)
@@ -649,6 +702,13 @@ test: fullReset lock — concurrent fullReset returns immediately
 test: syncIfNeeded — skips when within polling interval
 test: reentrance guard — concurrent sync() calls don't double-execute
 test: broadcastSyncApplied — SYNC_APPLIED message sent after pull with changes
+test: initialBootstrap — pre-existing local data generates create ops and pushes to server
+test: initialBootstrap guard — second enable skips bootstrap (initialPushCompleted flag)
+test: push loop — 300 pending ops drain in single sync cycle (3 batches of 100)
+test: push loop safety — exits after 30s or 10 batches
+test: dead ops — ops exceeding 20 attempts marked dead, not retried
+test: refreshAfterSync — preserves activeWorkspaceId when workspace still exists
+test: refreshAfterSync — falls back to first workspace when active workspace deleted
 ```
 
 ---
@@ -712,12 +772,15 @@ All execute.ts writes (#17-22) are inside a single `db.transaction("rw", ...)` a
 8. **Context factory extension** (Section 2.7) — change `createContextFactory` signature, update `apps/server/src/app.ts` to pass `syncRepo`
 9. **tRPC sync router** (Section 2.6) — depends on context having `syncRepo`
 10. **Server E2E tests** (Section 4.4)
-11. **SyncEngine** (Section 3.2-3.8)
-12. **Background integration + MSG constants** (Section 3.9-3.10)
-13. **useSync hook + tabs integration** (Section 3.1)
-14. **Settings UI + alarm lifecycle** (Section 4.1-4.2)
-15. **SyncEngine integration tests** (Section 4.5)
-16. **Migration regression tests** (Section 4.3)
+11. **SyncEngine core** (Section 3.2-3.8) — push loop, pull with deferred changes, fullReset, retry, cleanup
+12. **Initial sync bootstrap** (Section 3.9) — one-time upload of pre-existing local data
+13. **store.refreshAfterSync()** (Section 3.1) — new store method that preserves activeWorkspaceId
+14. **Background integration + MSG constants** (Section 3.10-3.11)
+15. **useSync hook + tabs integration** (Section 3.1)
+16. **Settings UI + alarm lifecycle + outbox indicators** (Section 4.1-4.2.1)
+17. **Server E2E tests** (Section 4.4) — including parentSyncId validation, partial failure, rate limit
+18. **SyncEngine integration tests** (Section 4.5) — including bootstrap, push loop, dead ops, refreshAfterSync
+19. **Migration regression tests** (Section 4.3)
 
 ## Future Iterations
 
