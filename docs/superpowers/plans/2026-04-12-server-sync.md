@@ -18,6 +18,7 @@
 |------|--------|----------------|
 | `apps/extension/src/lib/db.ts` | Modify | Add v4 schema + migration (syncId, deletedAt, lastOpId, outbox, syncMeta) |
 | `apps/extension/src/lib/db-queries.ts` | Create | Active query helpers (filter deletedAt for all reads) |
+| `apps/extension/src/lib/resolve-account-id.ts` | Create | Extract resolveAccountId() from app-store to avoid pulling Zustand into service worker |
 | `apps/extension/src/lib/mutate-with-outbox.ts` | Create | Atomic Dexie transaction: entity mutation + outbox write |
 | `apps/extension/src/lib/sync-engine.ts` | Create | Background-only SyncEngine (push/pull/retry/reset/bootstrap) |
 | `apps/extension/src/lib/settings.ts` | Modify | Add sync_polling_interval to AppSettings |
@@ -357,11 +358,41 @@ SYNC_INTERVAL_CHANGED: "SYNC_INTERVAL_CHANGED",
 SYNC_AUTH_REQUIRED: "SYNC_AUTH_REQUIRED",
 ```
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Extract resolveAccountId to standalone utility**
+
+Currently `resolveAccountId()` lives in `app-store.ts` (lines 58-63). Importing from app-store.ts pulls the entire Zustand store into the background service worker bundle. Extract to a standalone file:
+
+```typescript
+// apps/extension/src/lib/resolve-account-id.ts
+import { getAuthState } from "./auth-storage";
+
+export async function resolveAccountId(): Promise<string> {
+  const authState = await getAuthState();
+  if (authState?.mode === "online") return authState.accountId;
+  if (authState?.mode === "offline") return authState.localUuid;
+  throw new Error("Cannot resolve accountId: auth state is not available");
+}
+```
+
+Then update `app-store.ts` to import from the new file instead of defining it inline:
+
+```typescript
+// apps/extension/src/stores/app-store.ts — replace the local resolveAccountId with:
+import { resolveAccountId } from "@/lib/resolve-account-id";
+```
+
+Also update `import/execute.ts` which imports from app-store:
+```typescript
+// apps/extension/src/lib/import/execute.ts — change:
+// Old: import { resolveAccountId } from "@/stores/app-store";
+// New: import { resolveAccountId } from "@/lib/resolve-account-id";
+```
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add apps/extension/src/lib/settings.ts apps/extension/src/lib/constants.ts
-git commit -m "feat(extension): add sync_polling_interval setting and sync MSG constants"
+git add apps/extension/src/lib/settings.ts apps/extension/src/lib/constants.ts apps/extension/src/lib/resolve-account-id.ts apps/extension/src/stores/app-store.ts apps/extension/src/lib/import/execute.ts
+git commit -m "feat(extension): add sync settings, MSG constants, extract resolveAccountId utility"
 ```
 
 ---
@@ -1042,6 +1073,20 @@ private getTable(entityType: string) {
     default: throw new Error(`Unknown entity type: ${entityType}`);
   }
 }
+
+private extractEntityFields(op: PushOp): Record<string, unknown> {
+  const p = op.payload;
+  switch (op.entityType) {
+    case "workspace":
+      return { name: p.name, icon: p.icon ?? "", viewMode: p.viewMode, order: p.order, deletedAt: p.deletedAt };
+    case "collection":
+      return { name: p.name, order: p.order, workspaceSyncId: p.parentSyncId, deletedAt: p.deletedAt };
+    case "tab":
+      return { url: p.url, title: p.title, favIconUrl: p.favIconUrl, collectionSyncId: p.parentSyncId, order: p.order, deletedAt: p.deletedAt };
+    default:
+      throw new Error(`Unknown entity type: ${op.entityType}`);
+  }
+}
 ```
 
 - [ ] **Step 3: Implement pullChanges**
@@ -1406,7 +1451,7 @@ import { db } from "./db";
 import { getSettings } from "./settings";
 import { MSG } from "./constants";
 import { getExtensionTRPCClient } from "./trpc";
-import { resolveAccountId } from "../stores/app-store";
+import { resolveAccountId } from "./resolve-account-id";
 import { initializeAuth } from "./auth-manager";
 import { getAuthState, clearAuthState } from "./auth-storage";
 import { activeWorkspaces, activeCollections, activeTabs } from "./db-queries";
@@ -1623,7 +1668,15 @@ private async applyCreateOrUpdate(change: ChangeEntry): Promise<boolean> {
       if (existing) {
         if (existing.updatedAt > (payload.updatedAt as number)) return;
         if (existing.updatedAt === payload.updatedAt && (existing.lastOpId ?? "") >= change.opId) return;
-        await db.workspaces.update(existing.id!, { ...payload, lastOpId: change.opId });
+        await db.workspaces.update(existing.id!, {
+          name: payload.name as string,
+          icon: (payload.icon as string) ?? "",
+          viewMode: payload.viewMode as ViewMode | undefined,
+          order: payload.order as string,
+          updatedAt: payload.updatedAt as number,
+          deletedAt: payload.deletedAt as number | null,
+          lastOpId: change.opId,
+        });
       } else {
         await db.workspaces.add({
           accountId,
@@ -1653,7 +1706,10 @@ private async applyCreateOrUpdate(change: ChangeEntry): Promise<boolean> {
         if (existing.updatedAt > (payload.updatedAt as number)) return;
         if (existing.updatedAt === payload.updatedAt && (existing.lastOpId ?? "") >= change.opId) return;
         await db.tabCollections.update(existing.id!, {
-          ...payload,
+          name: payload.name as string,
+          order: payload.order as string,
+          updatedAt: payload.updatedAt as number,
+          deletedAt: payload.deletedAt as number | null,
           workspaceId: parentWs.id!,
           workspaceSyncId: payload.parentSyncId as string,
           lastOpId: change.opId,
@@ -1686,7 +1742,12 @@ private async applyCreateOrUpdate(change: ChangeEntry): Promise<boolean> {
         if (existing.updatedAt > (payload.updatedAt as number)) return;
         if (existing.updatedAt === payload.updatedAt && (existing.lastOpId ?? "") >= change.opId) return;
         await db.collectionTabs.update(existing.id!, {
-          ...payload,
+          url: payload.url as string,
+          title: payload.title as string,
+          favIconUrl: payload.favIconUrl as string | undefined,
+          order: payload.order as string,
+          updatedAt: payload.updatedAt as number,
+          deletedAt: payload.deletedAt as number | null,
           collectionId: parentCol.id!,
           collectionSyncId: payload.parentSyncId as string,
           lastOpId: change.opId,
@@ -1709,6 +1770,57 @@ private async applyCreateOrUpdate(change: ChangeEntry): Promise<boolean> {
     });
     return true;
   }
+
+  return true;
+}
+
+private async applyDelete(change: ChangeEntry): Promise<boolean> {
+  const payload = change.payload;
+  const tables = {
+    workspace: db.workspaces,
+    collection: db.tabCollections,
+    tab: db.collectionTabs,
+  };
+  const table = tables[change.entityType];
+  if (!table) return true;
+
+  await db.transaction("rw", [table, db.workspaces], async () => {
+    const existing = await table.where("syncId").equals(change.entitySyncId).first();
+    if (!existing) return;
+
+    // LWW check
+    if (existing.updatedAt > (payload.updatedAt as number)) return;
+    if (existing.updatedAt === (payload.updatedAt as number) && (existing.lastOpId ?? "") >= change.opId) return;
+
+    await table.update(existing.id!, {
+      deletedAt: payload.updatedAt as number,
+      updatedAt: payload.updatedAt as number,
+      lastOpId: change.opId,
+    });
+
+    // After workspace delete: check if zero active workspaces remain
+    if (change.entityType === "workspace") {
+      const accountId = await resolveAccountId();
+      const activeCount = await db.workspaces
+        .where("accountId").equals(accountId)
+        .filter((w) => !w.deletedAt)
+        .count();
+      if (activeCount === 0) {
+        // Auto-create default workspace (same as first-run behavior)
+        await db.workspaces.add({
+          accountId,
+          name: "Workspace",
+          icon: "planet",
+          order: "a0",
+          syncId: crypto.randomUUID(),
+          deletedAt: null,
+          lastOpId: "",
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+    }
+  });
 
   return true;
 }
@@ -1735,6 +1847,8 @@ git commit -m "feat(extension): implement SyncEngine with push/pull/retry/reset/
 
 **Files:**
 - Modify: `apps/extension/src/entrypoints/background.ts`
+
+**Important:** All code in this task goes INSIDE the existing `defineBackground(() => { ... })` block, not at module scope. The current `background.ts` wraps everything in `export default defineBackground(() => { ... })`.
 
 - [ ] **Step 1: Wire SyncEngine into background**
 
