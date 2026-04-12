@@ -21,7 +21,7 @@ Enable bidirectional sync between the Chrome extension (Dexie/IndexedDB) and a H
 | State layers | Dexie + Zustand + independent SyncEngine | TanStack Query adds a third state source; SyncEngine is orthogonal |
 | Sync model | Outbox + change log + cursor-based incremental pull | Handles deletes, offline accumulation, and multi-device correctly |
 | Conflict strategy | LWW(server): `updatedAt` wins, `opId` lexicographic tie-break | Simple, deterministic, no manual merge |
-| Idempotency | `applied_ops` table with `(userId, opId)` unique constraint | No SELECT-then-INSERT race; transaction-safe |
+| Idempotency | `appliedOps` table with `(userId, opId)` unique constraint | No SELECT-then-INSERT race; transaction-safe |
 | Trigger pattern | Push: immediate after write (500ms debounce). Pull: configurable polling (default 10min) + page activation check | Balances freshness with request volume |
 | Sync executor | Background service worker only | Prevents concurrent SyncEngine instances; tabs communicate via messages |
 | Local FK strategy | Keep integer `workspaceId`/`collectionId` for queries; add `syncId`/`workspaceSyncId`/`collectionSyncId` for sync protocol | Minimal migration risk, query performance preserved |
@@ -101,7 +101,7 @@ Key-value store for sync state:
 
 | Key | Value | Purpose |
 |-----|-------|---------|
-| `lastPulledCursor` | `number` | Server change_log seq position |
+| `lastPulledCursor` | `number` | Server changeLog seq position |
 | `lastSyncAt` | `number` | Timestamp of last successful sync |
 | `lock:fullReset` | `number` | TTL-based lease lock for fullReset |
 
@@ -218,51 +218,53 @@ Add to `DEFAULTS` object and `KEYS` array in `settings.ts`. No DB migration need
 
 Located in `packages/db/src/schema/sync.ts`, exported from `packages/db/src/schema/index.ts`.
 
-**Entity tables** (workspaces, tab_collections, collection_tabs):
+**Column naming convention: camelCase** — matching existing auth schema in `packages/db/src/schema/auth.ts` (e.g. `emailVerified`, `userId`, `createdAt`). Drizzle uses the string argument as the actual SQLite column name, so consistency prevents raw SQL errors.
+
+**Entity tables** (workspaces, tabCollections, collectionTabs):
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | integer PK auto-increment | Server-local |
-| `sync_id` | text NOT NULL | Client-generated UUID |
-| `user_id` | text NOT NULL | better-auth user.id |
+| `syncId` | text NOT NULL | Client-generated UUID |
+| `userId` | text NOT NULL | better-auth user.id |
 | `name` | text NOT NULL | (workspaces, collections) |
-| `url`, `title`, `fav_icon_url` | text | (tabs only) |
+| `url`, `title`, `favIconUrl` | text | (tabs only) |
 | `icon` | text | (workspaces only) |
 | `order` | text NOT NULL | Fractional indexing string |
-| `workspace_sync_id` | text | (collections: FK to workspaces.sync_id) |
-| `collection_sync_id` | text | (tabs: FK to collections.sync_id) |
-| `last_op_id` | text NOT NULL DEFAULT "" | LWW tie-break |
-| `deleted_at` | integer (timestamp_ms) | Soft delete |
-| `created_at` | integer (timestamp_ms) NOT NULL | |
-| `updated_at` | integer (timestamp_ms) NOT NULL | |
+| `workspaceSyncId` | text | (collections: FK to workspaces.syncId) |
+| `collectionSyncId` | text | (tabs: FK to tabCollections.syncId) |
+| `lastOpId` | text NOT NULL DEFAULT "" | LWW tie-break |
+| `deletedAt` | integer (timestamp_ms) | Soft delete |
+| `createdAt` | integer (timestamp_ms) NOT NULL | |
+| `updatedAt` | integer (timestamp_ms) NOT NULL | |
 
-Unique constraint: `(user_id, sync_id)` per table — prevents cross-user collision.
+Unique constraint: `(userId, syncId)` per table — prevents cross-user collision.
 
-**applied_ops table** (idempotency gate):
+**appliedOps table** (idempotency gate):
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | integer PK auto-increment | |
-| `user_id` | text NOT NULL | |
-| `op_id` | text NOT NULL | |
-| `applied_at` | integer (timestamp_ms) NOT NULL | |
+| `userId` | text NOT NULL | |
+| `opId` | text NOT NULL | |
+| `appliedAt` | integer (timestamp_ms) NOT NULL | |
 
-Unique index: `(user_id, op_id)`.
+Unique index: `(userId, opId)`.
 
-**change_log table** (pull cursor):
+**changeLog table** (pull cursor):
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `seq` | integer PK auto-increment | Monotonic cursor |
-| `user_id` | text NOT NULL | |
-| `entity_type` | text NOT NULL | "workspace" \| "collection" \| "tab" |
-| `entity_sync_id` | text NOT NULL | |
+| `userId` | text NOT NULL | |
+| `entityType` | text NOT NULL | "workspace" \| "collection" \| "tab" |
+| `entitySyncId` | text NOT NULL | |
 | `action` | text NOT NULL | "create" \| "update" \| "delete" |
-| `op_id` | text NOT NULL | For client self-echo detection |
+| `opId` | text NOT NULL | For client self-echo detection |
 | `payload` | text NOT NULL | JSON string |
-| `created_at` | integer (timestamp_ms) NOT NULL | |
+| `createdAt` | integer (timestamp_ms) NOT NULL | |
 
-Index: `(user_id, seq)`.
+Index: `(userId, seq)`.
 
 ### 2.2 Repository Interface
 
@@ -305,23 +307,23 @@ interface SnapshotResult {
 
 ### 2.3 SqliteSyncRepository.pushOps
 
-Per-op transaction: `insert applied_ops` → `applyOp` → `insert change_log`.
+Per-op transaction: `insert appliedOps` → `applyOp` → `insert changeLog`.
 
-- `applied_ops` unique constraint violation → catch error → record as duplicate → skip
-- If `applyOp` succeeds but `change_log` insert fails → entire transaction rolls back → `applied_ops` also rolls back → client can safely retry
-- If `applyOp` fails → transaction rolls back → `applied_ops` also rolls back → client can retry
+- `appliedOps` unique constraint violation → catch error → record as duplicate → skip
+- If `applyOp` succeeds but `changeLog` insert fails → entire transaction rolls back → `appliedOps` also rolls back → client can safely retry
+- If `applyOp` fails → transaction rolls back → `appliedOps` also rolls back → client can retry
 
 ### 2.4 applyOp — LWW Rules
 
-All write paths set `last_op_id = op.opId`.
+All write paths set `lastOpId = op.opId`.
 
-- **create**: `INSERT ... ON CONFLICT(user_id, sync_id) DO UPDATE` with LWW condition: `incoming.updatedAt > row.updatedAt OR (equal AND incoming.opId > coalesce(row.lastOpId, ''))`.
-- **update**: `UPDATE WHERE sync_id = ? AND user_id = ?` with same LWW condition.
-- **delete**: `UPDATE SET deleted_at = ? WHERE ...` with same LWW condition.
+- **create**: `INSERT ... ON CONFLICT(userId, syncId) DO UPDATE` with LWW condition: `incoming.updatedAt > row.updatedAt OR (equal AND incoming.opId > coalesce(row.lastOpId, ''))`.
+- **update**: `UPDATE WHERE syncId = ? AND userId = ?` with same LWW condition.
+- **delete**: `UPDATE SET deletedAt = ? WHERE ...` with same LWW condition.
 
 ### 2.5 pullChanges
 
-- Query `change_log WHERE user_id = ? AND seq > cursor ORDER BY seq LIMIT limit+1`
+- Query `changeLog WHERE userId = ? AND seq > cursor ORDER BY seq LIMIT limit+1`
 - `hasMore = results.length > limit`
 - If `cursor > 0 AND cursor < minRetainedSeq` → return `resetRequired: true`
 
@@ -559,11 +561,11 @@ test: push idempotent — same opId twice → accepted=1, duplicates=[opId]
 test: push LWW — push updatedAt=100, then updatedAt=50 → entity keeps 100
 test: push LWW tie-break — same updatedAt, higher opId wins
 test: push create conflict — same syncId different opId → onConflictDoUpdate + LWW
-test: push transaction rollback — applyOp fails → applied_ops also rolls back → retry works
+test: push transaction rollback — applyOp fails → appliedOps also rolls back → retry works
 test: pull cursor — push 3 ops, pull(cursor=0) → 3 changes, pull again → 0
 test: pull resetRequired — cursor below retention window → resetRequired=true
 test: snapshot — returns all non-deleted entities for user + current max seq
-test: push cascade delete — workspace + children all recorded in change_log
+test: push cascade delete — workspace + children all recorded in changeLog
 test: push payload validation — mismatched payload.syncId vs entitySyncId → BAD_REQUEST
 ```
 
@@ -582,6 +584,53 @@ test: syncIfNeeded — skips when within polling interval
 test: reentrance guard — concurrent sync() calls don't double-execute
 test: broadcastSyncApplied — SYNC_APPLIED message sent after pull with changes
 ```
+
+---
+
+## Appendix A: Write Path Conversion Checklist
+
+Every write to sync-enabled tables must go through `mutateWithOutbox` (or `bulkMutateWithOutbox` for import). This is the exhaustive list of call sites.
+
+### app-store.ts — Standalone writes (need wrapping in mutateWithOutbox)
+
+| # | Function | Line | DB Operation | Outbox Action |
+|---|----------|------|-------------|---------------|
+| 1 | `createWorkspace` | :239 | `db.workspaces.add(workspace)` | create workspace |
+| 2 | `renameWorkspace` | :264 | `db.workspaces.update(id, { name, updatedAt })` | update workspace |
+| 3 | `changeWorkspaceIcon` | :285 | `db.workspaces.update(id, { icon, updatedAt })` | update workspace |
+| 4 | `setWorkspaceViewMode` | :306 | `db.workspaces.update(id, { viewMode, updatedAt })` | update workspace |
+| 5 | `reorderWorkspace` | :360 | `db.workspaces.update(id, { order, updatedAt })` | update workspace |
+| 6 | `createCollection` | :386 | `db.tabCollections.add(collection)` | create collection |
+| 7 | `renameCollection` | :413 | `db.tabCollections.update(id, { name, updatedAt })` | update collection |
+| 8 | `reorderCollection` | :456 | `db.tabCollections.update(id, { order, updatedAt })` | update collection |
+| 9 | `addTabToCollection` | :483 | `db.collectionTabs.add(newTab)` | create tab |
+| 10 | `removeTabFromCollection` | :508-509 | `db.collectionTabs.delete(tabId)` + `db.tabCollections.update(collectionId, { updatedAt })` — **two separate non-atomic calls** | delete tab + update collection (must become single transaction) |
+| 11 | `reorderTabInCollection` | :533 | `db.collectionTabs.update(tabId, { order, updatedAt })` | update tab |
+| 12 | `updateTab` | :559 | `db.collectionTabs.update(tabId, { ...updates, updatedAt })` | update tab |
+
+### app-store.ts — Already-transactional writes (need outbox ops added)
+
+| # | Function | Line | DB Operation | Outbox Action |
+|---|----------|------|-------------|---------------|
+| 13 | `deleteWorkspace` | :319-329 | Transaction: cascade delete workspace + collections + tabs | delete workspace + all children (soft delete) |
+| 14 | `deleteCollection` | :426-428 | Transaction: delete collection + tabs | delete collection + all children (soft delete) |
+| 15 | `saveTabsAsCollection` | :604-610 | Transaction: add collection + bulkAdd tabs | create collection + create tabs |
+| 16 | `moveTabToCollection` | :672 | `db.collectionTabs.update(tabId, { collectionId, order, updatedAt })` | update tab (change parent) |
+
+### import/execute.ts — Bulk writes (use bulkMutateWithOutbox)
+
+| # | Operation | Line | DB Operation | Outbox Action |
+|---|-----------|------|-------------|---------------|
+| 17 | Fresh import | :52 | `db.collectionTabs.bulkAdd(records)` | create tabs (bulk) |
+| 18 | Merge: new workspace | :71 | `db.workspaces.add(...)` | create workspace |
+| 19 | Merge: new collection | :96 | `db.tabCollections.add(...)` | create collection |
+| 20 | Merge: delete tabs | :122 | `db.collectionTabs.bulkDelete(toDeleteIds)` | delete tabs (bulk, soft delete) |
+| 21 | Merge: update tab | :129 | `db.collectionTabs.update(...)` | update tab |
+| 22 | Merge: update collection | :140 | `db.tabCollections.update(...)` | update collection |
+
+All execute.ts writes (#17-22) are inside a single `db.transaction("rw", ...)` at line :61. This transaction must be converted to `bulkMutateWithOutbox`, with syncId generated for each new entity at creation time and ops collected incrementally during the transaction.
+
+**Total: 22 write sites across 2 files.**
 
 ---
 
