@@ -270,15 +270,20 @@ const collections = await activeCollections(id).sortBy("order");
 
 - [ ] **Step 3: Convert export.ts**
 
-In `apps/extension/src/lib/export.ts`, replace:
+In `apps/extension/src/lib/export.ts`, add deletedAt filter to existing queries. Export doesn't use accountId (it exports all local data), so don't use `activeWorkspaces(accountId)` — instead add `.filter()` to existing query chain:
+
 ```typescript
 // Old: const workspaces = await db.workspaces.orderBy("order").toArray();
 // New:
-import { activeWorkspaces } from "./db-queries";
-const workspaces = await activeWorkspaces(accountId).sortBy("order");
-```
+const workspaces = await db.workspaces.orderBy("order").filter((w) => !w.deletedAt).toArray();
 
-Note: export.ts needs access to the current accountId. Pass it as a parameter or resolve it from the auth state.
+// Also filter collections and tabs inside the map:
+// Old: const collections = await db.tabCollections.where("[workspaceId+order]").between(...).toArray();
+// New: add .filter((c) => !c.deletedAt) before .toArray()
+
+// Old: const tabs = await db.collectionTabs.where("[collectionId+order]").between(...).toArray();
+// New: add .filter((t) => !t.deletedAt) before .toArray()
+```
 
 - [ ] **Step 4: Convert search-dialog.tsx**
 
@@ -455,7 +460,9 @@ createWorkspace: async (name: string, icon: string) => {
   };
 
   // Optimistic update — use monotonic counter to avoid collision under rapid calls
-  // (define at module scope: let _nextTempId = -1; function nextTempId() { return _nextTempId--; })
+  // Add these at module scope in app-store.ts (outside the store):
+  //   let _nextTempId = -1;
+  //   function nextTempId() { return _nextTempId--; }
   const tempId = nextTempId();
   set({ workspaces: [{ ...workspace, id: tempId }, ...workspaces], activeWorkspaceId: tempId });
 
@@ -1167,6 +1174,7 @@ git commit -m "feat(api): extend context factory with syncRepo, wire into server
 
 ```typescript
 // packages/api/src/routers/sync.ts
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc.js";
 
@@ -1398,7 +1406,7 @@ import { db } from "./db";
 import { getSettings } from "./settings";
 import { MSG } from "./constants";
 import { getExtensionTRPCClient } from "./trpc";
-import { resolveAccountId } from "./auth-manager";
+import { resolveAccountId } from "../stores/app-store";
 import { initializeAuth } from "./auth-manager";
 import { getAuthState, clearAuthState } from "./auth-storage";
 import { activeWorkspaces, activeCollections, activeTabs } from "./db-queries";
@@ -1408,9 +1416,34 @@ const PUSH_DEBOUNCE_MS = 500;
 const PUSH_LOOP_TIME_LIMIT = 30_000;
 const PUSH_LOOP_BATCH_LIMIT = 10;
 
+// tRPC client errors have a `data.code` field for the tRPC error code
+function isUnauthorizedError(e: unknown): boolean {
+  if (e && typeof e === "object" && "data" in e) {
+    const data = (e as any).data;
+    return data?.code === "UNAUTHORIZED";
+  }
+  // Also check TRPCClientError shape
+  if (e instanceof Error && "shape" in e) {
+    return (e as any).shape?.data?.code === "UNAUTHORIZED";
+  }
+  return false;
+}
+
 export class SyncEngine {
   private isSyncing = false;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Get tRPC client from the extension's cached client factory */
+  private async getTRPC() {
+    return getExtensionTRPCClient();
+  }
+
+  /** Broadcast SYNC_APPLIED to all tabs pages */
+  private broadcastSyncApplied(): void {
+    chrome.runtime.sendMessage({ type: MSG.SYNC_APPLIED }).catch(() => {
+      // tabs page may not be open
+    });
+  }
 
   async syncIfNeeded(): Promise<void> {
     const settings = await getSettings();
