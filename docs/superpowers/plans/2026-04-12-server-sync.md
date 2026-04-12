@@ -471,51 +471,15 @@ export async function bulkMutateWithOutbox(
 
 In `app-store.ts`, the `createWorkspace` method currently does `db.workspaces.add(workspace)`. Convert to:
 
+Since `mutateWithOutbox` wraps the DB write AND outbox write in one transaction, and `db.workspaces.add()` returns the auto-increment id, the pattern for createWorkspace is:
+
+Add at module scope in app-store.ts (outside the store):
 ```typescript
-createWorkspace: async (name: string, icon: string) => {
-  const { workspaces } = get();
-  const now = Date.now();
-  const lastOrder = workspaces[0]?.order ?? null;
-  const order = generateKeyBetween(null, lastOrder);
-  const syncId = crypto.randomUUID();
-  const workspace = {
-    accountId: await resolveAccountId(),
-    name: validName,
-    icon: validIcon,
-    order,
-    syncId,
-    deletedAt: null,
-    lastOpId: "",
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  // Optimistic update — use monotonic counter to avoid collision under rapid calls
-  // Add these at module scope in app-store.ts (outside the store):
-  //   let _nextTempId = -1;
-  //   function nextTempId() { return _nextTempId--; }
-  const tempId = nextTempId();
-  set({ workspaces: [{ ...workspace, id: tempId }, ...workspaces], activeWorkspaceId: tempId });
-
-  try {
-    const id = await mutateWithOutbox(
-      async () => { /* id assigned by Dexie */ },
-      [{
-        opId: crypto.randomUUID(),
-        entityType: "workspace",
-        entitySyncId: syncId,
-        action: "create",
-        payload: { syncId, name: validName, icon: validIcon, order, updatedAt: now, deletedAt: null },
-        createdAt: now,
-      }],
-    );
-    // Actually need the id — use a different pattern:
-    // ...
-  }
-}
+let _nextTempId = -1;
+function nextTempId() { return _nextTempId--; }
 ```
 
-**Important pattern note:** Since `mutateWithOutbox` wraps the DB write AND outbox write in one transaction, and `db.workspaces.add()` returns the auto-increment id, the pattern must be:
+Then the create pattern:
 
 ```typescript
 let newId: number;
@@ -1351,14 +1315,58 @@ Follow existing test pattern in `auth.test.ts`. Create an authenticated user, pu
 // apps/server/src/__tests__/sync.test.ts
 import { describe, it, expect, beforeAll } from "vitest";
 import { app } from "../app";
-// ... setup helper to create authenticated user + get token
+
+// ─── Test Helpers ───
+
+async function pushOps(token: string, ops: Record<string, unknown>[]) {
+  const res = await app.request("/trpc/sync.push", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ ops }),
+  });
+  const data = await res.json();
+  return data.result.data;
+}
+
+function makeCreateOp(syncId: string, overrides: Record<string, unknown> = {}) {
+  const now = Date.now();
+  return {
+    opId: crypto.randomUUID(),
+    entitySyncId: syncId,
+    entityType: "workspace",
+    action: "create",
+    createdAt: now,
+    payload: { syncId, name: "WS", icon: "folder", order: "a0", updatedAt: now, deletedAt: null, ...overrides },
+  };
+}
+
+function makeUpdateOp(syncId: string, overrides: Record<string, unknown> = {}) {
+  const now = Date.now();
+  return {
+    opId: crypto.randomUUID(),
+    entitySyncId: syncId,
+    entityType: "workspace",
+    action: "update",
+    createdAt: now,
+    payload: { syncId, name: "WS", icon: "folder", order: "a0", updatedAt: now, deletedAt: null, ...overrides },
+  };
+}
+
+async function getSnapshot(token: string) {
+  const res = await app.request("/trpc/sync.snapshot", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  return data.result.data;
+}
+
+// ─── Tests ───
 
 describe("sync", () => {
   let token: string;
   let userId: string;
 
   beforeAll(async () => {
-    // Create anonymous user, get token
     const res = await app.request("/api/auth/sign-in/anonymous", { method: "POST" });
     const data = await res.json();
     token = data.token;
@@ -1683,7 +1691,7 @@ private async applyCreateOrUpdate(change: ChangeEntry): Promise<boolean> {
           syncId: change.entitySyncId,
           name: payload.name as string,
           icon: (payload.icon as string) ?? "",
-          viewMode: payload.viewMode as string | undefined,
+          viewMode: payload.viewMode as ViewMode | undefined,
           order: payload.order as string,
           deletedAt: payload.deletedAt as number | null,
           lastOpId: change.opId,
@@ -1810,7 +1818,7 @@ private async applyDelete(change: ChangeEntry): Promise<boolean> {
         await db.workspaces.add({
           accountId,
           name: "Workspace",
-          icon: "planet",
+          icon: "folder", // DEFAULT_ICON from constants.ts
           order: "a0",
           syncId: crypto.randomUUID(),
           deletedAt: null,
