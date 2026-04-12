@@ -1,4 +1,3 @@
-import Dexie from "dexie";
 import { generateKeyBetween } from "fractional-indexing";
 import { create } from "zustand";
 import { getAuthState } from "@/lib/auth-storage";
@@ -10,14 +9,12 @@ import {
 } from "@/lib/constants";
 import type { CollectionTab, TabCollection, Workspace } from "@/lib/db";
 import { db } from "@/lib/db";
+import { activeCollections, activeTabs } from "@/lib/db-queries";
 import { compareByOrder } from "@/lib/utils";
 import type { ViewMode } from "@/lib/view-mode";
 
 function loadCollections(workspaceId: number) {
-  return db.tabCollections
-    .where("[workspaceId+order]")
-    .between([workspaceId, Dexie.minKey], [workspaceId, Dexie.maxKey])
-    .toArray();
+  return activeCollections(workspaceId).sortBy("order");
 }
 
 async function loadTabsByCollection(
@@ -26,10 +23,7 @@ async function loadTabsByCollection(
   const ids = collections.map((c) => c.id).filter((id): id is number => id != null);
   const entries = await Promise.all(
     ids.map(async (id) => {
-      const tabs = await db.collectionTabs
-        .where("[collectionId+order]")
-        .between([id, Dexie.minKey], [id, Dexie.maxKey])
-        .toArray();
+      const tabs = await activeTabs(id).sortBy("order");
       return [id, tabs] as const;
     }),
   );
@@ -136,7 +130,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   initialize: async () => {
     try {
-      const workspaces = await db.workspaces.orderBy("order").toArray();
+      const workspaces = await db.workspaces
+        .orderBy("order")
+        .filter((w) => !w.deletedAt)
+        .toArray();
       const activeWorkspaceId = workspaces[0]?.id ?? null;
 
       let collections: TabCollection[] = [];
@@ -620,10 +617,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       collection.id = collectionId;
 
       // Reload from DB to get correct auto-increment IDs
-      const freshTabs = await db.collectionTabs
-        .where("[collectionId+order]")
-        .between([collectionId, Dexie.minKey], [collectionId, Dexie.maxKey])
-        .toArray();
+      const freshTabs = await activeTabs(collectionId).sortBy("order");
 
       const newMap = new Map(get().tabsByCollection);
       newMap.set(collectionId, freshTabs);

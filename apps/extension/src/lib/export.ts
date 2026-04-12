@@ -2,7 +2,10 @@ import Dexie from "dexie";
 import { db } from "@/lib/db";
 
 export async function exportAllData(): Promise<void> {
-  const workspaces = await db.workspaces.orderBy("order").toArray();
+  const workspaces = await db.workspaces
+    .orderBy("order")
+    .filter((w) => !w.deletedAt)
+    .toArray();
 
   const exportData = {
     version: 1 as const,
@@ -12,6 +15,7 @@ export async function exportAllData(): Promise<void> {
         const collections = await db.tabCollections
           .where("[workspaceId+order]")
           .between([ws.id!, Dexie.minKey], [ws.id!, Dexie.maxKey])
+          .filter((c) => !c.deletedAt)
           .toArray();
 
         return {
@@ -27,6 +31,7 @@ export async function exportAllData(): Promise<void> {
               const tabs = await db.collectionTabs
                 .where("[collectionId+order]")
                 .between([col.id!, Dexie.minKey], [col.id!, Dexie.maxKey])
+                .filter((t) => !t.deletedAt)
                 .toArray();
 
               return {
