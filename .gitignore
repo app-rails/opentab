@@ -32,7 +32,7 @@ apps/server/data/*.db-shm
 
 # Context (conductor)
 .context/
-.claude/
+.claude/settings.local.json
 .superpowers/
 
 # Cloudflare
