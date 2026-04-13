@@ -1,5 +1,5 @@
 import type { Auth } from "@opentab/auth";
-import type { SyncRepository } from "@opentab/db/repo";
+import type { SyncRepository } from "@opentab/db";
 
 export interface Context {
   session: Awaited<ReturnType<Auth["api"]["getSession"]>>;
