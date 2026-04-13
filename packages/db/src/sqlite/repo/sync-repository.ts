@@ -313,7 +313,6 @@ export class SqliteSyncRepository implements SyncRepository {
       .where(eq(syncCollectionTabs.userId, userId))
       .all();
 
-    // Get max seq for the cursor
     const maxSeqRow = this.db
       .select({ maxSeq: sql<number>`coalesce(max(${changeLog.seq}), 0)` })
       .from(changeLog)
