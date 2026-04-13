@@ -14,7 +14,7 @@
     "@opentab/auth": "workspace:*",
     "@opentab/db": "workspace:*",
     "@trpc/server": "^11.13.4",
-    "zod": "^3.24.0"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@opentab/config": "workspace:*",
