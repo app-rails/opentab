@@ -108,7 +108,7 @@ export class SqliteSyncRepository implements SyncRepository {
 }
 ```
 
-Marking `better-sqlite3` methods as `async` has zero runtime cost — they return a resolved Promise immediately. All consumers (tRPC router handlers) must `await` the results.
+Marking `better-sqlite3` methods as `async` has zero runtime cost — they return a resolved Promise immediately. tRPC handlers resolve returned Promises automatically — no code changes needed in the router. Direct callers outside tRPC must `await`.
 
 ---
 
@@ -324,8 +324,6 @@ export interface AuthConfig { db: DbInstance["db"]; dbProvider: "sqlite" | "pg";
 ```
 
 `DbInstance["db"]` extracts `SqliteDb | PgDb` via indexed access type distribution.
-
-**Verification needed at wiring time:** Confirm that better-auth's `drizzleAdapter` accepts `SqliteDb | PgDb` union type. If not, auth package will also need discriminated branching.
 
 ### 4.3 `packages/api/src/context.ts`
 
