@@ -36,13 +36,13 @@
   "devDependencies": {
     "@opentab/config": "workspace:^",
     "@tailwindcss/vite": "^4",
-    "@types/chrome": "^0.1.38",
+    "@types/chrome": "^0.1.40",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@wxt-dev/module-react": "^1",
     "shadcn": "^4.1.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
+    "typescript": "^6",
     "wxt": "^0.20"
   }
 }
