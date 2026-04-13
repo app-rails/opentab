@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { app } from "../app.js";
+import { beforeAll, describe, expect, it } from "vitest";
+import { createApp } from "../app.js";
+
+let app: Awaited<ReturnType<typeof createApp>>;
+beforeAll(async () => {
+  app = await createApp();
+});
 
 describe("anonymous auth", () => {
   it("POST /api/auth/sign-in/anonymous returns user and token", async () => {
