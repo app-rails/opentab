@@ -41,4 +41,9 @@ export interface SyncRepository {
   pushOps(userId: string, ops: PushOp[]): Promise<PushResult>;
   pullChanges(userId: string, cursor: number, limit: number): Promise<PullResult>;
   getSnapshot(userId: string): Promise<SnapshotResult>;
+  parentExists(
+    userId: string,
+    parentType: "workspace" | "collection",
+    parentSyncId: string,
+  ): Promise<boolean>;
 }

@@ -323,4 +323,18 @@ export class SqliteSyncRepository implements SyncRepository {
 
     return { workspaces, collections, tabs, cursor };
   }
+
+  async parentExists(
+    userId: string,
+    parentType: "workspace" | "collection",
+    parentSyncId: string,
+  ): Promise<boolean> {
+    const table = parentType === "workspace" ? syncWorkspaces : syncTabCollections;
+    const row = this.db
+      .select({ syncId: table.syncId })
+      .from(table)
+      .where(and(eq(table.userId, userId), eq(table.syncId, parentSyncId)))
+      .get();
+    return row != null;
+  }
 }

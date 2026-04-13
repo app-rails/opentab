@@ -116,18 +116,36 @@ export const syncRouter = router({
         ops: z.array(syncOpSchema).min(1).max(100),
       }),
     )
-    .mutation(({ ctx, input }) => {
-      // Validate payload.syncId === entitySyncId for each op
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user!.id;
+
       for (const op of input.ops) {
+        // Validate payload.syncId === entitySyncId
         if (op.payload.syncId !== op.entitySyncId) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: `Op ${op.opId}: payload.syncId "${op.payload.syncId}" !== entitySyncId "${op.entitySyncId}"`,
           });
         }
+
+        // Validate parentSyncId ownership for collection/tab create/update
+        if (op.action !== "delete" && "parentSyncId" in op.payload && op.payload.parentSyncId) {
+          const parentType = op.entityType === "collection" ? "workspace" : "collection";
+          const exists = await ctx.syncRepo.parentExists(
+            userId,
+            parentType as "workspace" | "collection",
+            String(op.payload.parentSyncId),
+          );
+          if (!exists) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Op ${op.opId}: parent ${parentType} "${op.payload.parentSyncId}" not found for user`,
+            });
+          }
+        }
       }
 
-      return ctx.syncRepo.pushOps(ctx.user!.id, input.ops);
+      return ctx.syncRepo.pushOps(userId, input.ops);
     }),
 
   pull: protectedProcedure

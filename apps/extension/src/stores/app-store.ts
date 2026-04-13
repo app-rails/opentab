@@ -128,10 +128,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   initialize: async () => {
     try {
+      const accountId = await resolveAccountId();
       const workspaces = await db.workspaces
-        .orderBy("order")
+        .where("accountId")
+        .equals(accountId)
         .filter((w) => !w.deletedAt)
-        .toArray();
+        .sortBy("order");
       const activeWorkspaceId = workspaces[0]?.id ?? null;
 
       let collections: TabCollection[] = [];
@@ -219,8 +221,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!validName) return;
     const { workspaces } = get();
     const sorted = [...workspaces].sort(compareByOrder);
-    const firstOrder = sorted.length > 0 ? sorted[0].order : null;
-    const newOrder = generateKeyBetween(null, firstOrder);
+    const lastOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : null;
+    const newOrder = generateKeyBetween(lastOrder, null);
 
     const now = Date.now();
     const workspace: Workspace = {
@@ -480,6 +482,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (activeWorkspaceId == null) return;
 
     const parentWs = workspaces.find((w) => w.id === activeWorkspaceId);
+    if (!parentWs) return;
 
     const sorted = [...collections].sort(compareByOrder);
     const firstOrder = sorted.length > 0 ? sorted[0].order : null;
@@ -488,6 +491,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const now = Date.now();
     const collection: TabCollection = {
       workspaceId: activeWorkspaceId,
+      workspaceSyncId: parentWs.syncId,
       name: validName,
       order: newOrder,
       syncId: crypto.randomUUID(),
@@ -505,7 +509,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         action: "create",
         payload: {
           syncId: collection.syncId,
-          parentSyncId: parentWs!.syncId,
+          parentSyncId: parentWs.syncId,
           name: validName,
           order: newOrder,
           updatedAt: now,
@@ -550,7 +554,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           action: "update",
           payload: {
             syncId: prev.syncId,
-            parentSyncId: prev.workspaceSyncId ?? "",
+            ...(prev.workspaceSyncId ? { parentSyncId: prev.workspaceSyncId } : {}),
             name: validName,
             order: prev.order,
             updatedAt: now,
@@ -640,7 +644,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           action: "update",
           payload: {
             syncId: prev.syncId,
-            parentSyncId: prev.workspaceSyncId ?? "",
+            ...(prev.workspaceSyncId ? { parentSyncId: prev.workspaceSyncId } : {}),
             name: prev.name,
             order: newOrder,
             updatedAt: now,
@@ -663,6 +667,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (existingTabs.some((t) => t.url === tab.url)) return;
 
     const parentCol = collections.find((c) => c.id === collectionId);
+    if (!parentCol) return;
 
     const lastOrder = existingTabs.length > 0 ? existingTabs[existingTabs.length - 1].order : null;
     const newOrder = generateKeyBetween(lastOrder, null);
@@ -670,6 +675,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const now = Date.now();
     const newTab: CollectionTab = {
       collectionId,
+      collectionSyncId: parentCol.syncId,
       url: tab.url,
       title: tab.title,
       favIconUrl: tab.favIconUrl,
@@ -689,7 +695,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         action: "create",
         payload: {
           syncId: newTab.syncId,
-          parentSyncId: parentCol!.syncId,
+          parentSyncId: parentCol.syncId,
           url: tab.url,
           title: tab.title,
           favIconUrl: tab.favIconUrl,
@@ -749,7 +755,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           action: "update",
           payload: {
             syncId: parentCol.syncId,
-            parentSyncId: parentCol.workspaceSyncId ?? "",
+            ...(parentCol.workspaceSyncId ? { parentSyncId: parentCol.workspaceSyncId } : {}),
             name: parentCol.name,
             order: parentCol.order,
             updatedAt: now,
@@ -1048,10 +1054,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   refreshAfterSync: async () => {
     try {
+      const accountId = await resolveAccountId();
       const workspaces = await db.workspaces
-        .orderBy("order")
+        .where("accountId")
+        .equals(accountId)
         .filter((w) => !w.deletedAt)
-        .toArray();
+        .sortBy("order");
       const currentActiveId = get().activeWorkspaceId;
       const activeStillExists = workspaces.some((w) => w.id === currentActiveId);
       const activeWorkspaceId = activeStillExists ? currentActiveId : (workspaces[0]?.id ?? null);

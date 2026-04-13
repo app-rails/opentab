@@ -63,6 +63,18 @@ function backoffMs(attempt: number): number {
   return Math.min(1000 * 2 ** attempt, 300_000);
 }
 
+/** LWW: existing wins if newer timestamp, or same timestamp with higher opId */
+function existingWinsLWW(
+  existing: { updatedAt: number; lastOpId?: string },
+  change: { createdAt: number; opId: string },
+): boolean {
+  if (existing.updatedAt > change.createdAt) return true;
+  if (existing.updatedAt === change.createdAt) {
+    return (existing.lastOpId ?? "") >= change.opId;
+  }
+  return false;
+}
+
 function toWireOp(op: SyncOp) {
   return {
     opId: op.opId,
@@ -514,8 +526,7 @@ export class SyncEngine {
         const existing = await db.workspaces.where("syncId").equals(syncId).first();
 
         if (existing) {
-          // LWW check
-          if (existing.updatedAt > change.createdAt) return true;
+          if (existingWinsLWW(existing, change)) return true;
           // Update with explicit field-picking
           await db.workspaces.update(existing.id!, {
             ...(payload.name != null && { name: String(payload.name) }),
@@ -560,7 +571,7 @@ export class SyncEngine {
         }
 
         if (existing) {
-          if (existing.updatedAt > change.createdAt) return true;
+          if (existingWinsLWW(existing, change)) return true;
           await db.tabCollections.update(existing.id!, {
             ...(payload.name != null && { name: String(payload.name) }),
             ...(payload.order != null && { order: String(payload.order) }),
@@ -599,7 +610,7 @@ export class SyncEngine {
         }
 
         if (existing) {
-          if (existing.updatedAt > change.createdAt) return true;
+          if (existingWinsLWW(existing, change)) return true;
           await db.collectionTabs.update(existing.id!, {
             ...(payload.url != null && { url: String(payload.url) }),
             ...(payload.title != null && { title: String(payload.title) }),
@@ -639,13 +650,13 @@ export class SyncEngine {
   private async applyDelete(change: ChangeEntry): Promise<boolean> {
     const syncId = String(change.payload.syncId ?? change.entitySyncId);
     const deletedAt =
-      typeof change.payload.deletedAt === "number" ? change.payload.deletedAt : Date.now();
+      typeof change.payload.deletedAt === "number" ? change.payload.deletedAt : change.createdAt;
 
     switch (change.entityType) {
       case "workspace": {
         const existing = await db.workspaces.where("syncId").equals(syncId).first();
         if (!existing) return true;
-        if (existing.updatedAt > change.createdAt) return true;
+        if (existingWinsLWW(existing, change)) return true;
 
         await db.workspaces.update(existing.id!, {
           deletedAt,
@@ -675,7 +686,7 @@ export class SyncEngine {
       case "collection": {
         const existing = await db.tabCollections.where("syncId").equals(syncId).first();
         if (!existing) return true;
-        if (existing.updatedAt > change.createdAt) return true;
+        if (existingWinsLWW(existing, change)) return true;
 
         await db.tabCollections.update(existing.id!, {
           deletedAt,
@@ -688,7 +699,7 @@ export class SyncEngine {
       case "tab": {
         const existing = await db.collectionTabs.where("syncId").equals(syncId).first();
         if (!existing) return true;
-        if (existing.updatedAt > change.createdAt) return true;
+        if (existingWinsLWW(existing, change)) return true;
 
         await db.collectionTabs.update(existing.id!, {
           deletedAt,
@@ -743,8 +754,8 @@ export class SyncEngine {
               icon: String(ws.icon ?? "folder"),
               order: String(ws.order ?? generateKeyBetween(null, null)),
               viewMode: (ws.viewMode as ViewMode | undefined) ?? undefined,
-              deletedAt: null,
-              lastOpId: "",
+              deletedAt: typeof ws.deletedAt === "number" ? ws.deletedAt : null,
+              lastOpId: typeof ws.lastOpId === "string" ? ws.lastOpId : "",
               createdAt: typeof ws.createdAt === "number" ? ws.createdAt : Date.now(),
               updatedAt: typeof ws.updatedAt === "number" ? ws.updatedAt : Date.now(),
             });
@@ -755,15 +766,22 @@ export class SyncEngine {
           const colSyncIdToLocalId = new Map<string, number>();
           for (const col of snapshot.collections) {
             const parentSyncId = String(col.parentSyncId ?? col.workspaceSyncId ?? "");
-            const workspaceId = wsSyncIdToLocalId.get(parentSyncId) ?? 0;
+            const workspaceId = wsSyncIdToLocalId.get(parentSyncId);
+            if (workspaceId == null) {
+              console.warn(
+                "[sync] fullReset: skipping collection with unknown parent:",
+                parentSyncId,
+              );
+              continue;
+            }
             const id = await db.tabCollections.add({
               workspaceId,
               workspaceSyncId: parentSyncId,
               syncId: String(col.syncId),
               name: String(col.name ?? "Untitled"),
               order: String(col.order ?? generateKeyBetween(null, null)),
-              deletedAt: null,
-              lastOpId: "",
+              deletedAt: typeof col.deletedAt === "number" ? col.deletedAt : null,
+              lastOpId: typeof col.lastOpId === "string" ? col.lastOpId : "",
               createdAt: typeof col.createdAt === "number" ? col.createdAt : Date.now(),
               updatedAt: typeof col.updatedAt === "number" ? col.updatedAt : Date.now(),
             });
@@ -773,7 +791,11 @@ export class SyncEngine {
           // Write tabs
           for (const tab of snapshot.tabs) {
             const parentSyncId = String(tab.parentSyncId ?? tab.collectionSyncId ?? "");
-            const collectionId = colSyncIdToLocalId.get(parentSyncId) ?? 0;
+            const collectionId = colSyncIdToLocalId.get(parentSyncId);
+            if (collectionId == null) {
+              console.warn("[sync] fullReset: skipping tab with unknown parent:", parentSyncId);
+              continue;
+            }
             await db.collectionTabs.add({
               collectionId,
               collectionSyncId: parentSyncId,
@@ -782,8 +804,8 @@ export class SyncEngine {
               title: String(tab.title ?? "Untitled"),
               favIconUrl: tab.favIconUrl != null ? String(tab.favIconUrl) : undefined,
               order: String(tab.order ?? generateKeyBetween(null, null)),
-              deletedAt: null,
-              lastOpId: "",
+              deletedAt: typeof tab.deletedAt === "number" ? tab.deletedAt : null,
+              lastOpId: typeof tab.lastOpId === "string" ? tab.lastOpId : "",
               createdAt: typeof tab.createdAt === "number" ? tab.createdAt : Date.now(),
               updatedAt: typeof tab.updatedAt === "number" ? tab.updatedAt : Date.now(),
             });

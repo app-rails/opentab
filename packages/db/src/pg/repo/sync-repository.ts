@@ -28,4 +28,12 @@ export class PgSyncRepository implements SyncRepository {
   async getSnapshot(_userId: string): Promise<SnapshotResult> {
     throw new Error("PostgreSQL getSnapshot not yet implemented.");
   }
+
+  async parentExists(
+    _userId: string,
+    _parentType: "workspace" | "collection",
+    _parentSyncId: string,
+  ): Promise<boolean> {
+    throw new Error("PostgreSQL parentExists not yet implemented.");
+  }
 }
