@@ -51,7 +51,7 @@ packages/db/src/
 packages/db/src/
   core/
     index.ts              ← re-exports
-    sync-repository.ts    ← SyncRepository interface + PushOp/PullResult/ChangeEntry/SnapshotResult types
+    sync-repository.ts    ← SyncRepository interface (async methods) + PushOp/PullResult/ChangeEntry/SnapshotResult types
   sqlite/
     index.ts              ← createDb(url?) → SqliteDb, exports SqliteDb type
     schema/
@@ -79,6 +79,36 @@ packages/db/src/
 - `sqlite/` and `pg/` are **completely independent** — neither imports from the other
 - Top-level `index.ts` is the **only glue layer** — routes to the correct dialect based on config
 - `pg/` files exist for structure only — all contain `throw new Error("PostgreSQL support not yet implemented")` with TODO comments
+
+---
+
+## Section 1.1: Async SyncRepository Interface
+
+The current `SyncRepository` interface declares synchronous return types (`PushResult`, `PullResult`, `SnapshotResult`). This works for `better-sqlite3` (which is synchronous), but `node-postgres` is inherently async — all queries return `Promise`. To avoid a breaking interface change when PG is implemented, make the interface async from the start.
+
+### `core/sync-repository.ts` — async interface
+
+```typescript
+export interface SyncRepository {
+  pushOps(userId: string, ops: PushOp[]): Promise<PushResult>;
+  pullChanges(userId: string, cursor: number, limit: number): Promise<PullResult>;
+  getSnapshot(userId: string): Promise<SnapshotResult>;
+}
+```
+
+### `SqliteSyncRepository` — mark methods `async`
+
+```typescript
+export class SqliteSyncRepository implements SyncRepository {
+  async pushOps(userId: string, ops: PushOp[]): Promise<PushResult> {
+    // ... existing synchronous logic unchanged, async wrapper is free
+  }
+  async pullChanges(userId: string, cursor: number, limit: number): Promise<PullResult> { ... }
+  async getSnapshot(userId: string): Promise<SnapshotResult> { ... }
+}
+```
+
+Marking `better-sqlite3` methods as `async` has zero runtime cost — they return a resolved Promise immediately. All consumers (tRPC router handlers) must `await` the results.
 
 ---
 
@@ -238,24 +268,48 @@ Old `drizzle.config.ts` deleted.
 
 ## Section 4: Consumer Migration
 
-### 4.1 `apps/server/src/app.ts`
+### 4.1 `apps/server/src/app.ts` + `apps/server/src/index.ts`
+
+Currently `app.ts` does module-level synchronous initialization (lines 12-37), and `index.ts` imports `app` synchronously. Since `createDb`/`createSyncRepo` are async, the initialization must move into an async factory.
 
 ```typescript
-// Before
+// app.ts — Before
 import { createDb } from "@opentab/db";
 import { SqliteSyncRepository } from "@opentab/db/repo";
 const db = createDb({ driver: env.DB_DRIVER, url: env.DATABASE_URL });
 const syncRepo = new SqliteSyncRepository(db);
 const auth = createAuth({ db, dbProvider: env.DB_DRIVER, ... });
+export const app = new Hono();
+// ... middleware ...
 
-// After
+// app.ts — After
 import { createDb, createSyncRepo } from "@opentab/db";
-const dbInstance = await createDb({ driver: env.DB_DRIVER, url: env.DATABASE_URL });
-const syncRepo = await createSyncRepo(dbInstance);
-const auth = createAuth({ db: dbInstance.db, dbProvider: dbInstance.driver, ... });
+
+export async function createApp() {
+  const dbInstance = await createDb({ driver: env.DB_DRIVER, url: env.DATABASE_URL });
+  const syncRepo = await createSyncRepo(dbInstance);
+  const auth = createAuth({ db: dbInstance.db, dbProvider: dbInstance.driver, ... });
+
+  const app = new Hono();
+  // ... middleware setup (same as before) ...
+  return app;
+}
 ```
 
-Note: `app.ts` initialization becomes async. The server entry point (`index.ts` or equivalent) must `await` the setup.
+```typescript
+// index.ts — Before
+import { serve } from "@hono/node-server";
+import { app } from "./app.js";
+serve({ fetch: app.fetch, port: 3001 }, ...);
+
+// index.ts — After
+import { serve } from "@hono/node-server";
+import { createApp } from "./app.js";
+const app = await createApp();
+serve({ fetch: app.fetch, port: 3001 }, ...);
+```
+
+Top-level `await` is supported — `apps/server/package.json` has `"type": "module"`.
 
 ### 4.2 `packages/auth/src/index.ts`
 
@@ -315,7 +369,7 @@ Old directories `src/schema/` and `src/repo/` are deleted after migration.
 
 ---
 
-## Open Items
+## Closed Items
 
-1. **better-auth union type acceptance** — Verify at implementation time that `drizzleAdapter(db as SqliteDb | PgDb, { provider })` compiles. If not, auth package needs discriminated branching similar to `createSyncRepo`.
-2. **Server entry point async** — `app.ts` initialization becomes async due to `createDb`/`createSyncRepo`. Verify that the Hono server entry point supports top-level await or wraps in an async IIFE.
+1. ~~**better-auth union type acceptance**~~ — Verified: `drizzleAdapter` accepts `db: { [key: string]: any }`. Both `SqliteDb` and `PgDb` satisfy this interface. No issue.
+2. ~~**Server entry point async**~~ — Addressed in Section 4.1: `app.ts` exports `createApp()` async factory, `index.ts` uses top-level `await`.
