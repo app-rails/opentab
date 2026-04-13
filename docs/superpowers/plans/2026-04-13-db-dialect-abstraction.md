@@ -561,8 +561,9 @@ export { SqliteSyncRepository } from "./sync-repository.js";
 git rm packages/db/src/repo/sync-repository.ts
 git rm packages/db/src/repo/sqlite-sync-repository.ts
 git rm packages/db/src/repo/index.ts
-rmdir packages/db/src/repo
 ```
+
+Git automatically removes empty directories from the working tree after `git rm`.
 
 - [ ] **Step 4: Commit**
 
@@ -1086,35 +1087,50 @@ git commit -m "refactor(server): async createApp() factory with DbInstance, top-
 
 - [ ] **Step 1: Update `apps/server/src/__tests__/auth.test.ts`**
 
-Replace line 2:
+Replace lines 1-2:
 
 ```typescript
+import { describe, expect, it } from "vitest";
 import { app } from "../app.js";
 ```
 
 with:
 
 ```typescript
+import { beforeAll, describe, expect, it } from "vitest";
+import { type Hono } from "hono";
 import { createApp } from "../app.js";
 
-const app = await createApp();
+let app: Awaited<ReturnType<typeof createApp>>;
+beforeAll(async () => {
+  app = await createApp();
+});
 ```
+
+Using `beforeAll` instead of top-level `await` prevents WAL locking issues if vitest runs multiple test files in the same worker thread, and allows adding `afterAll` cleanup later.
 
 - [ ] **Step 2: Update `apps/server/src/__tests__/sync.test.ts`**
 
-Replace line 2:
+Replace lines 1-2:
 
 ```typescript
+import { describe, expect, it } from "vitest";
 import { app } from "../app.js";
 ```
 
 with:
 
 ```typescript
+import { beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 
-const app = await createApp();
+let app: Awaited<ReturnType<typeof createApp>>;
+beforeAll(async () => {
+  app = await createApp();
+});
 ```
+
+The helper functions (`createAuthenticatedUser`, `pushOps`, etc.) reference `app` inside function bodies, so the `let` declaration works — they capture `app` by closure and are only called after `beforeAll` has run.
 
 - [ ] **Step 3: Run tests to verify everything works**
 
