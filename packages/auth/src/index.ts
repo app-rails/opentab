@@ -1,10 +1,10 @@
-import type { Db } from "@opentab/db";
+import type { DbInstance } from "@opentab/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { anonymous, bearer } from "better-auth/plugins";
 
 export interface AuthConfig {
-  db: Db;
+  db: DbInstance["db"];
   dbProvider: "sqlite" | "pg";
   secret: string;
   baseURL: string;

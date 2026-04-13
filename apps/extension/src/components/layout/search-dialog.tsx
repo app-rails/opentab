@@ -37,7 +37,11 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     const lower = q.toLowerCase();
     // Use Dexie .filter() with .limit() to avoid loading entire table into JS
     const matched = await db.collectionTabs
-      .filter((t) => t.title.toLowerCase().includes(lower) || t.url.toLowerCase().includes(lower))
+      .filter(
+        (t) =>
+          !t.deletedAt &&
+          (t.title.toLowerCase().includes(lower) || t.url.toLowerCase().includes(lower)),
+      )
       .limit(50)
       .toArray();
 

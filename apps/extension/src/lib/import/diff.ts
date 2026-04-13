@@ -109,6 +109,7 @@ async function loadCollectionsForWorkspace(workspaceId: number): Promise<TabColl
   return db.tabCollections
     .where("[workspaceId+order]")
     .between([workspaceId, Dexie.minKey], [workspaceId, Dexie.maxKey])
+    .filter((c) => !c.deletedAt)
     .toArray();
 }
 
@@ -116,11 +117,15 @@ async function loadTabsForCollection(collectionId: number): Promise<CollectionTa
   return db.collectionTabs
     .where("[collectionId+order]")
     .between([collectionId, Dexie.minKey], [collectionId, Dexie.maxKey])
+    .filter((t) => !t.deletedAt)
     .toArray();
 }
 
 export async function computeDiff(importData: ImportData): Promise<DiffResult> {
-  const existingWorkspaces = await db.workspaces.orderBy("order").toArray();
+  const existingWorkspaces = await db.workspaces
+    .orderBy("order")
+    .filter((w) => !w.deletedAt)
+    .toArray();
 
   // Group by name as arrays for one-to-one matching via shift()
   const workspacesByName = new Map<string, Workspace[]>();

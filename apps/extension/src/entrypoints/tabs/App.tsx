@@ -24,6 +24,7 @@ import { WelcomeDialog } from "@/components/layout/welcome-dialog";
 import { WorkspaceSidebar } from "@/components/layout/workspace-sidebar";
 import { TabFavicon } from "@/components/tab-favicon";
 import { useLiveTabSync } from "@/hooks/use-live-tab-sync";
+import { useSync } from "@/hooks/use-sync";
 import { DRAG_TYPES, type DragData, resolveTargetCollectionId } from "@/lib/dnd-types";
 import { getSettings, saveSettings } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
@@ -78,6 +79,7 @@ export default function App() {
   const isLoading = useAppStore((s) => s.isLoading);
 
   useLiveTabSync();
+  useSync();
   const { mode } = useTheme();
 
   // Layout state
