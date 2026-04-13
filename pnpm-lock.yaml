@@ -294,6 +294,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(better-sqlite3@12.8.0)(kysely@0.28.14)(pg@8.20.0)
+      pg:
+        specifier: ^8.0.0
+        version: 8.20.0
     devDependencies:
       '@opentab/config':
         specifier: workspace:*
@@ -301,6 +304,9 @@ importers:
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
+      '@types/pg':
+        specifier: ^8.0.0
+        version: 8.20.0
       drizzle-kit:
         specifier: ^0.31.0
         version: 0.31.10

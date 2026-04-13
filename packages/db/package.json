@@ -5,25 +5,39 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema/index.ts",
-    "./schema/sync": "./src/schema/sync.ts",
-    "./repo": "./src/repo/index.ts"
+    "./sqlite": "./src/sqlite/index.ts",
+    "./sqlite/schema": "./src/sqlite/schema/index.ts",
+    "./pg": "./src/pg/index.ts",
+    "./pg/schema": "./src/pg/schema/index.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",
     "lint": "biome check .",
-    "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:generate": "drizzle-kit generate --config=drizzle.sqlite.config.ts",
+    "db:generate:pg": "drizzle-kit generate --config=drizzle.pg.config.ts",
+    "db:push": "drizzle-kit push --config=drizzle.sqlite.config.ts",
+    "db:push:pg": "drizzle-kit push --config=drizzle.pg.config.ts",
+    "db:migrate": "drizzle-kit migrate --config=drizzle.sqlite.config.ts",
+    "db:migrate:pg": "drizzle-kit migrate --config=drizzle.pg.config.ts",
+    "db:studio": "drizzle-kit studio --config=drizzle.sqlite.config.ts",
+    "db:studio:pg": "drizzle-kit studio --config=drizzle.pg.config.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.8.0",
     "drizzle-orm": "^0.45.1"
   },
+  "peerDependencies": {
+    "pg": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@opentab/config": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/pg": "^8.0.0",
     "drizzle-kit": "^0.31.0",
     "typescript": "^5"
   }
