@@ -1,13 +1,5 @@
 import { and, eq, gt, or, type SQL, sql } from "drizzle-orm";
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
-import type { Db } from "../index.js";
-import {
-  appliedOps,
-  changeLog,
-  syncCollectionTabs,
-  syncTabCollections,
-  syncWorkspaces,
-} from "../schema/sync.js";
 import type {
   ChangeEntry,
   PullResult,
@@ -15,9 +7,17 @@ import type {
   PushResult,
   SnapshotResult,
   SyncRepository,
-} from "./sync-repository.js";
+} from "../../core/index.js";
+import type { SqliteDb } from "../index.js";
+import {
+  appliedOps,
+  changeLog,
+  syncCollectionTabs,
+  syncTabCollections,
+  syncWorkspaces,
+} from "../schema/sync.js";
 
-type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+type Tx = Parameters<Parameters<SqliteDb["transaction"]>[0]>[0];
 
 /** LWW condition: incoming timestamp wins if newer, or same timestamp with greater opId */
 function lwwCondition(
@@ -33,9 +33,9 @@ function lwwCondition(
 }
 
 export class SqliteSyncRepository implements SyncRepository {
-  constructor(private db: Db) {}
+  constructor(private db: SqliteDb) {}
 
-  pushOps(userId: string, ops: PushOp[]): PushResult {
+  async pushOps(userId: string, ops: PushOp[]): Promise<PushResult> {
     const applied: string[] = [];
     const duplicates: string[] = [];
 
@@ -264,7 +264,7 @@ export class SqliteSyncRepository implements SyncRepository {
     return result;
   }
 
-  pullChanges(userId: string, cursor: number, limit: number): PullResult {
+  async pullChanges(userId: string, cursor: number, limit: number): Promise<PullResult> {
     const rows = this.db
       .select()
       .from(changeLog)
@@ -294,7 +294,7 @@ export class SqliteSyncRepository implements SyncRepository {
     };
   }
 
-  getSnapshot(userId: string): SnapshotResult {
+  async getSnapshot(userId: string): Promise<SnapshotResult> {
     const workspaces = this.db
       .select()
       .from(syncWorkspaces)
