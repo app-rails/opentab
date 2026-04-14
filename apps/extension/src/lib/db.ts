@@ -231,4 +231,23 @@ db.version(4)
     }
   });
 
+// Handle version-change events from other connections (e.g. service worker vs newtab page).
+// When another connection needs to upgrade the schema, close this connection gracefully
+// so the upgrade can proceed, then reopen automatically.
+db.on("versionchange", () => {
+  db.close();
+  // Reopen after a short delay to allow the upgrade to complete
+  setTimeout(() => {
+    db.open().catch((err) => {
+      console.warn("[db] Failed to reopen after versionchange:", err);
+    });
+  }, 200);
+  return false; // Prevent default (which would also close, but we want to control reopen)
+});
+
+// Handle blocked events — the upgrade is waiting for other connections to close
+db.on("blocked", () => {
+  console.warn("[db] Database upgrade blocked by another connection — will retry when unblocked");
+});
+
 export { db };
