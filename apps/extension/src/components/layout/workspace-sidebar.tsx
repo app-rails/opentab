@@ -14,6 +14,7 @@ import {
   Sun,
   Upload,
 } from "lucide-react";
+import type { ChangeEvent } from "react";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import opentabLogo from "@/assets/opentab-logo.webp";
@@ -88,8 +89,12 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
   const langAbbr = locale === "en" ? t("sidebar.language_en") : t("sidebar.language_zh");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleExport = useCallback(() => {
-    void exportAllData();
+  const handleExport = useCallback(async () => {
+    try {
+      await exportAllData();
+    } catch (err) {
+      console.error("Export failed:", err);
+    }
   }, []);
 
   const handleImport = useCallback(() => {
@@ -97,7 +102,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
   }, []);
 
   const onFileSelected = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
