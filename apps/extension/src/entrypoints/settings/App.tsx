@@ -7,11 +7,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { checkHealth } from "@/lib/api";
 import { getBuildString } from "@/lib/build-info";
-import { db } from "@/lib/db";
 import { exportAllData } from "@/lib/export";
-import { detectFormat } from "@/lib/import/detect";
-import { parseOpenTab } from "@/lib/import/parse-opentab";
-import { parseTabTab } from "@/lib/import/parse-tabtab";
+import { processImportFile } from "@/lib/import/process-file";
 import { useLocale } from "@/lib/locale";
 import {
   type AppSettings,
@@ -120,25 +117,7 @@ export default function App() {
       if (!file) return;
 
       try {
-        const text = await file.text();
-        const json = JSON.parse(text);
-        const format = detectFormat(json);
-
-        if (!format) {
-          alert(t("settings.import.unsupported_format"));
-          return;
-        }
-
-        const importData = format === "tabtab" ? parseTabTab(json) : parseOpenTab(json);
-
-        const sessionId = await db.importSessions.add({
-          data: JSON.stringify(importData),
-          createdAt: Date.now(),
-        });
-
-        chrome.tabs.create({
-          url: chrome.runtime.getURL(`/import.html?sessionId=${sessionId}`),
-        });
+        await processImportFile(file, t);
       } catch (err) {
         console.error("Failed to read import file:", err);
         alert(t("settings.import.read_error"));

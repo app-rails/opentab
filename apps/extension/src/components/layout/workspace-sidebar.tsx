@@ -1,9 +1,20 @@
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@opentab/ui/components/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@opentab/ui/components/tooltip";
 import { cn } from "@opentab/ui/lib/utils";
-import { ChevronLeft, Monitor, Moon, PanelLeft, Plus, Settings, Sun } from "lucide-react";
-import { useState } from "react";
+import {
+  ChevronLeft,
+  Download,
+  Monitor,
+  Moon,
+  PanelLeft,
+  Plus,
+  Settings,
+  Sun,
+  Upload,
+} from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import opentabLogo from "@/assets/opentab-logo.webp";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
@@ -11,6 +22,8 @@ import { DeleteWorkspaceDialog } from "@/components/workspace/delete-workspace-d
 import { WorkspaceItem } from "@/components/workspace/workspace-item";
 import type { Workspace } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
+import { exportAllData } from "@/lib/export";
+import { processImportFile } from "@/lib/import/process-file";
 import { useLocale } from "@/lib/locale";
 import { useTheme } from "@/lib/theme";
 import { useAppStore } from "@/stores/app-store";
@@ -70,6 +83,35 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Workspace | null>(null);
   const ThemeIcon = THEME_ICON[mode];
+  const langLabel =
+    locale === "en" ? t("sidebar.language_label_en") : t("sidebar.language_label_zh");
+  const langAbbr = locale === "en" ? t("sidebar.language_en") : t("sidebar.language_zh");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = useCallback(() => {
+    void exportAllData();
+  }, []);
+
+  const handleImport = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const onFileSelected = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      try {
+        await processImportFile(file, t);
+      } catch (err) {
+        console.error("Failed to read import file:", err);
+        alert(t("settings.import.read_error"));
+      } finally {
+        e.target.value = "";
+      }
+    },
+    [t],
+  );
 
   return (
     <div className={cn("relative shrink-0", collapsed ? "w-3" : "")}>
@@ -178,31 +220,62 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
             <Settings className="size-4" />
             {t("sidebar.settings")}
           </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={cycleTheme}
-            aria-label={t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) })}
-            title={t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) })}
-          >
-            <ThemeIcon className="size-4 text-sidebar-foreground/70" />
-          </Button>
-          {(() => {
-            const langLabel =
-              locale === "en" ? t("sidebar.language_label_en") : t("sidebar.language_label_zh");
-            const langAbbr = locale === "en" ? t("sidebar.language_en") : t("sidebar.language_zh");
-            return (
+          <Tooltip>
+            <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon-xs"
-                onClick={cycleLocale}
-                aria-label={langLabel}
-                title={langLabel}
+                onClick={handleExport}
+                aria-label={t("sidebar.export")}
               >
+                <Download className="size-4 text-sidebar-foreground/70" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("sidebar.export")}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={handleImport}
+                aria-label={t("sidebar.import")}
+              >
+                <Upload className="size-4 text-sidebar-foreground/70" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("sidebar.import")}</TooltipContent>
+          </Tooltip>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={onFileSelected}
+          />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={cycleTheme}
+                aria-label={t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) })}
+              >
+                <ThemeIcon className="size-4 text-sidebar-foreground/70" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) })}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon-xs" onClick={cycleLocale} aria-label={langLabel}>
                 <span className="font-medium text-sidebar-foreground/70 text-xs">{langAbbr}</span>
               </Button>
-            );
-          })()}
+            </TooltipTrigger>
+            <TooltipContent>{langLabel}</TooltipContent>
+          </Tooltip>
         </div>
       </aside>
     </div>

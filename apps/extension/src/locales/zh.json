@@ -11,7 +11,9 @@
     "language_en": "EN",
     "language_zh": "中",
     "language_label_en": "Language: English",
-    "language_label_zh": "语言: 中文"
+    "language_label_zh": "语言: 中文",
+    "export": "导出",
+    "import": "导入"
   },
   "collection_panel": {
     "view_default": "默认视图",

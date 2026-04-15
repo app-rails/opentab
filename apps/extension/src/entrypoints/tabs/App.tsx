@@ -14,6 +14,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { TooltipProvider } from "@opentab/ui/components/tooltip";
 import { generateKeyBetween } from "fractional-indexing";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -304,7 +305,7 @@ export default function App() {
   const activeDragData = activeDrag?.data.current as DragData | undefined;
 
   return (
-    <>
+    <TooltipProvider>
       <DndContext
         sensors={sensors}
         collisionDetection={customCollisionDetection}
@@ -345,6 +346,6 @@ export default function App() {
       </DndContext>
       <WelcomeDialog />
       <Toaster position="bottom-center" theme={mode === "system" ? "system" : mode} />
-    </>
+    </TooltipProvider>
   );
 }
