@@ -4,7 +4,9 @@
 
 **Goal:** Let users move a `TabCollection` to another `Workspace` via drag onto the sidebar and via an icon button on the collection card that opens a workspace picker dialog.
 
-**Architecture:** Add one store method (`moveCollectionToWorkspace`) that updates `workspaceId`, `workspaceSyncId`, and `order` with optimistic updates + sync op. Wire it to two UIs: (1) a new `MoveCollectionDialog` triggered from a new icon button on `CollectionCard`, and (2) a DnD branch where workspace sidebar items become droppable targets.
+**Architecture:** Add one store method (`moveCollectionToWorkspace`) that updates `workspaceId`, `workspaceSyncId`, and `order`, with optimistic updates and a sync op (mirrors `moveTabToCollection`). Wire it to two UIs: (1) a new `MoveCollectionDialog` triggered from a new icon button on `CollectionCard`, and (2) a DnD branch where the existing workspace sidebar droppable (registered via `useSortable`) accepts collection drops.
+
+**Design constraint (avoid the flaky-drop failure mode):** Do **not** add a second `useDroppable` on the workspace row. `useSortable` already registers it as a droppable, and adding another overlapping target makes `closestCenter` non-deterministic. Instead, dispatch on `over.data.current.type === WORKSPACE` in the collection drop handler. Workspace reorder vs. collection cross-move stay separate because `handleDragEnd` dispatches on `active.type`.
 
 **Tech Stack:** Zustand, Dexie, `@dnd-kit/core`, `fractional-indexing`, shadcn `Dialog`/`Tooltip`, lucide icons, `react-i18next`.
 
@@ -14,107 +16,28 @@
 
 ## File Structure
 
-- **Modify** `apps/extension/src/lib/dnd-types.ts` — add `WORKSPACE_DROP` constant, `WorkspaceDropData` interface, union entry.
-- **Modify** `apps/extension/src/stores/app-store.ts` — add `moveCollectionToWorkspace` to `AppState` interface and store.
+- **Modify** `apps/extension/src/stores/app-store.ts` — add `moveCollectionToWorkspace` to the `AppState` interface and store implementation.
 - **Create** `apps/extension/src/components/collection/move-collection-dialog.tsx` — workspace picker dialog.
-- **Modify** `apps/extension/src/components/collection/collection-card.tsx` — add icon button with tooltip; open dialog; disable when no other workspace.
-- **Modify** `apps/extension/src/components/layout/workspace-sidebar.tsx` — make each `SortableWorkspaceItem` a droppable target and show hover highlight when a collection is dragged over.
-- **Modify** `apps/extension/src/entrypoints/tabs/App.tsx` — extend `handleCollectionReorder` to route to `moveCollectionToWorkspace` when the drop target is a workspace.
-- **Modify** `apps/extension/src/locales/en.json` and `apps/extension/src/locales/zh.json` — add `collection_card.move_to_workspace`, `dialog.move_collection.*`.
+- **Modify** `apps/extension/src/components/collection/collection-card.tsx` — add `ArrowRightLeft` icon button with tooltip; open dialog; disable when no other workspace exists.
+- **Modify** `apps/extension/src/components/layout/workspace-sidebar.tsx` — show a hover highlight on each `SortableWorkspaceItem` when a collection is dragged over it. No new droppable is added.
+- **Modify** `apps/extension/src/entrypoints/tabs/App.tsx` — in `handleCollectionReorder`, route on `over.data.current.type === WORKSPACE` to `moveCollectionToWorkspace`.
+- **Modify** `apps/extension/src/locales/en.json` and `apps/extension/src/locales/zh.json` — add `collection_card.move_to_workspace`, `collection_card.move_to_workspace_disabled`, `dialog.move_collection.*`.
 
-No tests: extension has no test harness today (matches `moveTabToCollection`). Verification is manual via the checklist at the end.
+No `dnd-types.ts` change, no `WORKSPACE_DROP` constant, no extra `useDroppable`. This keeps the plan aligned with how `@dnd-kit` already exposes sortable items as droppables.
 
----
+No tests: the extension has no test harness today (matches `moveTabToCollection`). Verification is manual via the checklist in Task 8.
 
-## Task 1: Add `WORKSPACE_DROP` to DnD types
-
-**Files:**
-- Modify: `apps/extension/src/lib/dnd-types.ts`
-
-- [ ] **Step 1: Add constant, interface, and union entry**
-
-Replace the full file contents with:
-
-```ts
-import type { CollectionTab } from "@/lib/db";
-
-export const DRAG_TYPES = {
-  WORKSPACE: "workspace",
-  COLLECTION: "collection",
-  LIVE_TAB: "live-tab",
-  COLLECTION_TAB: "collection-tab",
-  COLLECTION_DROP: "collection-drop",
-  WORKSPACE_DROP: "workspace-drop",
-} as const;
-
-export interface WorkspaceDragData {
-  type: typeof DRAG_TYPES.WORKSPACE;
-}
-
-export interface CollectionDragData {
-  type: typeof DRAG_TYPES.COLLECTION;
-  collectionId: number;
-}
-
-export interface LiveTabDragData {
-  type: typeof DRAG_TYPES.LIVE_TAB;
-  tab: chrome.tabs.Tab;
-}
-
-export interface CollectionTabDragData {
-  type: typeof DRAG_TYPES.COLLECTION_TAB;
-  tab: CollectionTab;
-  collectionId: number;
-}
-
-export interface CollectionDropData {
-  type: typeof DRAG_TYPES.COLLECTION_DROP;
-  collectionId: number;
-}
-
-export interface WorkspaceDropData {
-  type: typeof DRAG_TYPES.WORKSPACE_DROP;
-  workspaceId: number;
-}
-
-export type DragData =
-  | WorkspaceDragData
-  | CollectionDragData
-  | LiveTabDragData
-  | CollectionTabDragData
-  | CollectionDropData
-  | WorkspaceDropData;
-
-export function resolveTargetCollectionId(data: DragData | undefined): number | undefined {
-  if (
-    data?.type === DRAG_TYPES.COLLECTION_TAB ||
-    data?.type === DRAG_TYPES.COLLECTION ||
-    data?.type === DRAG_TYPES.COLLECTION_DROP
-  ) {
-    return data.collectionId;
-  }
-  return undefined;
-}
-```
-
-- [ ] **Step 2: Type-check**
-
-Run: `pnpm --filter @opentab/extension typecheck` (or `pnpm lint` from repo root).
-Expected: PASS (no existing code references `WORKSPACE_DROP` yet, so this is additive).
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add apps/extension/src/lib/dnd-types.ts
-git commit -m "feat(extension): add WORKSPACE_DROP drag type"
-```
+**Verification commands (actual scripts):**
+- Per-package typecheck: `pnpm --filter @opentab/extension check-types`
+- Repo-wide typecheck: `pnpm check-types`
+- Extension production build: `pnpm --filter @opentab/extension build`
 
 ---
 
-## Task 2: Add `moveCollectionToWorkspace` to the app store — interface
+## Task 1: Add `moveCollectionToWorkspace` to the app-store interface
 
 **Files:**
-- Modify: `apps/extension/src/stores/app-store.ts:99-105` (insert new method declaration next to `moveTabToCollection`)
+- Modify: `apps/extension/src/stores/app-store.ts:99-105` (insert new method declaration right after `moveTabToCollection`)
 
 - [ ] **Step 1: Add the method signature to `AppState`**
 
@@ -130,7 +53,7 @@ Find this block (around line 99):
   ) => Promise<void>;
 ```
 
-Insert right after it:
+Insert immediately after it:
 
 ```ts
   // Move collection across workspaces
@@ -140,21 +63,21 @@ Insert right after it:
   ) => Promise<void>;
 ```
 
-- [ ] **Step 2: Type-check — should fail with "not assignable" because the implementation is missing**
+- [ ] **Step 2: Typecheck — should fail because the implementation is still missing**
 
-Run: `pnpm --filter @opentab/extension typecheck`
-Expected: FAIL — TypeScript complains that the returned store object does not implement `moveCollectionToWorkspace`.
+Run: `pnpm --filter @opentab/extension check-types`
+Expected: FAIL — TypeScript reports the store object does not implement `moveCollectionToWorkspace`.
 
 ---
 
-## Task 3: Implement `moveCollectionToWorkspace`
+## Task 2: Implement `moveCollectionToWorkspace`
 
 **Files:**
-- Modify: `apps/extension/src/stores/app-store.ts:1027` (insert the implementation right after the `moveTabToCollection` body closes)
+- Modify: `apps/extension/src/stores/app-store.ts:1027` (insert the implementation right after the `moveTabToCollection` body closes, before `restoreCollection:`)
 
 - [ ] **Step 1: Add the implementation**
 
-Locate the closing of `moveTabToCollection` at line 1027 (ends with `},` after the `catch` block). Immediately after it and before the `restoreCollection:` property, insert:
+Locate the closing of `moveTabToCollection` at line 1027 (ends with `},` after the `catch` block). Immediately after that closing and before the `restoreCollection:` property, insert:
 
 ```ts
   moveCollectionToWorkspace: async (collectionId, targetWorkspaceId) => {
@@ -175,9 +98,10 @@ Locate the closing of `moveTabToCollection` at line 1027 (ends with `},` after t
     const now = Date.now();
     const sourceWorkspaceId = collection.workspaceId;
 
-    // Optimistic update: if we are viewing the source workspace, drop the
-    // collection from the visible list. We never need to populate the target
-    // workspace's collections here because the user stays on the source.
+    // Optimistic update: if the user is viewing the source workspace, drop
+    // the collection from the visible list. We do not mutate the target
+    // workspace's list here because the user stays on the source workspace
+    // after the move; the target list is re-read from Dexie on switch.
     const prevCollections = collections;
     if (activeWorkspaceId === sourceWorkspaceId) {
       set({
@@ -220,17 +144,17 @@ Locate the closing of `moveTabToCollection` at line 1027 (ends with `},` after t
   },
 ```
 
-- [ ] **Step 2: Type-check — should now pass**
+- [ ] **Step 2: Confirm required imports are already present**
 
-Run: `pnpm --filter @opentab/extension typecheck`
+The file already imports `generateKeyBetween` (line 1), `activeCollections` (line 11), `mutateWithOutbox` (line 12), and `db` (line 10). No new imports needed.
+
+Run: `grep -n "generateKeyBetween\|activeCollections\|mutateWithOutbox\|from \"@/lib/db\"" apps/extension/src/stores/app-store.ts | head -5`
+Expected: the four imports present at lines 1, 10, 11, 12.
+
+- [ ] **Step 3: Typecheck — now passes**
+
+Run: `pnpm --filter @opentab/extension check-types`
 Expected: PASS.
-
-- [ ] **Step 3: Verify imports still satisfy the new code**
-
-The file already imports `generateKeyBetween` (line 1), `activeCollections` (line 11), `mutateWithOutbox` (line 12), and `db` (line 10). No new imports needed. Confirm with:
-
-Run: `grep -n "generateKeyBetween\|activeCollections\|mutateWithOutbox" apps/extension/src/stores/app-store.ts | head -4`
-Expected: lines 1, 11, 12 present.
 
 - [ ] **Step 4: Commit**
 
@@ -241,40 +165,58 @@ git commit -m "feat(extension): add moveCollectionToWorkspace store method"
 
 ---
 
-## Task 4: Add i18n strings
+## Task 3: Add i18n strings
 
 **Files:**
 - Modify: `apps/extension/src/locales/en.json`
 - Modify: `apps/extension/src/locales/zh.json`
 
-- [ ] **Step 1: Add `collection_card.move_to_workspace` and dialog keys (English)**
+- [ ] **Step 1: English — extend `collection_card` and add `dialog.move_collection`**
 
-In `apps/extension/src/locales/en.json`, inside the `"collection_card"` object (around line 36–45), add after the `"drag_tabs_here"` line (keeping valid JSON: add a comma to the previous line):
+Open `apps/extension/src/locales/en.json`. In the `"collection_card"` object (currently lines 36–45), add a trailing comma to the `"drag_tabs_here"` line and append two new keys so the block reads:
 
 ```json
+  "collection_card": {
+    "expand": "Expand collection",
+    "collapse": "Collapse collection",
+    "open_all": "Open all tabs",
+    "delete": "Delete collection",
+    "more_actions": "More actions",
+    "rename": "Rename",
+    "delete_menu": "Delete",
     "drag_tabs_here": "Drag tabs here",
     "move_to_workspace": "Move to workspace",
     "move_to_workspace_disabled": "No other workspace to move to"
+  },
 ```
 
-Then inside the `"dialog"` object, add a new key group (place it alphabetically or at the end of `dialog`, ensure commas stay valid):
+Inside the existing `"dialog"` object, add the `move_collection` sub-object. Place it after `cancel` and before the existing `create_workspace`:
 
 ```json
     "move_collection": {
       "title": "Move \"{{name}}\" to…",
       "description": "Choose a workspace. The collection will appear at the top.",
       "empty": "No other workspaces available."
-    }
+    },
 ```
 
-- [ ] **Step 2: Add the same keys in Chinese**
+- [ ] **Step 2: Chinese — mirror the same keys**
 
-In `apps/extension/src/locales/zh.json`, inside `"collection_card"` (around line 36–45), extend with:
+Open `apps/extension/src/locales/zh.json`. Update `"collection_card"` so it reads:
 
 ```json
+  "collection_card": {
+    "expand": "展开集合",
+    "collapse": "折叠集合",
+    "open_all": "打开所有标签页",
+    "delete": "删除集合",
+    "more_actions": "更多操作",
+    "rename": "重命名",
+    "delete_menu": "删除",
     "drag_tabs_here": "将标签页拖放到这里",
     "move_to_workspace": "移动到其他 Space",
     "move_to_workspace_disabled": "没有其他可选 Space"
+  },
 ```
 
 Inside `"dialog"`, add:
@@ -284,12 +226,17 @@ Inside `"dialog"`, add:
       "title": "将 \"{{name}}\" 移动到…",
       "description": "选择一个 Space，集合会出现在最前面。",
       "empty": "没有其他可选的 Space。"
-    }
+    },
 ```
 
 - [ ] **Step 3: Validate JSON**
 
-Run: `node -e "JSON.parse(require('node:fs').readFileSync('apps/extension/src/locales/en.json','utf8')); JSON.parse(require('node:fs').readFileSync('apps/extension/src/locales/zh.json','utf8')); console.log('ok')"`
+Run:
+
+```bash
+node -e "JSON.parse(require('node:fs').readFileSync('apps/extension/src/locales/en.json','utf8')); JSON.parse(require('node:fs').readFileSync('apps/extension/src/locales/zh.json','utf8')); console.log('ok')"
+```
+
 Expected: prints `ok`.
 
 - [ ] **Step 4: Commit**
@@ -301,7 +248,7 @@ git commit -m "feat(extension): add i18n for move collection to workspace"
 
 ---
 
-## Task 5: Create `MoveCollectionDialog`
+## Task 4: Create `MoveCollectionDialog`
 
 **Files:**
 - Create: `apps/extension/src/components/collection/move-collection-dialog.tsx`
@@ -392,9 +339,9 @@ export function MoveCollectionDialog({
 }
 ```
 
-- [ ] **Step 2: Type-check**
+- [ ] **Step 2: Typecheck**
 
-Run: `pnpm --filter @opentab/extension typecheck`
+Run: `pnpm --filter @opentab/extension check-types`
 Expected: PASS.
 
 - [ ] **Step 3: Commit**
@@ -406,27 +353,14 @@ git commit -m "feat(extension): add MoveCollectionDialog"
 
 ---
 
-## Task 6: Add move button + dialog hookup to `CollectionCard`
+## Task 5: Add move button + dialog hookup to `CollectionCard`
 
 **Files:**
 - Modify: `apps/extension/src/components/collection/collection-card.tsx`
 
-- [ ] **Step 1: Add the import for `ArrowRightLeft`, `Tooltip`, and the dialog**
+- [ ] **Step 1: Imports**
 
-At the top of the file, update the `lucide-react` import to include `ArrowRightLeft`. Change:
-
-```tsx
-import {
-  ChevronRight,
-  EllipsisVertical,
-  ExternalLink,
-  GripVertical,
-  Pencil,
-  Trash2,
-} from "lucide-react";
-```
-
-to:
+In the `lucide-react` import block, add `ArrowRightLeft` so it reads:
 
 ```tsx
 import {
@@ -440,19 +374,19 @@ import {
 } from "lucide-react";
 ```
 
-Add below the existing `lucide-react` import block:
+Add next to the other `@opentab/ui` imports:
 
 ```tsx
 import { Tooltip, TooltipContent, TooltipTrigger } from "@opentab/ui/components/tooltip";
 ```
 
-Add next to the `AddTabPopover` import:
+Add near the `AddTabPopover` / `CollectionTabItem` imports:
 
 ```tsx
 import { MoveCollectionDialog } from "./move-collection-dialog";
 ```
 
-- [ ] **Step 2: Track dialog open state and eligibility**
+- [ ] **Step 2: Local state + eligibility**
 
 Inside `CollectionCard`, right after the existing `const [collapsed, setCollapsed] = useState(false);` line, insert:
 
@@ -464,9 +398,9 @@ Inside `CollectionCard`, right after the existing `const [collapsed, setCollapse
   );
 ```
 
-- [ ] **Step 3: Insert the move icon button in the hover action row**
+- [ ] **Step 3: Insert the move icon between "Open all" and "Delete"**
 
-Find this block inside the JSX (around line 167–176):
+Find this JSX block (currently lines 167–176):
 
 ```tsx
             {tabs.length > 0 && (
@@ -481,7 +415,7 @@ Find this block inside the JSX (around line 167–176):
             )}
 ```
 
-Immediately after that block and before the delete `Button`, insert:
+Immediately after the closing `)}` of the open-all button and **before** the delete `<Button …>`, insert:
 
 ```tsx
             <Tooltip>
@@ -506,11 +440,11 @@ Immediately after that block and before the delete `Button`, insert:
             </Tooltip>
 ```
 
-Note: the `<span>` wrapper is required so the disabled button still triggers the tooltip (Radix `TooltipTrigger` doesn't fire on disabled buttons).
+Note on the `<span>`: Radix `TooltipTrigger` does not receive pointer events from a disabled child button. Wrapping in a span keeps the tooltip functional when the button is disabled.
 
 - [ ] **Step 4: Render the dialog**
 
-At the very end of the outer `<div ref={setNodeRef} …>` (right before its closing `</div>`), insert:
+Right before the outermost closing `</div>` of `CollectionCard` (the `<div ref={setNodeRef} …>` opened at line 101), insert:
 
 ```tsx
       <MoveCollectionDialog
@@ -520,9 +454,9 @@ At the very end of the outer `<div ref={setNodeRef} …>` (right before its clos
       />
 ```
 
-- [ ] **Step 5: Type-check**
+- [ ] **Step 5: Typecheck**
 
-Run: `pnpm --filter @opentab/extension typecheck`
+Run: `pnpm --filter @opentab/extension check-types`
 Expected: PASS.
 
 - [ ] **Step 6: Commit**
@@ -534,29 +468,30 @@ git commit -m "feat(extension): add move-to-workspace button on collection card"
 
 ---
 
-## Task 7: Make workspace sidebar items droppable
+## Task 6: Show hover highlight when a collection is dragged over a workspace
 
 **Files:**
 - Modify: `apps/extension/src/components/layout/workspace-sidebar.tsx`
 
-- [ ] **Step 1: Import `useDroppable` and `useDndContext` from `@dnd-kit/core`**
+We do **not** add a second `useDroppable`. `useSortable` already registers the row as a droppable with `over.id === workspace.id` and `over.data.current.type === DRAG_TYPES.WORKSPACE`. We only need to read the current drag context and apply a visual highlight.
 
-Change the first import line from:
+- [ ] **Step 1: Import `useDndContext`**
+
+Change the top imports. Currently:
 
 ```tsx
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 ```
 
-to:
+Add a new line above or below it:
 
 ```tsx
-import { useDndContext, useDroppable } from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useDndContext } from "@dnd-kit/core";
 ```
 
-- [ ] **Step 2: Turn `SortableWorkspaceItem` into a droppable target with hover highlight**
+- [ ] **Step 2: Replace `SortableWorkspaceItem`**
 
-Replace the whole `SortableWorkspaceItem` component (currently lines 34–69) with:
+Replace the current component (lines 34–69) with:
 
 ```tsx
 function SortableWorkspaceItem({
@@ -577,14 +512,10 @@ function SortableWorkspaceItem({
     data: { type: DRAG_TYPES.WORKSPACE },
   });
 
-  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
-    id: `workspace-drop-${workspace.id}`,
-    data: { type: DRAG_TYPES.WORKSPACE_DROP, workspaceId: workspace.id! },
-  });
-
-  const { active } = useDndContext();
+  const { active, over } = useDndContext();
   const activeType = (active?.data.current as { type?: string } | undefined)?.type;
-  const isCollectionOver = isOver && activeType === DRAG_TYPES.COLLECTION;
+  const isCollectionOver =
+    over?.id === workspace.id && activeType === DRAG_TYPES.COLLECTION;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -592,14 +523,9 @@ function SortableWorkspaceItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  function setRefs(node: HTMLElement | null) {
-    setNodeRef(node);
-    setDroppableRef(node);
-  }
-
   return (
     <div
-      ref={setRefs}
+      ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
@@ -620,28 +546,30 @@ function SortableWorkspaceItem({
 }
 ```
 
-- [ ] **Step 3: Type-check**
+- [ ] **Step 3: Typecheck**
 
-Run: `pnpm --filter @opentab/extension typecheck`
+Run: `pnpm --filter @opentab/extension check-types`
 Expected: PASS.
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add apps/extension/src/components/layout/workspace-sidebar.tsx
-git commit -m "feat(extension): make workspace sidebar items droppable for collections"
+git commit -m "feat(extension): highlight workspace row while dragging a collection"
 ```
 
 ---
 
-## Task 8: Route collection drops to `moveCollectionToWorkspace`
+## Task 7: Route collection-over-workspace drops to `moveCollectionToWorkspace`
 
 **Files:**
 - Modify: `apps/extension/src/entrypoints/tabs/App.tsx`
 
-- [ ] **Step 1: Extend `handleCollectionReorder` to handle workspace drops**
+The existing `handleDragEnd` already dispatches on `active.type`, so `WORKSPACE` (reorder workspaces) and `COLLECTION` (our case) are isolated. We only extend `handleCollectionReorder`.
 
-Replace the existing `handleCollectionReorder` (lines 214–226) with:
+- [ ] **Step 1: Replace `handleCollectionReorder`**
+
+Replace the current function (lines 214–226) with:
 
 ```tsx
   function handleCollectionReorder(active: Active, over: NonNullable<DragEndEvent["over"]>) {
@@ -649,17 +577,19 @@ Replace the existing `handleCollectionReorder` (lines 214–226) with:
 
     const overData = over.data.current as DragData | undefined;
 
-    // Drop onto a workspace sidebar item → cross-workspace move
-    if (overData?.type === DRAG_TYPES.WORKSPACE_DROP) {
+    // Drop onto a workspace sidebar row → cross-workspace move.
+    // The row is registered as droppable by useSortable with data.type === WORKSPACE.
+    if (overData?.type === DRAG_TYPES.WORKSPACE) {
       const activeData = active.data.current as DragData | undefined;
       if (activeData?.type !== DRAG_TYPES.COLLECTION) return;
+      const targetWorkspaceId = over.id as number;
       useAppStore
         .getState()
-        .moveCollectionToWorkspace(activeData.collectionId, overData.workspaceId);
+        .moveCollectionToWorkspace(activeData.collectionId, targetWorkspaceId);
       return;
     }
 
-    // Otherwise: reorder within the active workspace
+    // Otherwise: reorder within the active workspace.
     const collections = useAppStore.getState().collections;
     const oldIndex = collections.findIndex((c) => `collection-${c.id}` === String(active.id));
     const newIndex = collections.findIndex((c) => `collection-${c.id}` === String(over.id));
@@ -673,12 +603,12 @@ Replace the existing `handleCollectionReorder` (lines 214–226) with:
   }
 ```
 
-- [ ] **Step 2: Type-check**
+- [ ] **Step 2: Typecheck**
 
-Run: `pnpm --filter @opentab/extension typecheck`
+Run: `pnpm --filter @opentab/extension check-types`
 Expected: PASS.
 
-- [ ] **Step 3: Build the extension to surface any integration errors**
+- [ ] **Step 3: Production build**
 
 Run: `pnpm --filter @opentab/extension build`
 Expected: build completes without errors and produces `.output/chrome-mv3/`.
@@ -687,63 +617,69 @@ Expected: build completes without errors and produces `.output/chrome-mv3/`.
 
 ```bash
 git add apps/extension/src/entrypoints/tabs/App.tsx
-git commit -m "feat(extension): wire collection drop on workspace to cross-space move"
+git commit -m "feat(extension): route collection-over-workspace drop to cross-space move"
 ```
 
 ---
 
-## Task 9: Manual verification
+## Task 8: Manual verification
 
-- [ ] **Step 1: Load the extension**
+- [ ] **Step 1: Load the unpacked extension**
 
-Run: `pnpm --filter @opentab/extension build` (if not already run).
+Run: `pnpm --filter @opentab/extension build` (if not already run in Task 7).
 Open `chrome://extensions/`, enable Developer Mode, click "Load unpacked", and select `apps/extension/.output/chrome-mv3/`. Open the OpenTab new-tab view.
 
-- [ ] **Step 2: Precondition — at least two workspaces**
+- [ ] **Step 2: Precondition — at least two workspaces + one collection with tabs**
 
-Create a second workspace via the sidebar `+` button if only one exists. Add at least one collection with a couple of tabs in the first workspace.
+Create a second workspace via the sidebar `+` button if needed. In the first workspace, create a collection and add a couple of tabs.
 
-- [ ] **Step 3: Verify button flow**
+- [ ] **Step 3: Button flow**
 
-1. Hover a collection card. The new double-arrow icon appears between "Open all" and "Delete".
+1. Hover a collection card. The new double-arrow (`ArrowRightLeft`) icon appears between "Open all" and "Delete".
 2. Hover the icon: tooltip reads "Move to workspace".
-3. Click it: dialog opens. Verify the current workspace is **not** in the list.
-4. Click a target workspace. Dialog closes, collection disappears from the current view.
-5. Switch to the target workspace — collection is at the **top** of the list, all tabs intact.
+3. Click it: dialog opens. The current workspace is **absent** from the list.
+4. Click a target workspace. Dialog closes; collection disappears from the current view.
+5. Switch to the target workspace — the collection is at the **top** of the list, with all tabs intact.
 
-- [ ] **Step 4: Verify single-workspace disabled state**
+- [ ] **Step 4: Single-workspace disabled state**
 
-Delete one workspace (or start from a clean state with one workspace). Hover a collection. The move button shows tooltip "No other workspace to move to" and is disabled.
+Temporarily reduce to one workspace (soft-delete the others). Hover a collection's move button: it's disabled and the tooltip reads "No other workspace to move to".
 
-- [ ] **Step 5: Verify drag flow**
+- [ ] **Step 5: Drag flow**
 
-With at least two workspaces:
-1. Drag a collection card by its `GripVertical` handle onto a workspace in the sidebar.
-2. Observe the target workspace gets a ring highlight while hovered.
-3. Drop. Collection disappears from current list; switching to target workspace shows it at the top.
+Restore two+ workspaces. With at least two workspaces and a collection in the source workspace:
+1. Drag a collection card by its `GripVertical` handle toward a workspace row in the sidebar.
+2. The target workspace row shows a ring highlight while hovered.
+3. Drop. The collection disappears from the current view; switching to the target workspace shows it at the top with all tabs.
 
-- [ ] **Step 6: Verify same-workspace drop is a no-op**
+- [ ] **Step 6: Same-workspace drop is a no-op**
 
-Drag a collection onto its own current workspace in the sidebar. Drop. Nothing changes (collection stays where it was).
+Drag a collection onto its own current workspace in the sidebar. Release. Nothing changes (no error, collection remains in place).
 
-- [ ] **Step 7: Verify persistence**
+- [ ] **Step 7: Does not break workspace reorder**
 
-After moving, click the extension reload button in `chrome://extensions/` and re-open the new-tab view. Collection is still in the target workspace.
+Drag a **workspace** row by grabbing anywhere on it and dropping on another workspace row. The workspace list reorders as before. No collection move should occur.
 
-- [ ] **Step 8: Verify sync op (only if server sync is configured)**
+- [ ] **Step 8: Persistence**
 
-With sync enabled, check that the collection appears in the target workspace on a second client. (Skip if no sync setup is available — this path is covered by `mutateWithOutbox` and mirrors existing `reorderCollection` behavior.)
+After a successful move, click the extension reload button in `chrome://extensions/` and re-open the new-tab view. The collection is still in the target workspace.
 
-- [ ] **Step 9: Check console for errors**
+- [ ] **Step 9: Sync op (skip if no server configured)**
 
-Throughout the above, open DevTools on the new-tab page. Confirm no `[store] failed to move collection to workspace` errors logged.
+With server sync enabled, verify a second client receives the updated `collection` with its new `parentSyncId`.
+
+- [ ] **Step 10: Console check**
+
+Throughout the above, keep DevTools open. Confirm no `[store] failed to move collection to workspace` errors appear.
 
 ---
 
 ## Self-Review
 
-- Every spec section has a task: data model (no change, covered in spec), store method (Tasks 2–3), dialog (Task 5), card button (Task 6), DnD types (Task 1), droppable sidebar (Task 7), dispatch (Task 8), i18n (Task 4), manual test checklist (Task 9).
-- No placeholders; every step has exact code or exact commands.
-- Method name `moveCollectionToWorkspace` is used consistently in Tasks 2, 3, 5, 6, 8.
-- `WORKSPACE_DROP` constant and `WorkspaceDropData` interface consistent across Tasks 1, 7, 8.
-- i18n keys used in the UI (`collection_card.move_to_workspace`, `collection_card.move_to_workspace_disabled`, `dialog.move_collection.title/description/empty`) all appear in Task 4.
+- **Spec coverage:** every spec section maps to a task — data model (no schema change, covered by spec), store method (Tasks 1–2), dialog (Task 4), card button (Task 5), DnD highlight (Task 6), dispatch (Task 7), i18n (Task 3), manual test (Task 8).
+- **Placeholder scan:** no TBD/TODO; every code block is complete, every command concrete.
+- **Type consistency:** `moveCollectionToWorkspace` signature matches across Tasks 1, 2, 4, 5, 7. i18n keys (`collection_card.move_to_workspace`, `collection_card.move_to_workspace_disabled`, `dialog.move_collection.{title,description,empty}`) appear identically in Tasks 3, 4, 5.
+- **Risk mitigations:**
+  - High-risk dual-droppable avoided by reusing the existing `useSortable` droppable and dispatching on `over.data.current.type === WORKSPACE`.
+  - All verification commands use real package scripts (`check-types`, `build`).
+  - i18n keys normalized to the `collection_card.*` / `dialog.move_collection.*` conventions used elsewhere in the codebase.

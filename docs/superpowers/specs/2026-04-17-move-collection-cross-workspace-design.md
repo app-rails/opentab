@@ -59,7 +59,7 @@ Behavior:
 `apps/extension/src/components/collection/collection-card.tsx`
 
 - Add an `ArrowRightLeft` icon button in the existing action row (next to open-all / delete).
-- Wrap with `Tooltip`; content: i18n key `collection.moveToWorkspace` → "Move to workspace".
+- Wrap with `Tooltip`; content: i18n keys `collection_card.move_to_workspace` ("Move to workspace") / `collection_card.move_to_workspace_disabled` ("No other workspace to move to").
 - Click opens the `MoveCollectionDialog`.
 - Disabled when there is no other non-deleted workspace; tooltip explains why.
 
@@ -67,21 +67,21 @@ Behavior:
 
 `apps/extension/src/entrypoints/tabs/App.tsx` and `workspace-sidebar.tsx`
 
-- In `workspace-sidebar`, wrap each workspace item with `useDroppable`:
-  - `id: workspace-drop-${workspace.id}`
-  - `data: { type: DRAG_TYPES.WORKSPACE_DROP, workspaceId }`
-- Add a `WORKSPACE_DROP` entry to `DRAG_TYPES` in `apps/extension/src/lib/dnd-types.ts`.
-- When `isOver`, add a background highlight to the workspace item.
-- In `handleDragEnd`, add a branch: if `active.data.type === COLLECTION` and `over.data.type === WORKSPACE_DROP`, call `moveCollectionToWorkspace(active.data.collectionId, over.data.workspaceId)`.
+- `SortableWorkspaceItem` already registers as droppable through `useSortable({ id: workspace.id!, data: { type: DRAG_TYPES.WORKSPACE } })`. We reuse that droppable instead of adding a second one on the same DOM node (which would make collision selection non-deterministic).
+- In `SortableWorkspaceItem`, read `useDndContext` to detect when a `COLLECTION` drag hovers this row (`over?.id === workspace.id && activeType === COLLECTION`) and apply a visible highlight.
+- In `handleCollectionReorder` (already the `DRAG_TYPES.COLLECTION` branch of `handleDragEnd`), route based on `over.data.current.type`:
+  - `WORKSPACE` → `moveCollectionToWorkspace(collectionId, over.id as number)`.
+  - anything else → existing reorder-within-workspace path.
+- `active.type === WORKSPACE` still routes to `handleWorkspaceReorder`, so workspace reorder vs. collection cross-move cannot conflict (they are dispatched on `active.type`).
 
 ## Data Flow
 
 ### Drag flow
 
 1. User drags a collection card via its existing drag handle.
-2. DnD context reports `over` as a workspace sidebar item.
-3. Sidebar item highlights during hover.
-4. On drop, `handleDragEnd` routes to the new branch → calls store method.
+2. `closestCenter` resolves `over` to a workspace sidebar item (its existing `useSortable` droppable).
+3. Sidebar item highlights while hovered (active type is `COLLECTION`).
+4. On drop, `handleDragEnd` → `handleCollectionReorder` sees `over.data.current.type === WORKSPACE` and calls `moveCollectionToWorkspace`.
 
 ### Button flow
 
@@ -123,7 +123,6 @@ No automated tests (extension has no component/E2E harness today, matching exist
 - `apps/extension/src/stores/app-store.ts` — add `moveCollectionToWorkspace`.
 - `apps/extension/src/components/collection/collection-card.tsx` — add icon button + dialog hookup.
 - `apps/extension/src/components/collection/move-collection-dialog.tsx` — new file.
-- `apps/extension/src/components/layout/workspace-sidebar.tsx` (and/or `workspace-item.tsx`) — make items droppable, highlight on hover.
-- `apps/extension/src/entrypoints/tabs/App.tsx` — route `COLLECTION` → `WORKSPACE_DROP` in `handleDragEnd`.
-- `apps/extension/src/lib/dnd-types.ts` — add `WORKSPACE_DROP` constant + type.
-- `apps/extension/src/locales/*` — add `collection.moveToWorkspace` i18n strings.
+- `apps/extension/src/components/layout/workspace-sidebar.tsx` — add hover highlight when a collection drags over a workspace row (no new droppable).
+- `apps/extension/src/entrypoints/tabs/App.tsx` — in `handleCollectionReorder`, route on `over.data.current.type === WORKSPACE` to the cross-workspace move.
+- `apps/extension/src/locales/en.json` / `zh.json` — add `collection_card.move_to_workspace`, `collection_card.move_to_workspace_disabled`, `dialog.move_collection.*`.
