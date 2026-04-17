@@ -41,7 +41,9 @@
     "more_actions": "更多操作",
     "rename": "重命名",
     "delete_menu": "删除",
-    "drag_tabs_here": "将标签页拖放到这里"
+    "drag_tabs_here": "将标签页拖放到这里",
+    "move_to_workspace": "移动到其他 Space",
+    "move_to_workspace_disabled": "没有其他可选 Space"
   },
   "collection_tab": {
     "open": "打开",
@@ -77,6 +79,11 @@
   },
   "dialog": {
     "cancel": "取消",
+    "move_collection": {
+      "title": "将 \"{{name}}\" 移动到…",
+      "description": "选择一个 Space，集合会出现在最前面。",
+      "empty": "没有其他可选的 Space。"
+    },
     "create_workspace": {
       "title": "新建工作空间",
       "description": "创建新的工作空间来组织你的标签页",

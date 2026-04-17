@@ -41,7 +41,9 @@
     "more_actions": "More actions",
     "rename": "Rename",
     "delete_menu": "Delete",
-    "drag_tabs_here": "Drag tabs here"
+    "drag_tabs_here": "Drag tabs here",
+    "move_to_workspace": "Move to workspace",
+    "move_to_workspace_disabled": "No other workspace to move to"
   },
   "collection_tab": {
     "open": "Open",
@@ -77,6 +79,11 @@
   },
   "dialog": {
     "cancel": "Cancel",
+    "move_collection": {
+      "title": "Move \"{{name}}\" to…",
+      "description": "Choose a workspace. The collection will appear at the top.",
+      "empty": "No other workspaces available."
+    },
     "create_workspace": {
       "title": "New Workspace",
       "description": "Create a new workspace to organize your tabs",
