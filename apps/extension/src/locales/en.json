@@ -82,7 +82,8 @@
     "move_collection": {
       "title": "Move \"{{name}}\" to…",
       "description": "Choose a workspace. The collection will appear at the top.",
-      "empty": "No other workspaces available."
+      "empty": "No other workspaces available.",
+      "switch_after": "Switch to the target workspace after moving"
     },
     "create_workspace": {
       "title": "New Workspace",

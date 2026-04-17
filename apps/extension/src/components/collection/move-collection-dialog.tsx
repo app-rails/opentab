@@ -1,3 +1,4 @@
+import { Checkbox } from "@opentab/ui/components/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -6,6 +7,7 @@ import {
   DialogTitle,
 } from "@opentab/ui/components/dialog";
 import { cn } from "@opentab/ui/lib/utils";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TabCollection } from "@/lib/db";
 import { WORKSPACE_ICONS } from "@/lib/workspace-icons";
@@ -25,6 +27,8 @@ export function MoveCollectionDialog({
   const { t } = useTranslation();
   const workspaces = useAppStore((s) => s.workspaces);
   const moveCollectionToWorkspace = useAppStore((s) => s.moveCollectionToWorkspace);
+  const [switchAfter, setSwitchAfter] = useState(true);
+  const switchCheckboxId = useId();
 
   const eligible = workspaces.filter(
     (w) => w.deletedAt == null && collection != null && w.id !== collection.workspaceId,
@@ -32,7 +36,7 @@ export function MoveCollectionDialog({
 
   async function handleSelect(targetWorkspaceId: number) {
     if (collection?.id == null) return;
-    await moveCollectionToWorkspace(collection.id, targetWorkspaceId);
+    await moveCollectionToWorkspace(collection.id, targetWorkspaceId, { switchAfter });
     onOpenChange(false);
   }
 
@@ -45,6 +49,17 @@ export function MoveCollectionDialog({
           </DialogTitle>
           <DialogDescription>{t("dialog.move_collection.description")}</DialogDescription>
         </DialogHeader>
+        <label
+          htmlFor={switchCheckboxId}
+          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50"
+        >
+          <Checkbox
+            id={switchCheckboxId}
+            checked={switchAfter}
+            onCheckedChange={(v) => setSwitchAfter(v === true)}
+          />
+          <span>{t("dialog.move_collection.switch_after")}</span>
+        </label>
         <div className="max-h-80 overflow-auto py-2">
           {eligible.length === 0 ? (
             <p className="px-2 py-6 text-center text-muted-foreground text-sm">

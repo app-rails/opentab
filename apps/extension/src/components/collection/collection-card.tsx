@@ -26,7 +26,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { CollectionTab, TabCollection } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
@@ -60,10 +60,14 @@ export function CollectionCard({
   const [renameValue, setRenameValue] = useState(collection.name);
   const [collapsed, setCollapsed] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [isFocusHighlighted, setIsFocusHighlighted] = useState(false);
   const workspaces = useAppStore((s) => s.workspaces);
   const hasOtherWorkspace = workspaces.some(
     (w) => w.deletedAt == null && w.id !== collection.workspaceId,
   );
+  const focusCollectionId = useAppStore((s) => s.focusCollectionId);
+  const clearFocusCollection = useAppStore((s) => s.clearFocusCollection);
+  const cardRef = useRef<HTMLDivElement | null>(null);
 
   const sortableId = `collection-${collection.id}`;
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
@@ -82,6 +86,23 @@ export function CollectionCard({
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  function setRefs(node: HTMLDivElement | null) {
+    setNodeRef(node);
+    cardRef.current = node;
+  }
+
+  // When the store marks this collection as the focus target (set after
+  // moveCollectionToWorkspace + switchAfter), scroll into view, flash a
+  // ring highlight briefly, then clear the signal so it fires only once.
+  useEffect(() => {
+    if (focusCollectionId !== collection.id) return;
+    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setIsFocusHighlighted(true);
+    clearFocusCollection();
+    const timeout = setTimeout(() => setIsFocusHighlighted(false), 1500);
+    return () => clearTimeout(timeout);
+  }, [focusCollectionId, collection.id, clearFocusCollection]);
 
   function handleRenameConfirm() {
     if (collection.id != null && renameValue.trim()) {
@@ -107,9 +128,13 @@ export function CollectionCard({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
       style={sortableStyle}
-      className={cn("transition-colors", isOver && "bg-primary/5")}
+      className={cn(
+        "rounded-md transition-colors",
+        isOver && "bg-primary/5",
+        isFocusHighlighted && "ring-2 ring-primary ring-offset-1",
+      )}
     >
       {/* Header */}
       <div className="group flex items-center gap-1 border-border border-b px-4 pt-2 pb-3">

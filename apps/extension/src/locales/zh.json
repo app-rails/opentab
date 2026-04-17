@@ -82,7 +82,8 @@
     "move_collection": {
       "title": "将 \"{{name}}\" 移动到…",
       "description": "选择一个 Space，集合会出现在最前面。",
-      "empty": "没有其他可选的 Space。"
+      "empty": "没有其他可选的 Space。",
+      "switch_after": "移动后切换到目标 Space"
     },
     "create_workspace": {
       "title": "新建工作空间",

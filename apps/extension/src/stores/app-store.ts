@@ -59,6 +59,9 @@ interface AppState {
   liveTabs: chrome.tabs.Tab[];
   liveTabUrls: Set<string>;
   isLoading: boolean;
+  // Transient: when set, the matching collection card should scroll into
+  // view and briefly highlight, then call clearFocusCollection().
+  focusCollectionId: number | null;
 
   initialize: () => Promise<void>;
   setActiveWorkspace: (id: number) => void;
@@ -105,7 +108,15 @@ interface AppState {
   ) => Promise<void>;
 
   // Move collection across workspaces
-  moveCollectionToWorkspace: (collectionId: number, targetWorkspaceId: number) => Promise<void>;
+  moveCollectionToWorkspace: (
+    collectionId: number,
+    targetWorkspaceId: number,
+    options?: { switchAfter?: boolean },
+  ) => Promise<void>;
+
+  // Focus helper — clears the transient focusCollectionId after the card
+  // has scrolled into view and highlighted.
+  clearFocusCollection: () => void;
 
   // Restore
   restoreCollection: (collectionId: number) => Promise<void>;
@@ -128,6 +139,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   liveTabs: [],
   liveTabUrls: new Set(),
   isLoading: true,
+  focusCollectionId: null,
+
+  clearFocusCollection: () => set({ focusCollectionId: null }),
 
   initialize: async () => {
     try {
@@ -1029,7 +1043,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  moveCollectionToWorkspace: async (collectionId, targetWorkspaceId) => {
+  moveCollectionToWorkspace: async (collectionId, targetWorkspaceId, options) => {
+    const switchAfter = options?.switchAfter ?? false;
     const { collections, workspaces, activeWorkspaceId } = get();
     const collection = collections.find((c) => c.id === collectionId);
     if (!collection) return;
@@ -1081,6 +1096,15 @@ export const useAppStore = create<AppState>((set, get) => ({
           createdAt: now,
         },
       ]);
+
+      // After the write succeeds, optionally switch to the target workspace
+      // and mark the moved collection for scroll-into-view + highlight.
+      // Order matters: set focusCollectionId first so the target's freshly
+      // loaded collection cards see it on their first render.
+      if (switchAfter && get().activeWorkspaceId !== targetWorkspaceId) {
+        set({ focusCollectionId: collectionId });
+        get().setActiveWorkspace(targetWorkspaceId);
+      }
     } catch (err) {
       console.error("[store] failed to move collection to workspace:", err);
       // Only roll back if we applied the optimistic update AND the user is
