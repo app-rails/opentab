@@ -15,8 +15,10 @@ import {
   DropdownMenuTrigger,
 } from "@opentab/ui/components/dropdown-menu";
 import { Input } from "@opentab/ui/components/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@opentab/ui/components/tooltip";
 import { cn } from "@opentab/ui/lib/utils";
 import {
+  ArrowRightLeft,
   ChevronRight,
   EllipsisVertical,
   ExternalLink,
@@ -33,6 +35,7 @@ import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
 import { AddTabPopover } from "./add-tab-popover";
 import { CollectionTabItem } from "./collection-tab-item";
+import { MoveCollectionDialog } from "./move-collection-dialog";
 
 interface CollectionCardProps {
   collection: TabCollection;
@@ -56,6 +59,11 @@ export function CollectionCard({
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(collection.name);
   const [collapsed, setCollapsed] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const workspaces = useAppStore((s) => s.workspaces);
+  const hasOtherWorkspace = workspaces.some(
+    (w) => w.deletedAt == null && w.id !== collection.workspaceId,
+  );
 
   const sortableId = `collection-${collection.id}`;
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
@@ -174,6 +182,26 @@ export function CollectionCard({
                 <ExternalLink className="size-3.5 text-muted-foreground" />
               </Button>
             )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => setMoveOpen(true)}
+                    disabled={!hasOtherWorkspace}
+                    aria-label={t("collection_card.move_to_workspace")}
+                  >
+                    <ArrowRightLeft className="size-3.5 text-muted-foreground" />
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {hasOtherWorkspace
+                  ? t("collection_card.move_to_workspace")
+                  : t("collection_card.move_to_workspace_disabled")}
+              </TooltipContent>
+            </Tooltip>
             <Button
               variant="ghost"
               size="icon-xs"
@@ -250,6 +278,7 @@ export function CollectionCard({
           </SortableContext>
         </div>
       )}
+      <MoveCollectionDialog collection={collection} open={moveOpen} onOpenChange={setMoveOpen} />
     </div>
   );
 }
