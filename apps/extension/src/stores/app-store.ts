@@ -104,6 +104,9 @@ interface AppState {
     targetOrder: string,
   ) => Promise<void>;
 
+  // Move collection across workspaces
+  moveCollectionToWorkspace: (collectionId: number, targetWorkspaceId: number) => Promise<void>;
+
   // Restore
   restoreCollection: (collectionId: number) => Promise<void>;
 
@@ -1023,6 +1026,69 @@ export const useAppStore = create<AppState>((set, get) => ({
       revertMap.set(sourceCollectionId, sourceTabs);
       revertMap.set(targetCollectionId, targetTabs);
       set({ tabsByCollection: revertMap });
+    }
+  },
+
+  moveCollectionToWorkspace: async (collectionId, targetWorkspaceId) => {
+    const { collections, workspaces, activeWorkspaceId } = get();
+    const collection = collections.find((c) => c.id === collectionId);
+    if (!collection) return;
+    if (collection.workspaceId === targetWorkspaceId) return;
+
+    const targetWs = workspaces.find((w) => w.id === targetWorkspaceId && w.deletedAt == null);
+    if (!targetWs) return;
+
+    const targetCollections = await activeCollections(targetWorkspaceId).sortBy("order");
+    const firstOrder = targetCollections[0]?.order ?? null;
+    const newOrder = generateKeyBetween(null, firstOrder);
+
+    const now = Date.now();
+    const sourceWorkspaceId = collection.workspaceId;
+
+    // Optimistic update: if the user is viewing the source workspace, drop
+    // the collection from the visible list. Track whether we applied it so
+    // we know whether a rollback is even meaningful.
+    const prevCollections = collections;
+    const didOptimisticUpdate = activeWorkspaceId === sourceWorkspaceId;
+    if (didOptimisticUpdate) {
+      set({
+        collections: collections.filter((c) => c.id !== collectionId),
+      });
+    }
+
+    try {
+      await mutateWithOutbox(async () => {
+        await db.tabCollections.update(collectionId, {
+          workspaceId: targetWorkspaceId,
+          workspaceSyncId: targetWs.syncId,
+          order: newOrder,
+          updatedAt: now,
+        });
+      }, [
+        {
+          opId: crypto.randomUUID(),
+          entityType: "collection",
+          entitySyncId: collection.syncId,
+          action: "update",
+          payload: {
+            syncId: collection.syncId,
+            parentSyncId: targetWs.syncId,
+            name: collection.name,
+            order: newOrder,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        },
+      ]);
+    } catch (err) {
+      console.error("[store] failed to move collection to workspace:", err);
+      // Only roll back if we applied the optimistic update AND the user is
+      // still on the source workspace. If they switched during the await,
+      // setActiveWorkspace has already loaded the new workspace's data.
+      if (didOptimisticUpdate && get().activeWorkspaceId === sourceWorkspaceId) {
+        set({ collections: prevCollections });
+      }
     }
   },
 
