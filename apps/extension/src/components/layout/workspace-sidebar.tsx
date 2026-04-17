@@ -1,3 +1,4 @@
+import { useDndContext } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@opentab/ui/components/button";
@@ -49,6 +50,15 @@ function SortableWorkspaceItem({
     data: { type: DRAG_TYPES.WORKSPACE },
   });
 
+  const { active, over } = useDndContext();
+  const activeType = (active?.data.current as { type?: string } | undefined)?.type;
+  // dnd-kit UniqueIdentifier is string | number; compare as strings so the
+  // check does not silently break if workspace IDs ever become strings.
+  const isCollectionOver =
+    over?.id != null &&
+    String(over.id) === String(workspace.id) &&
+    activeType === DRAG_TYPES.COLLECTION;
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -56,7 +66,16 @@ function SortableWorkspaceItem({
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "rounded-md transition-colors",
+        isCollectionOver && "ring-2 ring-primary ring-offset-1 ring-offset-sidebar",
+      )}
+    >
       <WorkspaceItem
         workspace={workspace}
         isActive={isActive}
