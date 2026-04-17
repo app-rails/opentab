@@ -99,11 +99,11 @@ Locate the closing of `moveTabToCollection` at line 1027 (ends with `},` after t
     const sourceWorkspaceId = collection.workspaceId;
 
     // Optimistic update: if the user is viewing the source workspace, drop
-    // the collection from the visible list. We do not mutate the target
-    // workspace's list here because the user stays on the source workspace
-    // after the move; the target list is re-read from Dexie on switch.
+    // the collection from the visible list. Track whether we applied it so
+    // we know whether a rollback is even meaningful.
     const prevCollections = collections;
-    if (activeWorkspaceId === sourceWorkspaceId) {
+    const didOptimisticUpdate = activeWorkspaceId === sourceWorkspaceId;
+    if (didOptimisticUpdate) {
       set({
         collections: collections.filter((c) => c.id !== collectionId),
       });
@@ -139,7 +139,15 @@ Locate the closing of `moveTabToCollection` at line 1027 (ends with `},` after t
       );
     } catch (err) {
       console.error("[store] failed to move collection to workspace:", err);
-      set({ collections: prevCollections });
+      // Only roll back the visible list if:
+      //   1. we actually applied the optimistic update, and
+      //   2. the user is still on the source workspace.
+      // If the user switched workspaces during the await, setActiveWorkspace
+      // has already replaced `collections` with the new workspace's data —
+      // restoring our stale snapshot would stomp it.
+      if (didOptimisticUpdate && get().activeWorkspaceId === sourceWorkspaceId) {
+        set({ collections: prevCollections });
+      }
     }
   },
 ```
@@ -514,8 +522,12 @@ function SortableWorkspaceItem({
 
   const { active, over } = useDndContext();
   const activeType = (active?.data.current as { type?: string } | undefined)?.type;
+  // dnd-kit UniqueIdentifier is string | number. Compare as strings so the
+  // check does not silently break if workspace IDs ever become strings.
   const isCollectionOver =
-    over?.id === workspace.id && activeType === DRAG_TYPES.COLLECTION;
+    over?.id != null &&
+    String(over.id) === String(workspace.id) &&
+    activeType === DRAG_TYPES.COLLECTION;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -582,7 +594,10 @@ Replace the current function (lines 214–226) with:
     if (overData?.type === DRAG_TYPES.WORKSPACE) {
       const activeData = active.data.current as DragData | undefined;
       if (activeData?.type !== DRAG_TYPES.COLLECTION) return;
-      const targetWorkspaceId = over.id as number;
+      // UniqueIdentifier is string | number; coerce defensively so a future
+      // switch to string IDs does not silently no-op.
+      const targetWorkspaceId = Number(over.id);
+      if (!Number.isFinite(targetWorkspaceId)) return;
       useAppStore
         .getState()
         .moveCollectionToWorkspace(activeData.collectionId, targetWorkspaceId);
@@ -681,5 +696,7 @@ Throughout the above, keep DevTools open. Confirm no `[store] failed to move col
 - **Type consistency:** `moveCollectionToWorkspace` signature matches across Tasks 1, 2, 4, 5, 7. i18n keys (`collection_card.move_to_workspace`, `collection_card.move_to_workspace_disabled`, `dialog.move_collection.{title,description,empty}`) appear identically in Tasks 3, 4, 5.
 - **Risk mitigations:**
   - High-risk dual-droppable avoided by reusing the existing `useSortable` droppable and dispatching on `over.data.current.type === WORKSPACE`.
+  - Rollback in `moveCollectionToWorkspace` is guarded by `didOptimisticUpdate && activeWorkspaceId === sourceWorkspaceId`, so switching workspaces during the await cannot cause a stale-snapshot stomp.
+  - DnD target IDs are coerced via `Number(over.id)` with `Number.isFinite` check; highlight uses `String(over.id) === String(workspace.id)`. This stays correct whether `UniqueIdentifier` resolves to `number` or `string`.
   - All verification commands use real package scripts (`check-types`, `build`).
   - i18n keys normalized to the `collection_card.*` / `dialog.move_collection.*` conventions used elsewhere in the codebase.
