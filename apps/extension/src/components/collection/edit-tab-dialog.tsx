@@ -48,7 +48,11 @@ export function EditTabDialog({ tab, open, onOpenChange }: EditTabDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      {/* Stop propagation so clicks inside the dialog don't bubble up the
+          React tree to CollectionTabItem's outer div, whose onClick opens
+          the tab's URL. Radix renders via portal, but React 17+ synthetic
+          events bubble through the React tree, not the DOM tree. */}
+      <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
           <DialogTitle>{t("edit_tab.title")}</DialogTitle>
           <DialogDescription>{t("edit_tab.description")}</DialogDescription>
