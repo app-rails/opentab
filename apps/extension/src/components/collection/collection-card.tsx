@@ -35,13 +35,13 @@ import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
 import { AddTabPopover } from "./add-tab-popover";
 import { CollectionTabItem } from "./collection-tab-item";
-import { MoveCollectionDialog } from "./move-collection-dialog";
 
 interface CollectionCardProps {
   collection: TabCollection;
   tabs: CollectionTab[];
   viewMode: ViewMode;
   onRequestDelete: () => void;
+  onRequestMove: () => void;
 }
 
 export function CollectionCard({
@@ -49,6 +49,7 @@ export function CollectionCard({
   tabs,
   viewMode,
   onRequestDelete,
+  onRequestMove,
 }: CollectionCardProps) {
   const { t } = useTranslation();
   const renameCollection = useAppStore((s) => s.renameCollection);
@@ -59,13 +60,13 @@ export function CollectionCard({
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(collection.name);
   const [collapsed, setCollapsed] = useState(false);
-  const [moveOpen, setMoveOpen] = useState(false);
   const [isFocusHighlighted, setIsFocusHighlighted] = useState(false);
-  const workspaces = useAppStore((s) => s.workspaces);
-  const hasOtherWorkspace = workspaces.some(
-    (w) => w.deletedAt == null && w.id !== collection.workspaceId,
+  // Scalar selectors — return primitives so Zustand only re-renders this
+  // card when the specific boolean flips (not on every workspaces change).
+  const hasOtherWorkspace = useAppStore((s) =>
+    s.workspaces.some((w) => w.deletedAt == null && w.id !== collection.workspaceId),
   );
-  const focusCollectionId = useAppStore((s) => s.focusCollectionId);
+  const isFocusTarget = useAppStore((s) => s.focusCollectionId === collection.id);
   const clearFocusCollection = useAppStore((s) => s.clearFocusCollection);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
@@ -93,16 +94,25 @@ export function CollectionCard({
   }
 
   // When the store marks this collection as the focus target (set after
-  // moveCollectionToWorkspace + switchAfter), scroll into view, flash a
-  // ring highlight briefly, then clear the signal so it fires only once.
+  // moveCollectionToWorkspace + switchAfter), scroll into view and flash
+  // a ring highlight briefly. The store signal is cleared inside the
+  // timeout callback — clearing earlier would trigger a re-render whose
+  // cleanup would cancel the in-flight timeout before it fires.
   useEffect(() => {
-    if (focusCollectionId !== collection.id) return;
-    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!isFocusTarget) return;
+    const raf = requestAnimationFrame(() => {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
     setIsFocusHighlighted(true);
-    clearFocusCollection();
-    const timeout = setTimeout(() => setIsFocusHighlighted(false), 1500);
-    return () => clearTimeout(timeout);
-  }, [focusCollectionId, collection.id, clearFocusCollection]);
+    const timeout = setTimeout(() => {
+      setIsFocusHighlighted(false);
+      clearFocusCollection();
+    }, 1500);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timeout);
+    };
+  }, [isFocusTarget, clearFocusCollection]);
 
   function handleRenameConfirm() {
     if (collection.id != null && renameValue.trim()) {
@@ -213,7 +223,7 @@ export function CollectionCard({
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    onClick={() => setMoveOpen(true)}
+                    onClick={onRequestMove}
                     disabled={!hasOtherWorkspace}
                     aria-label={t("collection_card.move_to_workspace")}
                   >
@@ -303,7 +313,6 @@ export function CollectionCard({
           </SortableContext>
         </div>
       )}
-      <MoveCollectionDialog collection={collection} open={moveOpen} onOpenChange={setMoveOpen} />
     </div>
   );
 }
