@@ -213,6 +213,23 @@ export default function App() {
 
   function handleCollectionReorder(active: Active, over: NonNullable<DragEndEvent["over"]>) {
     if (active.id === over.id) return;
+
+    const overData = over.data.current as DragData | undefined;
+
+    // Drop onto a workspace sidebar row → cross-workspace move.
+    // The row is registered as droppable by useSortable with data.type === WORKSPACE.
+    if (overData?.type === DRAG_TYPES.WORKSPACE) {
+      const activeData = active.data.current as DragData | undefined;
+      if (activeData?.type !== DRAG_TYPES.COLLECTION) return;
+      // UniqueIdentifier is string | number; coerce defensively so a future
+      // switch to string IDs does not silently no-op.
+      const targetWorkspaceId = Number(over.id);
+      if (!Number.isFinite(targetWorkspaceId)) return;
+      useAppStore.getState().moveCollectionToWorkspace(activeData.collectionId, targetWorkspaceId);
+      return;
+    }
+
+    // Otherwise: reorder within the active workspace.
     const collections = useAppStore.getState().collections;
     const oldIndex = collections.findIndex((c) => `collection-${c.id}` === String(active.id));
     const newIndex = collections.findIndex((c) => `collection-${c.id}` === String(over.id));

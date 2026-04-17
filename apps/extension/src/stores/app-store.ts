@@ -59,6 +59,9 @@ interface AppState {
   liveTabs: chrome.tabs.Tab[];
   liveTabUrls: Set<string>;
   isLoading: boolean;
+  // Transient: when set, the matching collection card should scroll into
+  // view and briefly highlight, then call clearFocusCollection().
+  focusCollectionId: number | null;
 
   initialize: () => Promise<void>;
   setActiveWorkspace: (id: number) => void;
@@ -104,6 +107,17 @@ interface AppState {
     targetOrder: string,
   ) => Promise<void>;
 
+  // Move collection across workspaces
+  moveCollectionToWorkspace: (
+    collectionId: number,
+    targetWorkspaceId: number,
+    options?: { switchAfter?: boolean },
+  ) => Promise<void>;
+
+  // Focus helper — clears the transient focusCollectionId after the card
+  // has scrolled into view and highlighted.
+  clearFocusCollection: () => void;
+
   // Restore
   restoreCollection: (collectionId: number) => Promise<void>;
 
@@ -125,6 +139,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   liveTabs: [],
   liveTabUrls: new Set(),
   isLoading: true,
+  focusCollectionId: null,
+
+  clearFocusCollection: () => set({ focusCollectionId: null }),
 
   initialize: async () => {
     try {
@@ -1023,6 +1040,79 @@ export const useAppStore = create<AppState>((set, get) => ({
       revertMap.set(sourceCollectionId, sourceTabs);
       revertMap.set(targetCollectionId, targetTabs);
       set({ tabsByCollection: revertMap });
+    }
+  },
+
+  moveCollectionToWorkspace: async (collectionId, targetWorkspaceId, options) => {
+    const switchAfter = options?.switchAfter ?? false;
+    const { collections, workspaces, activeWorkspaceId } = get();
+    const collection = collections.find((c) => c.id === collectionId);
+    if (!collection) return;
+    if (collection.workspaceId === targetWorkspaceId) return;
+
+    const targetWs = workspaces.find((w) => w.id === targetWorkspaceId && w.deletedAt == null);
+    if (!targetWs) return;
+
+    const targetCollections = await activeCollections(targetWorkspaceId).sortBy("order");
+    const firstOrder = targetCollections[0]?.order ?? null;
+    const newOrder = generateKeyBetween(null, firstOrder);
+
+    const now = Date.now();
+    const sourceWorkspaceId = collection.workspaceId;
+
+    // Optimistic update: if the user is viewing the source workspace, drop
+    // the collection from the visible list. Track whether we applied it so
+    // we know whether a rollback is even meaningful.
+    const prevCollections = collections;
+    const didOptimisticUpdate = activeWorkspaceId === sourceWorkspaceId;
+    if (didOptimisticUpdate) {
+      set({
+        collections: collections.filter((c) => c.id !== collectionId),
+      });
+    }
+
+    try {
+      await mutateWithOutbox(async () => {
+        await db.tabCollections.update(collectionId, {
+          workspaceId: targetWorkspaceId,
+          workspaceSyncId: targetWs.syncId,
+          order: newOrder,
+          updatedAt: now,
+        });
+      }, [
+        {
+          opId: crypto.randomUUID(),
+          entityType: "collection",
+          entitySyncId: collection.syncId,
+          action: "update",
+          payload: {
+            syncId: collection.syncId,
+            parentSyncId: targetWs.syncId,
+            name: collection.name,
+            order: newOrder,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        },
+      ]);
+
+      // After the write succeeds, optionally switch to the target workspace
+      // and mark the moved collection for scroll-into-view + highlight.
+      // Order matters: set focusCollectionId first so the target's freshly
+      // loaded collection cards see it on their first render.
+      if (switchAfter && get().activeWorkspaceId !== targetWorkspaceId) {
+        set({ focusCollectionId: collectionId });
+        get().setActiveWorkspace(targetWorkspaceId);
+      }
+    } catch (err) {
+      console.error("[store] failed to move collection to workspace:", err);
+      // Only roll back if we applied the optimistic update AND the user is
+      // still on the source workspace. If they switched during the await,
+      // setActiveWorkspace has already loaded the new workspace's data.
+      if (didOptimisticUpdate && get().activeWorkspaceId === sourceWorkspaceId) {
+        set({ collections: prevCollections });
+      }
     }
   },
 

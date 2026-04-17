@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { CollectionCard } from "@/components/collection/collection-card";
 import { CreateCollectionDialog } from "@/components/collection/create-collection-dialog";
 import { DeleteCollectionDialog } from "@/components/collection/delete-collection-dialog";
+import { MoveCollectionDialog } from "@/components/collection/move-collection-dialog";
 import { AboutPage } from "@/components/layout/about-page";
 import { SearchDialog } from "@/components/layout/search-dialog";
 import { DeleteWorkspaceDialog } from "@/components/workspace/delete-workspace-dialog";
@@ -144,6 +145,7 @@ export function CollectionPanel({
   const { t } = useTranslation();
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TabCollection | null>(null);
+  const [moveTarget, setMoveTarget] = useState<TabCollection | null>(null);
   const [deleteWorkspaceOpen, setDeleteWorkspaceOpen] = useState(false);
   const addButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -327,6 +329,7 @@ export function CollectionPanel({
                   tabs={tabsByCollection.get(col.id!) ?? []}
                   viewMode={viewMode}
                   onRequestDelete={() => setDeleteTarget(col)}
+                  onRequestMove={() => setMoveTarget(col)}
                 />
               ))}
             </div>
@@ -335,6 +338,13 @@ export function CollectionPanel({
       </div>
 
       <CreateCollectionDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <MoveCollectionDialog
+        collection={moveTarget}
+        open={moveTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setMoveTarget(null);
+        }}
+      />
       <DeleteCollectionDialog
         collectionId={deleteTarget?.id ?? null}
         collectionName={deleteTarget?.name ?? ""}

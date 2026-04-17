@@ -15,8 +15,10 @@ import {
   DropdownMenuTrigger,
 } from "@opentab/ui/components/dropdown-menu";
 import { Input } from "@opentab/ui/components/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@opentab/ui/components/tooltip";
 import { cn } from "@opentab/ui/lib/utils";
 import {
+  ArrowRightLeft,
   ChevronRight,
   EllipsisVertical,
   ExternalLink,
@@ -24,7 +26,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { CollectionTab, TabCollection } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
@@ -39,6 +41,7 @@ interface CollectionCardProps {
   tabs: CollectionTab[];
   viewMode: ViewMode;
   onRequestDelete: () => void;
+  onRequestMove: () => void;
 }
 
 export function CollectionCard({
@@ -46,6 +49,7 @@ export function CollectionCard({
   tabs,
   viewMode,
   onRequestDelete,
+  onRequestMove,
 }: CollectionCardProps) {
   const { t } = useTranslation();
   const renameCollection = useAppStore((s) => s.renameCollection);
@@ -56,6 +60,15 @@ export function CollectionCard({
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(collection.name);
   const [collapsed, setCollapsed] = useState(false);
+  const [isFocusHighlighted, setIsFocusHighlighted] = useState(false);
+  // Scalar selectors — return primitives so Zustand only re-renders this
+  // card when the specific boolean flips (not on every workspaces change).
+  const hasOtherWorkspace = useAppStore((s) =>
+    s.workspaces.some((w) => w.deletedAt == null && w.id !== collection.workspaceId),
+  );
+  const isFocusTarget = useAppStore((s) => s.focusCollectionId === collection.id);
+  const clearFocusCollection = useAppStore((s) => s.clearFocusCollection);
+  const cardRef = useRef<HTMLDivElement | null>(null);
 
   const sortableId = `collection-${collection.id}`;
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
@@ -74,6 +87,32 @@ export function CollectionCard({
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  function setRefs(node: HTMLDivElement | null) {
+    setNodeRef(node);
+    cardRef.current = node;
+  }
+
+  // When the store marks this collection as the focus target (set after
+  // moveCollectionToWorkspace + switchAfter), scroll into view and flash
+  // a ring highlight briefly. The store signal is cleared inside the
+  // timeout callback — clearing earlier would trigger a re-render whose
+  // cleanup would cancel the in-flight timeout before it fires.
+  useEffect(() => {
+    if (!isFocusTarget) return;
+    const raf = requestAnimationFrame(() => {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    setIsFocusHighlighted(true);
+    const timeout = setTimeout(() => {
+      setIsFocusHighlighted(false);
+      clearFocusCollection();
+    }, 1500);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timeout);
+    };
+  }, [isFocusTarget, clearFocusCollection]);
 
   function handleRenameConfirm() {
     if (collection.id != null && renameValue.trim()) {
@@ -99,9 +138,13 @@ export function CollectionCard({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
       style={sortableStyle}
-      className={cn("transition-colors", isOver && "bg-primary/5")}
+      className={cn(
+        "rounded-md transition-colors",
+        isOver && "bg-primary/5",
+        isFocusHighlighted && "ring-2 ring-primary ring-offset-1",
+      )}
     >
       {/* Header */}
       <div className="group flex items-center gap-1 border-border border-b px-4 pt-2 pb-3">
@@ -174,6 +217,26 @@ export function CollectionCard({
                 <ExternalLink className="size-3.5 text-muted-foreground" />
               </Button>
             )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={onRequestMove}
+                    disabled={!hasOtherWorkspace}
+                    aria-label={t("collection_card.move_to_workspace")}
+                  >
+                    <ArrowRightLeft className="size-3.5 text-muted-foreground" />
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {hasOtherWorkspace
+                  ? t("collection_card.move_to_workspace")
+                  : t("collection_card.move_to_workspace_disabled")}
+              </TooltipContent>
+            </Tooltip>
             <Button
               variant="ghost"
               size="icon-xs"
