@@ -30,8 +30,9 @@
 | Path | Change |
 |---|---|
 | `packages/ui/package.json` | Add `sonner` dep; add 3 new `exports` entries. |
-| `apps/extension/package.json` | Add devDeps: `jsdom`, `@testing-library/react@^16`, `@testing-library/jest-dom`, `@testing-library/dom`. |
-| `apps/extension/vitest.config.ts` | `environment: "jsdom"`, broaden `include` to `.tsx`, add `setupFiles`. |
+| `apps/extension/package.json` | Add devDeps: `jsdom`, `@testing-library/react@^16`, `@testing-library/jest-dom`, `@testing-library/dom`, `@vitejs/plugin-react`. |
+| `apps/extension/vitest.config.ts` | `environment: "jsdom"`, broaden `include` to `.tsx`, add `setupFiles`, wire `plugins: [react()]` for JSX transform. |
+| `apps/extension/tsconfig.json` | Widen `include` to cover `vitest.config.ts` + `vitest.setup.ts` so `check-types` sees test config. |
 | `apps/extension/src/lib/theme.ts` | `cycleTheme(anchor?)` with animation orchestration + in-flight lock + ambient `Document.startViewTransition` type. |
 | `apps/extension/src/components/layout/workspace-sidebar.tsx` | Swap inner Button → `<ThemeToggler type="icon" aria-label={label} />`; remove `THEME_ICON` const, `ThemeIcon` local, `cycleTheme` destructure, `Monitor/Moon/Sun` imports. |
 
@@ -337,7 +338,23 @@ export default defineConfig({
 import "@testing-library/jest-dom/vitest";
 ```
 
-- [ ] **Step 4: Verify existing tests still pass**
+- [ ] **Step 4: Extend `apps/extension/tsconfig.json` include**
+
+Change line 11 from:
+
+```json
+"include": ["src", ".wxt/wxt.d.ts"],
+```
+
+to:
+
+```json
+"include": ["src", ".wxt/wxt.d.ts", "vitest.config.ts", "vitest.setup.ts"],
+```
+
+This makes `check-types` cover the test config too — catches typos in the setup file and future config changes early. Single-line setup has no type surface today, but the broader include costs nothing and prevents the next agent from being confused when config changes don't get checked.
+
+- [ ] **Step 5: Verify existing tests still pass**
 
 ```bash
 pnpm --filter @opentab/extension test
@@ -345,10 +362,10 @@ pnpm --filter @opentab/extension test
 
 Expected: Existing `collection-sort.test.ts` and `collection-dedup.test.ts` pass (switching to jsdom should not break pure-logic tests). All green.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add apps/extension/package.json apps/extension/vitest.config.ts apps/extension/vitest.setup.ts pnpm-lock.yaml
+git add apps/extension/package.json apps/extension/vitest.config.ts apps/extension/vitest.setup.ts apps/extension/tsconfig.json pnpm-lock.yaml
 git commit -m "chore(extension): enable jsdom + Testing Library in vitest"
 ```
 
@@ -1176,7 +1193,7 @@ Stop. Do not merge. File findings inline in the failing task's section above and
   - Wiring (sidebar swap + outer Tooltip retention + dead code cleanup) → Task 8.
   - Hook change (`cycleTheme(anchor?)` + ambient VT type + lock + 400ms ease-out + fallbacks) → Task 5.
   - Test infra (jsdom, Testing Library, vitest include/setup) → Task 4 (before Task 5).
-  - Tests (hook 7 cases, component 5 cases) → Tasks 5 and 9.
+  - Tests (hook 7 cases, component 5 cases — expands spec's 3 conceptual cases by splitting "renders correct icon for each mode" into 3 explicit per-mode tests) → Tasks 5 and 9.
   - Manual verification → Task 10.
 
 - **Placeholder scan:** No TODO / TBD / "fill in details" / vague "add error handling" remains; all code blocks are complete.
