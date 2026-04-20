@@ -302,10 +302,10 @@ no cross-package hook dependency."
 - [ ] **Step 1: Install test devDeps**
 
 ```bash
-pnpm add -D -F @opentab/extension jsdom @testing-library/react@^16 @testing-library/jest-dom @testing-library/dom
+pnpm add -D -F @opentab/extension jsdom @testing-library/react@^16 @testing-library/jest-dom @testing-library/dom @vitejs/plugin-react
 ```
 
-Expected: 4 devDependencies appear in `apps/extension/package.json`; `pnpm-lock.yaml` updated.
+Expected: 5 devDependencies appear in `apps/extension/package.json`; `pnpm-lock.yaml` updated. `@vitejs/plugin-react` resolves to `^5` (pinned by root `pnpm.overrides`), which provides the JSX transform vitest needs to execute `.tsx` component tests under React 19's automatic runtime.
 
 - [ ] **Step 2: Update `apps/extension/vitest.config.ts`**
 
@@ -313,9 +313,11 @@ Replace entire file with:
 
 ```ts
 import path from "node:path";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  plugins: [react()],
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.{ts,tsx}"],
@@ -430,12 +432,12 @@ function installMocks({
     delete (document as DocLike).startViewTransition;
   }
 
-  (globalThis as unknown as { chrome: unknown }).chrome = {
+  vi.stubGlobal("chrome", {
     runtime: {
       onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
       sendMessage: vi.fn().mockResolvedValue(undefined),
     },
-  };
+  });
 }
 
 function makeAnchor(): HTMLButtonElement {
@@ -457,7 +459,11 @@ function makeAnchor(): HTMLButtonElement {
 }
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  // clearAllMocks wipes call history without restoring module-mock implementations
+  // (unlike restoreAllMocks, which can leave `getSettings` returning undefined
+  // between tests). unstubAllGlobals rolls back vi.stubGlobal state cleanly.
+  vi.clearAllMocks();
+  vi.unstubAllGlobals();
   document.body.replaceChildren();
   document.documentElement.classList.remove("dark");
 });
@@ -853,7 +859,10 @@ function isThemeMode(value: string): value is ThemeMode {
   return (THEME_VALUES as readonly string[]).includes(value);
 }
 
-type IconProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+// Omit HTML's button `type` so our discriminator ("icon" | "toggle") doesn't
+// collapse to `undefined` via intersection with `"submit" | "reset" | "button"`.
+// The underlying <button> in AnimatedThemeToggler hardcodes `type="button"` anyway.
+type IconProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type"> & {
   type?: "icon";
   ref?: Ref<HTMLButtonElement>;
 };
@@ -994,7 +1003,7 @@ Keep the surrounding `<Tooltip><TooltipTrigger asChild>…<TooltipContent>…</T
 pnpm --filter @opentab/extension lint && pnpm --filter @opentab/extension check-types
 ```
 
-Expected: both exit 0. No `noUnusedImports` or `noUnusedVariables` errors.
+Expected: both exit 0. Biome's `noUnusedImports` / `noUnusedVariables` default severity is `warn`, so lint will exit 0 even if a cleanup item is missed — treat the lint output as a **warning signal**, not a hard gate. Visually scan the Biome output: if it reports any new warnings mentioning `Monitor`, `Moon`, `Sun`, `THEME_ICON`, `ThemeIcon`, or `cycleTheme`, re-check steps 1-5 above. `check-types` **is** a hard gate — it must exit 0 with no errors.
 
 - [ ] **Step 7: Commit**
 
