@@ -57,7 +57,7 @@ Edit `apps/extension/package.json`:
 And add to devDependencies:
 
 ```json
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.1"
 ```
 
 - [ ] **Step 2: Create `apps/extension/vitest.config.ts`**
@@ -603,12 +603,9 @@ Add after `reorderTabInCollection`:
 
 ```ts
   sortCollectionTabs: async (collectionId, key, direction) => {
-    const { tabsByCollection, collections } = get();
+    const { tabsByCollection } = get();
     const prevTabs = tabsByCollection.get(collectionId);
     if (!prevTabs || prevTabs.length < 2) return;
-
-    const parentCol = collections.find((c) => c.id === collectionId);
-    if (!parentCol) return;
 
     const sorted = sortTabs(prevTabs, key, direction);
     const withOrders = regenerateOrders(sorted);
@@ -1098,44 +1095,33 @@ export function DedupConfirmDialog({
   onConfirm,
 }: DedupConfirmDialogProps) {
   const { t } = useTranslation();
-  const triggerBlockerRef = useRef<HTMLDivElement>(null);
 
-  if (!result || result.removedCount === 0) return null;
+  // Keep the last non-null result so the dialog can play its close animation
+  // after the parent clears `result`. Without this, `return null` would unmount
+  // Radix's Dialog immediately and skip the animation.
+  const lastResultRef = useRef<DedupResult | null>(null);
+  if (result && result.removedCount > 0) {
+    lastResultRef.current = result;
+  }
+  const displayResult = result ?? lastResultRef.current;
 
-  const summaryKey =
-    result.removedCount === 1 && result.affectedUrls.length === 1
-      ? "dedupe_dialog.summary_one"
-      : "dedupe_dialog.summary";
-
-  const confirmKey =
-    result.removedCount === 1 ? "dedupe_dialog.confirm_one" : "dedupe_dialog.confirm";
+  if (!displayResult) return null; // never opened yet
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-md"
-        onCloseAutoFocus={(e) => {
-          // Keep focus from bouncing back to the dedupe trigger button, which
-          // would cause an aria-hidden warning while the dropdown animates out.
-          if (triggerBlockerRef.current) {
-            e.preventDefault();
-            triggerBlockerRef.current.focus();
-          }
-        }}
-      >
-        <div ref={triggerBlockerRef} tabIndex={-1} />
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("dedupe_dialog.title")}</DialogTitle>
           <DialogDescription>{t("dedupe_dialog.description")}</DialogDescription>
         </DialogHeader>
         <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-600 text-sm dark:text-amber-400">
-          {t(summaryKey, {
-            count: result.removedCount,
-            urlCount: result.affectedUrls.length,
+          {t("dedupe_dialog.summary", {
+            count: displayResult.removedCount,
+            urlCount: displayResult.affectedUrls.length,
           })}
         </div>
         <div className="max-h-60 overflow-y-auto rounded-md border bg-muted/30 p-1">
-          {result.affectedUrls.map((group) => (
+          {displayResult.affectedUrls.map((group) => (
             <div
               key={group.url}
               className="flex items-center gap-2 rounded px-2 py-1.5 text-xs"
@@ -1155,7 +1141,7 @@ export function DedupConfirmDialog({
             {t("dedupe_dialog.cancel")}
           </Button>
           <Button variant="destructive" onClick={onConfirm}>
-            {t(confirmKey, { count: result.removedCount })}
+            {t("dedupe_dialog.confirm", { count: displayResult.removedCount })}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1163,6 +1149,11 @@ export function DedupConfirmDialog({
   );
 }
 ```
+
+**Notes on the shape:**
+
+- No `onCloseAutoFocus` workaround here: this Dialog is triggered by a plain toolbar Button, not from within a `DropdownMenu`, so Radix's default focus return does not produce the `aria-hidden` warning the project memo warns about. Keep the ref-blocker pattern for the ellipsis-menu case only.
+- `i18next` auto-selects `summary_one` / `confirm_one` when `count === 1` (default pluralization is on — see `src/lib/i18n.ts`). That's why we always call the base key.
 
 - [ ] **Step 2: Type-check and lint**
 
@@ -1285,27 +1276,34 @@ Find the `<div className="flex items-center gap-0.5 opacity-0 transition-opacity
   </Button>
 )}
 
-{/* Content maintenance group */}
-<div className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
-<CollectionSortMenu
-  disabled={!canMaintain}
-  onApply={handleSort}
-  onReverse={handleReverse}
-/>
-<Button
-  variant="ghost"
-  size="icon-xs"
-  onClick={handleDedupeClick}
-  disabled={!canMaintain}
-  title={
-    canMaintain
-      ? t("collection_card.dedupe")
-      : t("collection_card.dedupe_disabled")
-  }
-  aria-label={t("collection_card.dedupe")}
->
-  <Copy className="size-3.5 text-muted-foreground" />
-</Button>
+{/* Content maintenance group — hidden entirely when the collection is
+    empty. Otherwise the group would be a pair of disabled controls
+    bracketed by two separators, which looks like cruft. Sort/Dedupe only
+    make sense when the collection has at least one tab. */}
+{tabs.length > 0 && (
+  <>
+    <div className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
+    <CollectionSortMenu
+      disabled={!canMaintain}
+      onApply={handleSort}
+      onReverse={handleReverse}
+    />
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      onClick={handleDedupeClick}
+      disabled={!canMaintain}
+      title={
+        canMaintain
+          ? t("collection_card.dedupe")
+          : t("collection_card.dedupe_disabled")
+      }
+      aria-label={t("collection_card.dedupe")}
+    >
+      <Copy className="size-3.5 text-muted-foreground" />
+    </Button>
+  </>
+)}
 <div className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
 
 <Tooltip>
@@ -1320,6 +1318,10 @@ Find the `<div className="flex items-center gap-0.5 opacity-0 transition-opacity
 ```
 
 Only the two separators and the two new buttons are added; everything else stays in its original order.
+
+When `tabs.length === 0` the maintenance group (and its leading separator) is omitted, so the toolbar collapses to: `[+tab] | [move] [delete] [⋮]` — still a clean, meaningful grouping.
+
+`canMaintain` covers the `tabs.length === 1` case: group is visible but both controls are disabled with a tooltip explaining why.
 
 - [ ] **Step 6: Render the dedup dialog near the end of the component JSX (still inside the card)**
 
