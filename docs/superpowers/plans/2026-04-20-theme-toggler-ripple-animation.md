@@ -33,7 +33,7 @@
 | `apps/extension/package.json` | Add devDeps: `jsdom`, `@testing-library/react@^16`, `@testing-library/jest-dom`, `@testing-library/dom`, `@vitejs/plugin-react`. |
 | `apps/extension/vitest.config.ts` | `environment: "jsdom"`, broaden `include` to `.tsx`, add `setupFiles`, wire `plugins: [react()]` for JSX transform. |
 | `apps/extension/tsconfig.json` | Widen `include` to cover `vitest.config.ts` + `vitest.setup.ts` so `check-types` sees test config. |
-| `apps/extension/src/lib/theme.ts` | `cycleTheme(anchor?)` with animation orchestration + in-flight lock + ambient `Document.startViewTransition` type. |
+| `apps/extension/src/lib/theme.ts` | `cycleTheme(anchor?)` with animation orchestration, in-flight lock, and defensive catch for synchronous `startViewTransition` throws. |
 | `apps/extension/src/components/layout/workspace-sidebar.tsx` | Swap inner Button → `<ThemeToggler type="icon" aria-label={label} />`; remove `THEME_ICON` const, `ThemeIcon` local, `cycleTheme` destructure, `Monitor/Moon/Sun` imports. |
 
 ---
@@ -1201,7 +1201,7 @@ Stop. Do not merge. File findings inline in the failing task's section above and
   - Mechanical adaptations (paths, radix-ui unified, i18n aria-label, next-themes strip from sonner) → inline in Tasks 1-3, 6, 7.
   - Runtime adaptations (useTheme rename, sonner theme-prop, AnimatedThemeToggler 2→3 state + ref forwarding, `type="button"` drop, `isThemeMode` narrow) → Tasks 3, 6, 7.
   - Wiring (sidebar swap + outer Tooltip retention + dead code cleanup) → Task 8.
-  - Hook change (`cycleTheme(anchor?)` + ambient VT type + lock + 400ms ease-out + fallbacks) → Task 5.
+  - Hook change (`cycleTheme(anchor?)` + in-flight lock + 400ms ease-out + fallbacks + defensive catch for synchronous VT throws) → Task 5.
   - Test infra (jsdom, Testing Library, vitest include/setup) → Task 4 (before Task 5).
   - Tests (hook 7 cases, component 5 cases — expands spec's 3 conceptual cases by splitting "renders correct icon for each mode" into 3 explicit per-mode tests) → Tasks 5 and 9.
   - Manual verification → Task 10.
