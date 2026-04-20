@@ -8,6 +8,7 @@
     "build": "wxt build",
     "check-types": "tsc --noEmit",
     "lint": "biome check .",
+    "test": "vitest run",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
@@ -43,6 +44,7 @@
     "shadcn": "^4.1.0",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "vitest": "^4.1.1",
     "wxt": "^0.20"
   }
 }
