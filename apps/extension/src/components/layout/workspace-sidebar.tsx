@@ -4,21 +4,12 @@ import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@opentab/ui/components/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@opentab/ui/components/tooltip";
 import { cn } from "@opentab/ui/lib/utils";
-import {
-  ChevronLeft,
-  Download,
-  Monitor,
-  Moon,
-  PanelLeft,
-  Plus,
-  Settings,
-  Sun,
-  Upload,
-} from "lucide-react";
+import { ChevronLeft, Download, PanelLeft, Plus, Settings, Upload } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import opentabLogo from "@/assets/opentab-logo.webp";
+import { ThemeToggler } from "@/components/theme-toggler";
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
 import { DeleteWorkspaceDialog } from "@/components/workspace/delete-workspace-dialog";
 import { WorkspaceItem } from "@/components/workspace/workspace-item";
@@ -29,8 +20,6 @@ import { processImportFile } from "@/lib/import/process-file";
 import { useLocale } from "@/lib/locale";
 import { useTheme } from "@/lib/theme";
 import { useAppStore } from "@/stores/app-store";
-
-const THEME_ICON = { light: Sun, dark: Moon, system: Monitor } as const;
 
 function SortableWorkspaceItem({
   workspace,
@@ -97,12 +86,11 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
   const setActiveWorkspace = useAppStore((s) => s.setActiveWorkspace);
 
-  const { mode, cycleTheme } = useTheme();
+  const { mode } = useTheme();
   const { locale, cycleLocale } = useLocale();
   const { t } = useTranslation();
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Workspace | null>(null);
-  const ThemeIcon = THEME_ICON[mode];
   const langLabel =
     locale === "en" ? t("sidebar.language_label_en") : t("sidebar.language_label_zh");
   const langAbbr = locale === "en" ? t("sidebar.language_en") : t("sidebar.language_zh");
@@ -279,14 +267,11 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
           />
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={() => void cycleTheme()}
+              <ThemeToggler
+                type="icon"
+                className="inline-flex size-6 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground [&_svg]:text-sidebar-foreground/70"
                 aria-label={t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) })}
-              >
-                <ThemeIcon className="size-4 text-sidebar-foreground/70" />
-              </Button>
+              />
             </TooltipTrigger>
             <TooltipContent>
               {t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) })}
