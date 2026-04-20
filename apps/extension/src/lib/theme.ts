@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { MSG } from "./constants";
 import { getSettings, saveSettings, type ThemeMode } from "./settings";
+
+// Runtime check still needed: Firefox and older Safari lack startViewTransition.
 
 function resolveEffective(mode: ThemeMode): "light" | "dark" {
   if (mode === "system") {
@@ -18,11 +21,25 @@ export function applyTheme(mode: ThemeMode) {
 }
 
 const THEME_CYCLE: ThemeMode[] = ["system", "light", "dark"];
+const RIPPLE_DURATION_MS = 800;
+const RIPPLE_EASING = "ease-out";
+
+// cycleTheme/setTheme are often called as `void cycleTheme(...)` from click
+// handlers, so any saveSettings rejection would surface as an unhandled
+// promise rejection. Log and swallow — the in-memory/DOM state is already
+// updated; the next SETTINGS_CHANGED broadcast will reconcile.
+async function persistTheme(next: ThemeMode): Promise<void> {
+  try {
+    await saveSettings({ theme: next });
+  } catch (err) {
+    console.error("Failed to persist theme:", err);
+  }
+}
 
 export function useTheme() {
   const [mode, setMode] = useState<ThemeMode>("system");
+  const isAnimatingRef = useRef(false);
 
-  // Load on mount
   useEffect(() => {
     getSettings().then((s) => {
       setMode(s.theme);
@@ -30,7 +47,6 @@ export function useTheme() {
     });
   }, []);
 
-  // Listen for cross-tab changes
   useEffect(() => {
     const handler = (message: { type: string }) => {
       if (message.type === MSG.SETTINGS_CHANGED) {
@@ -44,7 +60,6 @@ export function useTheme() {
     return () => chrome.runtime.onMessage.removeListener(handler);
   }, []);
 
-  // Watch system preference when mode is "system"
   useEffect(() => {
     if (mode !== "system") return;
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
@@ -53,24 +68,86 @@ export function useTheme() {
     return () => mql.removeEventListener("change", onChange);
   }, [mode]);
 
-  // Apply whenever mode changes
-  useEffect(() => {
-    applyTheme(mode);
-  }, [mode]);
+  const cycleTheme = useCallback(
+    async (anchor?: HTMLElement | null) => {
+      if (isAnimatingRef.current) return;
 
-  const cycleTheme = useCallback(async () => {
-    const idx = THEME_CYCLE.indexOf(mode);
-    const next = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
-    setMode(next);
-    applyTheme(next);
-    await saveSettings({ theme: next });
-  }, [mode]);
+      const idx = THEME_CYCLE.indexOf(mode);
+      const next = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
 
-  const setTheme = useCallback(async (next: ThemeMode) => {
-    setMode(next);
-    applyTheme(next);
-    await saveSettings({ theme: next });
-  }, []);
+      const supportsVT = typeof document.startViewTransition === "function";
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const shouldAnimate =
+        !!anchor &&
+        supportsVT &&
+        !reducedMotion &&
+        resolveEffective(mode) !== resolveEffective(next);
+
+      if (!shouldAnimate) {
+        setMode(next);
+        applyTheme(next);
+        await persistTheme(next);
+        return;
+      }
+
+      isAnimatingRef.current = true;
+      try {
+        // Defensive fallback for sync throw: callback never ran, so apply inline.
+        let transition: ReturnType<Document["startViewTransition"]>;
+        try {
+          transition = document.startViewTransition(() => {
+            flushSync(() => {
+              setMode(next);
+              applyTheme(next);
+            });
+          });
+        } catch (err) {
+          console.warn(
+            "document.startViewTransition threw synchronously; falling back to instant swap",
+            err,
+          );
+          setMode(next);
+          applyTheme(next);
+          return;
+        }
+
+        await transition.ready;
+
+        const rect = anchor!.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const maxRad = Math.hypot(
+          Math.max(x, window.innerWidth - x),
+          Math.max(y, window.innerHeight - y),
+        );
+        document.documentElement.animate(
+          {
+            clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${maxRad}px at ${x}px ${y}px)`],
+          },
+          {
+            duration: RIPPLE_DURATION_MS,
+            easing: RIPPLE_EASING,
+            pseudoElement: "::view-transition-new(root)",
+          },
+        );
+        await transition.finished;
+      } finally {
+        isAnimatingRef.current = false;
+        await persistTheme(next);
+      }
+    },
+    [mode],
+  );
+
+  const setTheme = useCallback(
+    async (next: ThemeMode) => {
+      if (next === mode) return;
+      setMode(next);
+      applyTheme(next);
+      await persistTheme(next);
+    },
+    [mode],
+  );
 
   return { mode, cycleTheme, setTheme };
 }
