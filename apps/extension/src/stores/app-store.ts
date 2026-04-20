@@ -860,7 +860,15 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const withOrders = regenerateOrders(sorted);
     const now = Date.now();
-    const finalTabs = withOrders.map((t) => ({ ...t, updatedAt: now }));
+    // Pre-generate opIds so we can persist each row's lastOpId to match the
+    // opId staged in the outbox. Sync LWW uses lastOpId to break ties when
+    // two mutations share the same updatedAt.
+    const finalTabs = withOrders.map((tab) => ({
+      ...tab,
+      updatedAt: now,
+      lastOpId: crypto.randomUUID(),
+    }));
+    const collectionOpId = crypto.randomUUID();
 
     const newMap = new Map(tabsByCollection);
     newMap.set(collectionId, finalTabs);
@@ -872,7 +880,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const ops: SyncOpInput[] = [
         ...finalTabs.map((tab) => ({
-          opId: crypto.randomUUID(),
+          opId: tab.lastOpId!,
           entityType: "tab" as const,
           entitySyncId: tab.syncId,
           action: "update" as const,
@@ -885,7 +893,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           createdAt: now,
         })),
         {
-          opId: crypto.randomUUID(),
+          opId: collectionOpId,
           entityType: "collection" as const,
           entitySyncId: parentCol.syncId,
           action: "update" as const,
@@ -903,14 +911,20 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       await mutateWithOutbox(async () => {
         await db.collectionTabs.bulkPut(finalTabs);
-        await db.tabCollections.update(collectionId, { updatedAt: now });
+        await db.tabCollections.update(collectionId, {
+          updatedAt: now,
+          lastOpId: collectionOpId,
+        });
       }, ops);
     } catch (err) {
       console.error("[store] failed to sort collection:", err);
-      const revertMap = new Map(get().tabsByCollection);
+      const { tabsByCollection: curMap, collections: curCols } = get();
+      const revertMap = new Map(curMap);
       revertMap.set(collectionId, prevTabs);
-      set({ tabsByCollection: revertMap });
-      throw err;
+      set({
+        tabsByCollection: revertMap,
+        collections: curCols.map((c) => (c.id === collectionId ? parentCol : c)),
+      });
     }
   },
 
@@ -944,9 +958,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     try {
+      // Pre-generate opIds per tab + for the collection op so we can persist
+      // each row's lastOpId to match what we stage in the outbox (needed for
+      // LWW tiebreaking when timestamps collide on sync).
+      const tabOps = tabsToRemove.map((tab) => ({ tab, opId: crypto.randomUUID() }));
+      const collectionOpId = crypto.randomUUID();
+
       const ops: SyncOpInput[] = [
-        ...tabsToRemove.map((tab) => ({
-          opId: crypto.randomUUID(),
+        ...tabOps.map(({ tab, opId }) => ({
+          opId,
           entityType: "tab" as const,
           entitySyncId: tab.syncId,
           action: "delete" as const,
@@ -954,7 +974,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           createdAt: now,
         })),
         {
-          opId: crypto.randomUUID(),
+          opId: collectionOpId,
           entityType: "collection" as const,
           entitySyncId: parentCol.syncId,
           action: "update" as const,
@@ -972,19 +992,25 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       await mutateWithOutbox(async () => {
         await db.collectionTabs.bulkUpdate(
-          tabsToRemove.map((tab) => ({
+          tabOps.map(({ tab, opId }) => ({
             key: tab.id!,
-            changes: { deletedAt: now, updatedAt: now },
+            changes: { deletedAt: now, updatedAt: now, lastOpId: opId },
           })),
         );
-        await db.tabCollections.update(collectionId, { updatedAt: now });
+        await db.tabCollections.update(collectionId, {
+          updatedAt: now,
+          lastOpId: collectionOpId,
+        });
       }, ops);
     } catch (err) {
       console.error("[store] failed to dedupe collection:", err);
-      const revertMap = new Map(get().tabsByCollection);
+      const { tabsByCollection: curMap, collections: curCols } = get();
+      const revertMap = new Map(curMap);
       revertMap.set(collectionId, prevTabs);
-      set({ tabsByCollection: revertMap });
-      throw err;
+      set({
+        tabsByCollection: revertMap,
+        collections: curCols.map((c) => (c.id === collectionId ? parentCol : c)),
+      });
     }
   },
 

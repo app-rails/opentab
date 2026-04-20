@@ -2,7 +2,7 @@ import { Button } from "@opentab/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@opentab/ui/components/popover";
 import { cn } from "@opentab/ui/lib/utils";
 import { ArrowUpDown } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SortDirection, SortKey } from "@/lib/collection-sort";
 
@@ -14,6 +14,8 @@ interface CollectionSortMenuProps {
 
 export function CollectionSortMenu({ disabled, onApply, onReverse }: CollectionSortMenuProps) {
   const { t } = useTranslation();
+  // Per-instance name so radios in different CollectionCards don't share a group.
+  const radioName = useId();
   const [open, setOpen] = useState(false);
   const [key, setKey] = useState<Exclude<SortKey, "reverse">>("title");
   const [direction, setDirection] = useState<SortDirection>("asc");
@@ -72,7 +74,7 @@ export function CollectionSortMenu({ disabled, onApply, onReverse }: CollectionS
               >
                 <input
                   type="radio"
-                  name="sort-key"
+                  name={radioName}
                   value={k.value}
                   checked={selected}
                   onChange={() => setKey(k.value)}
