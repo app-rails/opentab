@@ -28,12 +28,12 @@
   "devDependencies": {
     "@opentab/config": "workspace:*",
     "@tailwindcss/vite": "^4",
-    "@tanstack/router-plugin": "^1.141.1",
+    "@tanstack/router-plugin": "^1.167.22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@vitejs/plugin-react": "^5",
+    "@vitejs/plugin-react": "^6",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "vite": "^6"
+    "typescript": "^6",
+    "vite": "^8"
   }
 }
