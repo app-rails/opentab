@@ -252,7 +252,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
                 onClick={handleExport}
                 aria-label={t("sidebar.export")}
               >
-                <Download className="size-4 text-sidebar-foreground/70" />
+                <Upload className="size-4 text-sidebar-foreground/70" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t("sidebar.export")}</TooltipContent>
@@ -265,7 +265,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
                 onClick={handleImport}
                 aria-label={t("sidebar.import")}
               >
-                <Upload className="size-4 text-sidebar-foreground/70" />
+                <Download className="size-4 text-sidebar-foreground/70" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t("sidebar.import")}</TooltipContent>
