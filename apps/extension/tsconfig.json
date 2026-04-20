@@ -8,6 +8,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", ".wxt/wxt.d.ts"],
+  "include": ["src", ".wxt/wxt.d.ts", "vitest.config.ts", "vitest.setup.ts"],
   "exclude": ["node_modules", ".output"]
 }
