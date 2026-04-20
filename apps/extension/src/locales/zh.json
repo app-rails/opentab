@@ -43,7 +43,31 @@
     "delete_menu": "删除",
     "drag_tabs_here": "将标签页拖放到这里",
     "move_to_workspace": "移动到其他 Space",
-    "move_to_workspace_disabled": "没有其他可选 Space"
+    "move_to_workspace_disabled": "没有其他可选 Space",
+    "sort": "排序标签",
+    "sort_disabled": "至少需要 2 个标签才能排序",
+    "sort_by_label": "按以下方式排序",
+    "sort_by_title": "标题",
+    "sort_by_domain": "域名",
+    "sort_by_date_added": "加入时间",
+    "sort_order_label": "顺序",
+    "sort_order_asc": "升序",
+    "sort_order_desc": "降序",
+    "sort_apply": "应用排序",
+    "sort_reverse": "反转当前顺序",
+    "dedupe": "移除重复标签",
+    "dedupe_disabled": "至少需要 2 个标签才能去重",
+    "dedupe_toast_none": "没有发现重复项"
+  },
+  "dedupe_dialog": {
+    "title": "移除重复标签",
+    "description": "每组重复的 URL 保留最早加入的一个。",
+    "summary": "将移除 {{count}} 个标签，涉及 {{urlCount}} 个 URL",
+    "summary_one": "将移除 1 个标签，涉及 1 个 URL",
+    "per_url_count": "{{count}} → 1",
+    "cancel": "取消",
+    "confirm": "移除 {{count}} 个标签",
+    "confirm_one": "移除 1 个标签"
   },
   "collection_tab": {
     "open": "打开",

@@ -43,7 +43,31 @@
     "delete_menu": "Delete",
     "drag_tabs_here": "Drag tabs here",
     "move_to_workspace": "Move to workspace",
-    "move_to_workspace_disabled": "No other workspace to move to"
+    "move_to_workspace_disabled": "No other workspace to move to",
+    "sort": "Sort tabs",
+    "sort_disabled": "Need at least 2 tabs to sort",
+    "sort_by_label": "Sort tabs by",
+    "sort_by_title": "Title",
+    "sort_by_domain": "Domain",
+    "sort_by_date_added": "Date added",
+    "sort_order_label": "Order",
+    "sort_order_asc": "Asc",
+    "sort_order_desc": "Desc",
+    "sort_apply": "Apply sort",
+    "sort_reverse": "Reverse current order",
+    "dedupe": "Remove duplicate tabs",
+    "dedupe_disabled": "Need at least 2 tabs to dedupe",
+    "dedupe_toast_none": "No duplicates found"
+  },
+  "dedupe_dialog": {
+    "title": "Remove duplicate tabs",
+    "description": "Keeping the earliest copy of each URL.",
+    "summary": "Will remove {{count}} tabs across {{urlCount}} URLs",
+    "summary_one": "Will remove 1 tab across 1 URL",
+    "per_url_count": "{{count}} → 1",
+    "cancel": "Cancel",
+    "confirm": "Remove {{count}} tabs",
+    "confirm_one": "Remove 1 tab"
   },
   "collection_tab": {
     "open": "Open",
