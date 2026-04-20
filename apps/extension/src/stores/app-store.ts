@@ -1,5 +1,6 @@
 import { generateKeyBetween } from "fractional-indexing";
 import { create } from "zustand";
+import { regenerateOrders, sortTabs } from "@/lib/collection-sort";
 import {
   DEFAULT_ICON,
   WORKSPACE_ICON_OPTIONS,
@@ -93,6 +94,11 @@ interface AppState {
   ) => Promise<void>;
   removeTabFromCollection: (tabId: number, collectionId: number) => Promise<void>;
   reorderTabInCollection: (tabId: number, collectionId: number, newOrder: string) => Promise<void>;
+  sortCollectionTabs: (
+    collectionId: number,
+    key: import("@/lib/collection-sort").SortKey,
+    direction: import("@/lib/collection-sort").SortDirection,
+  ) => Promise<void>;
   updateTab: (
     tabId: number,
     collectionId: number,
@@ -827,6 +833,47 @@ export const useAppStore = create<AppState>((set, get) => ({
       const revertMap = new Map(get().tabsByCollection);
       revertMap.set(collectionId, prevTabs);
       set({ tabsByCollection: revertMap });
+    }
+  },
+
+  sortCollectionTabs: async (collectionId, key, direction) => {
+    const { tabsByCollection } = get();
+    const prevTabs = tabsByCollection.get(collectionId);
+    if (!prevTabs || prevTabs.length < 2) return;
+
+    const sorted = sortTabs(prevTabs, key, direction);
+    const withOrders = regenerateOrders(sorted);
+    const now = Date.now();
+    const finalTabs = withOrders.map((t) => ({ ...t, updatedAt: now }));
+
+    const newMap = new Map(tabsByCollection);
+    newMap.set(collectionId, finalTabs);
+    set({ tabsByCollection: newMap });
+
+    try {
+      const ops: SyncOpInput[] = finalTabs.map((tab) => ({
+        opId: crypto.randomUUID(),
+        entityType: "tab",
+        entitySyncId: tab.syncId,
+        action: "update",
+        payload: {
+          syncId: tab.syncId,
+          order: tab.order,
+          updatedAt: now,
+          deletedAt: null,
+        },
+        createdAt: now,
+      }));
+
+      await mutateWithOutbox(async () => {
+        await db.collectionTabs.bulkPut(finalTabs);
+      }, ops);
+    } catch (err) {
+      console.error("[store] failed to sort collection:", err);
+      const revertMap = new Map(get().tabsByCollection);
+      revertMap.set(collectionId, prevTabs);
+      set({ tabsByCollection: revertMap });
+      throw err;
     }
   },
 
