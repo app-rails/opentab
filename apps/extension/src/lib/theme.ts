@@ -21,7 +21,7 @@ export function applyTheme(mode: ThemeMode) {
 }
 
 const THEME_CYCLE: ThemeMode[] = ["system", "light", "dark"];
-const RIPPLE_DURATION_MS = 400;
+const RIPPLE_DURATION_MS = 800;
 const RIPPLE_EASING = "ease-out";
 
 export function useTheme() {
