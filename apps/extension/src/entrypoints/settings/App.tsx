@@ -284,7 +284,7 @@ export default function App() {
               </h3>
               <p className="text-muted-foreground text-sm">{t("settings.export.description")}</p>
               <Button onClick={handleExport} disabled={isExporting} className="gap-2">
-                <Download className="size-4" />
+                <Upload className="size-4" />
                 {isExporting ? t("settings.export.exporting") : t("settings.export.button")}
               </Button>
 
@@ -293,7 +293,7 @@ export default function App() {
               </h3>
               <p className="text-muted-foreground text-sm">{t("settings.import.description")}</p>
               <Button variant="outline" onClick={handleImport} className="gap-2">
-                <Upload className="size-4" />
+                <Download className="size-4" />
                 {t("settings.import.button")}
               </Button>
             </section>

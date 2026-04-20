@@ -1,6 +1,11 @@
 import { generateKeyBetween } from "fractional-indexing";
 import { create } from "zustand";
 import {
+  type DedupResult,
+  computeCollectionDuplicates as pureComputeDuplicates,
+} from "@/lib/collection-dedup";
+import { regenerateOrders, sortTabs } from "@/lib/collection-sort";
+import {
   DEFAULT_ICON,
   WORKSPACE_ICON_OPTIONS,
   WORKSPACE_NAME_MAX_LENGTH,
@@ -93,6 +98,18 @@ interface AppState {
   ) => Promise<void>;
   removeTabFromCollection: (tabId: number, collectionId: number) => Promise<void>;
   reorderTabInCollection: (tabId: number, collectionId: number, newOrder: string) => Promise<void>;
+  sortCollectionTabs: (
+    collectionId: number,
+    key: import("@/lib/collection-sort").SortKey,
+    direction: import("@/lib/collection-sort").SortDirection,
+  ) => Promise<void>;
+  computeCollectionDuplicates: (
+    collectionId: number,
+  ) => import("@/lib/collection-dedup").DedupResult;
+  applyCollectionDedup: (
+    collectionId: number,
+    result: import("@/lib/collection-dedup").DedupResult,
+  ) => Promise<void>;
   updateTab: (
     tabId: number,
     collectionId: number,
@@ -827,6 +844,173 @@ export const useAppStore = create<AppState>((set, get) => ({
       const revertMap = new Map(get().tabsByCollection);
       revertMap.set(collectionId, prevTabs);
       set({ tabsByCollection: revertMap });
+    }
+  },
+
+  sortCollectionTabs: async (collectionId, key, direction) => {
+    const { tabsByCollection, collections } = get();
+    const prevTabs = tabsByCollection.get(collectionId);
+    if (!prevTabs || prevTabs.length < 2) return;
+
+    const parentCol = collections.find((c) => c.id === collectionId);
+    if (!parentCol) return;
+
+    const sorted = sortTabs(prevTabs, key, direction);
+    if (sorted.every((t, i) => t.id === prevTabs[i].id)) return;
+
+    const withOrders = regenerateOrders(sorted);
+    const now = Date.now();
+    // Pre-generate opIds so we can persist each row's lastOpId to match the
+    // opId staged in the outbox. Sync LWW uses lastOpId to break ties when
+    // two mutations share the same updatedAt.
+    const finalTabs = withOrders.map((tab) => ({
+      ...tab,
+      updatedAt: now,
+      lastOpId: crypto.randomUUID(),
+    }));
+    const collectionOpId = crypto.randomUUID();
+
+    const newMap = new Map(tabsByCollection);
+    newMap.set(collectionId, finalTabs);
+    set({
+      tabsByCollection: newMap,
+      collections: collections.map((c) => (c.id === collectionId ? { ...c, updatedAt: now } : c)),
+    });
+
+    try {
+      const ops: SyncOpInput[] = [
+        ...finalTabs.map((tab) => ({
+          opId: tab.lastOpId!,
+          entityType: "tab" as const,
+          entitySyncId: tab.syncId,
+          action: "update" as const,
+          payload: {
+            syncId: tab.syncId,
+            order: tab.order,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        })),
+        {
+          opId: collectionOpId,
+          entityType: "collection" as const,
+          entitySyncId: parentCol.syncId,
+          action: "update" as const,
+          payload: {
+            syncId: parentCol.syncId,
+            ...(parentCol.workspaceSyncId ? { parentSyncId: parentCol.workspaceSyncId } : {}),
+            name: parentCol.name,
+            order: parentCol.order,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        },
+      ];
+
+      await mutateWithOutbox(async () => {
+        await db.collectionTabs.bulkPut(finalTabs);
+        await db.tabCollections.update(collectionId, {
+          updatedAt: now,
+          lastOpId: collectionOpId,
+        });
+      }, ops);
+    } catch (err) {
+      console.error("[store] failed to sort collection:", err);
+      const { tabsByCollection: curMap, collections: curCols } = get();
+      const revertMap = new Map(curMap);
+      revertMap.set(collectionId, prevTabs);
+      set({
+        tabsByCollection: revertMap,
+        collections: curCols.map((c) => (c.id === collectionId ? parentCol : c)),
+      });
+    }
+  },
+
+  computeCollectionDuplicates: (collectionId) => {
+    const tabs = get().tabsByCollection.get(collectionId) ?? [];
+    return pureComputeDuplicates(tabs);
+  },
+
+  applyCollectionDedup: async (collectionId, result: DedupResult) => {
+    if (result.removedCount === 0) return;
+
+    const { tabsByCollection, collections } = get();
+    const prevTabs = tabsByCollection.get(collectionId);
+    if (!prevTabs) return;
+
+    const parentCol = collections.find((c) => c.id === collectionId);
+    if (!parentCol) return;
+
+    const removedIds = new Set<number>(result.removedTabIds);
+    const tabsToRemove = prevTabs.filter((t) => t.id != null && removedIds.has(t.id));
+    if (tabsToRemove.length === 0) return;
+
+    const now = Date.now();
+    const nextTabs = prevTabs.filter((t) => t.id == null || !removedIds.has(t.id));
+
+    const newMap = new Map(tabsByCollection);
+    newMap.set(collectionId, nextTabs);
+    set({
+      tabsByCollection: newMap,
+      collections: collections.map((c) => (c.id === collectionId ? { ...c, updatedAt: now } : c)),
+    });
+
+    try {
+      // Pre-generate opIds per tab + for the collection op so we can persist
+      // each row's lastOpId to match what we stage in the outbox (needed for
+      // LWW tiebreaking when timestamps collide on sync).
+      const tabOps = tabsToRemove.map((tab) => ({ tab, opId: crypto.randomUUID() }));
+      const collectionOpId = crypto.randomUUID();
+
+      const ops: SyncOpInput[] = [
+        ...tabOps.map(({ tab, opId }) => ({
+          opId,
+          entityType: "tab" as const,
+          entitySyncId: tab.syncId,
+          action: "delete" as const,
+          payload: { syncId: tab.syncId, updatedAt: now },
+          createdAt: now,
+        })),
+        {
+          opId: collectionOpId,
+          entityType: "collection" as const,
+          entitySyncId: parentCol.syncId,
+          action: "update" as const,
+          payload: {
+            syncId: parentCol.syncId,
+            ...(parentCol.workspaceSyncId ? { parentSyncId: parentCol.workspaceSyncId } : {}),
+            name: parentCol.name,
+            order: parentCol.order,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        },
+      ];
+
+      await mutateWithOutbox(async () => {
+        await db.collectionTabs.bulkUpdate(
+          tabOps.map(({ tab, opId }) => ({
+            key: tab.id!,
+            changes: { deletedAt: now, updatedAt: now, lastOpId: opId },
+          })),
+        );
+        await db.tabCollections.update(collectionId, {
+          updatedAt: now,
+          lastOpId: collectionOpId,
+        });
+      }, ops);
+    } catch (err) {
+      console.error("[store] failed to dedupe collection:", err);
+      const { tabsByCollection: curMap, collections: curCols } = get();
+      const revertMap = new Map(curMap);
+      revertMap.set(collectionId, prevTabs);
+      set({
+        tabsByCollection: revertMap,
+        collections: curCols.map((c) => (c.id === collectionId ? parentCol : c)),
+      });
     }
   },
 

@@ -20,6 +20,7 @@ import { cn } from "@opentab/ui/lib/utils";
 import {
   ArrowRightLeft,
   ChevronRight,
+  Copy,
   EllipsisVertical,
   ExternalLink,
   GripVertical,
@@ -28,13 +29,18 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import type { DedupResult } from "@/lib/collection-dedup";
+import type { SortDirection, SortKey } from "@/lib/collection-sort";
 import type { CollectionTab, TabCollection } from "@/lib/db";
 import { DRAG_TYPES } from "@/lib/dnd-types";
 import { faviconUrl } from "@/lib/url";
 import type { ViewMode } from "@/lib/view-mode";
 import { useAppStore } from "@/stores/app-store";
 import { AddTabPopover } from "./add-tab-popover";
+import { CollectionSortMenu } from "./collection-sort-menu";
 import { CollectionTabItem } from "./collection-tab-item";
+import { DedupConfirmDialog } from "./dedup-confirm-dialog";
 
 interface CollectionCardProps {
   collection: TabCollection;
@@ -56,11 +62,17 @@ export function CollectionCard({
   const removeTabFromCollection = useAppStore((s) => s.removeTabFromCollection);
   const addTabToCollection = useAppStore((s) => s.addTabToCollection);
   const restoreCollection = useAppStore((s) => s.restoreCollection);
+  const sortCollectionTabs = useAppStore((s) => s.sortCollectionTabs);
+  const computeCollectionDuplicates = useAppStore((s) => s.computeCollectionDuplicates);
+  const applyCollectionDedup = useAppStore((s) => s.applyCollectionDedup);
 
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(collection.name);
   const [collapsed, setCollapsed] = useState(false);
   const [isFocusHighlighted, setIsFocusHighlighted] = useState(false);
+  const [dedupResult, setDedupResult] = useState<DedupResult | null>(null);
+
+  const canMaintain = tabs.length >= 2;
   // Scalar selectors — return primitives so Zustand only re-renders this
   // card when the specific boolean flips (not on every workspaces change).
   const hasOtherWorkspace = useAppStore((s) =>
@@ -134,6 +146,33 @@ export function CollectionCard({
       title: title || url,
       favIconUrl: favicon,
     });
+  }
+
+  function handleSort(key: Exclude<SortKey, "reverse">, direction: SortDirection) {
+    if (collection.id == null) return;
+    void sortCollectionTabs(collection.id, key, direction);
+  }
+
+  function handleReverse() {
+    if (collection.id == null) return;
+    void sortCollectionTabs(collection.id, "reverse", "asc");
+  }
+
+  function handleDedupeClick() {
+    if (collection.id == null) return;
+    const result = computeCollectionDuplicates(collection.id);
+    if (result.removedCount === 0) {
+      toast.info(t("collection_card.dedupe_toast_none"));
+      return;
+    }
+    setDedupResult(result);
+  }
+
+  async function handleDedupeConfirm() {
+    if (collection.id == null || !dedupResult) return;
+    const toApply = dedupResult;
+    setDedupResult(null);
+    await applyCollectionDedup(collection.id, toApply);
   }
 
   return (
@@ -217,6 +256,29 @@ export function CollectionCard({
                 <ExternalLink className="size-3.5 text-muted-foreground" />
               </Button>
             )}
+            {tabs.length > 0 && (
+              <>
+                <div className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
+                <CollectionSortMenu
+                  disabled={!canMaintain}
+                  onApply={handleSort}
+                  onReverse={handleReverse}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={handleDedupeClick}
+                  disabled={!canMaintain}
+                  title={
+                    canMaintain ? t("collection_card.dedupe") : t("collection_card.dedupe_disabled")
+                  }
+                  aria-label={t("collection_card.dedupe")}
+                >
+                  <Copy className="size-3.5 text-muted-foreground" />
+                </Button>
+              </>
+            )}
+            <div className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
@@ -313,6 +375,14 @@ export function CollectionCard({
           </SortableContext>
         </div>
       )}
+      <DedupConfirmDialog
+        open={dedupResult !== null}
+        onOpenChange={(next) => {
+          if (!next) setDedupResult(null);
+        }}
+        result={dedupResult}
+        onConfirm={handleDedupeConfirm}
+      />
     </div>
   );
 }
