@@ -1,5 +1,9 @@
 import { generateKeyBetween } from "fractional-indexing";
 import { create } from "zustand";
+import {
+  type DedupResult,
+  computeCollectionDuplicates as pureComputeDuplicates,
+} from "@/lib/collection-dedup";
 import { regenerateOrders, sortTabs } from "@/lib/collection-sort";
 import {
   DEFAULT_ICON,
@@ -98,6 +102,13 @@ interface AppState {
     collectionId: number,
     key: import("@/lib/collection-sort").SortKey,
     direction: import("@/lib/collection-sort").SortDirection,
+  ) => Promise<void>;
+  computeCollectionDuplicates: (
+    collectionId: number,
+  ) => import("@/lib/collection-dedup").DedupResult;
+  applyCollectionDedup: (
+    collectionId: number,
+    result: import("@/lib/collection-dedup").DedupResult,
   ) => Promise<void>;
   updateTab: (
     tabId: number,
@@ -870,6 +881,80 @@ export const useAppStore = create<AppState>((set, get) => ({
       }, ops);
     } catch (err) {
       console.error("[store] failed to sort collection:", err);
+      const revertMap = new Map(get().tabsByCollection);
+      revertMap.set(collectionId, prevTabs);
+      set({ tabsByCollection: revertMap });
+      throw err;
+    }
+  },
+
+  computeCollectionDuplicates: (collectionId) => {
+    const tabs = get().tabsByCollection.get(collectionId) ?? [];
+    return pureComputeDuplicates(tabs);
+  },
+
+  applyCollectionDedup: async (collectionId, result: DedupResult) => {
+    if (result.removedCount === 0) return;
+
+    const { tabsByCollection, collections } = get();
+    const prevTabs = tabsByCollection.get(collectionId);
+    if (!prevTabs) return;
+
+    const parentCol = collections.find((c) => c.id === collectionId);
+    if (!parentCol) return;
+
+    const removedIds = new Set<number>(result.removedTabIds);
+    const tabsToRemove = prevTabs.filter((t) => t.id != null && removedIds.has(t.id));
+    if (tabsToRemove.length === 0) return;
+
+    const now = Date.now();
+    const nextTabs = prevTabs.filter((t) => t.id == null || !removedIds.has(t.id));
+
+    const newMap = new Map(tabsByCollection);
+    newMap.set(collectionId, nextTabs);
+    set({
+      tabsByCollection: newMap,
+      collections: collections.map((c) => (c.id === collectionId ? { ...c, updatedAt: now } : c)),
+    });
+
+    try {
+      const ops: SyncOpInput[] = [
+        ...tabsToRemove.map((tab) => ({
+          opId: crypto.randomUUID(),
+          entityType: "tab" as const,
+          entitySyncId: tab.syncId,
+          action: "delete" as const,
+          payload: { syncId: tab.syncId, updatedAt: now },
+          createdAt: now,
+        })),
+        {
+          opId: crypto.randomUUID(),
+          entityType: "collection" as const,
+          entitySyncId: parentCol.syncId,
+          action: "update" as const,
+          payload: {
+            syncId: parentCol.syncId,
+            ...(parentCol.workspaceSyncId ? { parentSyncId: parentCol.workspaceSyncId } : {}),
+            name: parentCol.name,
+            order: parentCol.order,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        },
+      ];
+
+      await mutateWithOutbox(async () => {
+        await db.collectionTabs.bulkUpdate(
+          tabsToRemove.map((tab) => ({
+            key: tab.id!,
+            changes: { deletedAt: now, updatedAt: now },
+          })),
+        );
+        await db.tabCollections.update(collectionId, { updatedAt: now });
+      }, ops);
+    } catch (err) {
+      console.error("[store] failed to dedupe collection:", err);
       const revertMap = new Map(get().tabsByCollection);
       revertMap.set(collectionId, prevTabs);
       set({ tabsByCollection: revertMap });
