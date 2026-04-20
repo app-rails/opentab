@@ -19,6 +19,15 @@ const defaultSettings = {
 import { getSettings, saveSettings } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
 
+// Capture originals at module load so afterEach can restore — the tests mutate
+// these globals and we must not let state leak into sibling test files.
+const originalMatchMedia = window.matchMedia;
+const originalAnimate = document.documentElement.animate;
+const originalStartViewTransitionDescriptor = Object.getOwnPropertyDescriptor(
+  document,
+  "startViewTransition",
+);
+
 function installMocks({
   initialTheme = "light" as "light" | "dark" | "system",
   reducedMotion = false,
@@ -94,6 +103,14 @@ function makeAnchor(): HTMLButtonElement {
 afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
+  window.matchMedia = originalMatchMedia;
+  document.documentElement.animate = originalAnimate;
+  if (originalStartViewTransitionDescriptor) {
+    Object.defineProperty(document, "startViewTransition", originalStartViewTransitionDescriptor);
+  } else {
+    // Property was absent originally (e.g., jsdom); drop the override we added.
+    delete (document as { startViewTransition?: unknown }).startViewTransition;
+  }
   document.body.replaceChildren();
   document.documentElement.classList.remove("dark");
 });

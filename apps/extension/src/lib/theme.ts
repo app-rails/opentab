@@ -24,6 +24,18 @@ const THEME_CYCLE: ThemeMode[] = ["system", "light", "dark"];
 const RIPPLE_DURATION_MS = 800;
 const RIPPLE_EASING = "ease-out";
 
+// cycleTheme/setTheme are often called as `void cycleTheme(...)` from click
+// handlers, so any saveSettings rejection would surface as an unhandled
+// promise rejection. Log and swallow — the in-memory/DOM state is already
+// updated; the next SETTINGS_CHANGED broadcast will reconcile.
+async function persistTheme(next: ThemeMode): Promise<void> {
+  try {
+    await saveSettings({ theme: next });
+  } catch (err) {
+    console.error("Failed to persist theme:", err);
+  }
+}
+
 export function useTheme() {
   const [mode, setMode] = useState<ThemeMode>("system");
   const isAnimatingRef = useRef(false);
@@ -74,7 +86,7 @@ export function useTheme() {
       if (!shouldAnimate) {
         setMode(next);
         applyTheme(next);
-        await saveSettings({ theme: next });
+        await persistTheme(next);
         return;
       }
 
@@ -121,7 +133,7 @@ export function useTheme() {
         await transition.finished;
       } finally {
         isAnimatingRef.current = false;
-        await saveSettings({ theme: next });
+        await persistTheme(next);
       }
     },
     [mode],
@@ -132,7 +144,7 @@ export function useTheme() {
       if (next === mode) return;
       setMode(next);
       applyTheme(next);
-      await saveSettings({ theme: next });
+      await persistTheme(next);
     },
     [mode],
   );
