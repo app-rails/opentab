@@ -71,7 +71,6 @@ export function CollectionCard({
   const [collapsed, setCollapsed] = useState(false);
   const [isFocusHighlighted, setIsFocusHighlighted] = useState(false);
   const [dedupResult, setDedupResult] = useState<DedupResult | null>(null);
-  const [dedupOpen, setDedupOpen] = useState(false);
 
   const canMaintain = tabs.length >= 2;
   // Scalar selectors — return primitives so Zustand only re-renders this
@@ -167,17 +166,13 @@ export function CollectionCard({
       return;
     }
     setDedupResult(result);
-    setDedupOpen(true);
   }
 
   async function handleDedupeConfirm() {
     if (collection.id == null || !dedupResult) return;
-    setDedupOpen(false);
-    try {
-      await applyCollectionDedup(collection.id, dedupResult);
-    } finally {
-      setDedupResult(null);
-    }
+    const toApply = dedupResult;
+    setDedupResult(null);
+    await applyCollectionDedup(collection.id, toApply);
   }
 
   return (
@@ -381,9 +376,8 @@ export function CollectionCard({
         </div>
       )}
       <DedupConfirmDialog
-        open={dedupOpen}
+        open={dedupResult !== null}
         onOpenChange={(next) => {
-          setDedupOpen(next);
           if (!next) setDedupResult(null);
         }}
         result={dedupResult}

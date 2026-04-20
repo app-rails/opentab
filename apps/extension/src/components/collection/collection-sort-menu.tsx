@@ -97,32 +97,20 @@ export function CollectionSortMenu({ disabled, onApply, onReverse }: CollectionS
             {t("collection_card.sort_order_label")}
           </span>
           <div className="ml-auto inline-flex rounded bg-muted p-0.5">
-            <button
-              type="button"
-              className={cn(
-                "rounded px-2 py-0.5 text-xs",
-                direction === "asc"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground",
-              )}
-              onClick={() => setDirection("asc")}
-              aria-pressed={direction === "asc"}
-            >
-              {t("collection_card.sort_order_asc")}
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "rounded px-2 py-0.5 text-xs",
-                direction === "desc"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground",
-              )}
-              onClick={() => setDirection("desc")}
-              aria-pressed={direction === "desc"}
-            >
-              {t("collection_card.sort_order_desc")}
-            </button>
+            {(["asc", "desc"] as const).map((d) => (
+              <button
+                key={d}
+                type="button"
+                className={cn(
+                  "rounded px-2 py-0.5 text-xs",
+                  direction === d ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+                )}
+                onClick={() => setDirection(d)}
+                aria-pressed={direction === d}
+              >
+                {t(`collection_card.sort_order_${d}`)}
+              </button>
+            ))}
           </div>
         </div>
         <Button size="sm" className="mt-2 w-full" onClick={handleApply}>

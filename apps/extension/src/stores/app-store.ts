@@ -848,36 +848,62 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   sortCollectionTabs: async (collectionId, key, direction) => {
-    const { tabsByCollection } = get();
+    const { tabsByCollection, collections } = get();
     const prevTabs = tabsByCollection.get(collectionId);
     if (!prevTabs || prevTabs.length < 2) return;
 
+    const parentCol = collections.find((c) => c.id === collectionId);
+    if (!parentCol) return;
+
     const sorted = sortTabs(prevTabs, key, direction);
+    if (sorted.every((t, i) => t.id === prevTabs[i].id)) return;
+
     const withOrders = regenerateOrders(sorted);
     const now = Date.now();
     const finalTabs = withOrders.map((t) => ({ ...t, updatedAt: now }));
 
     const newMap = new Map(tabsByCollection);
     newMap.set(collectionId, finalTabs);
-    set({ tabsByCollection: newMap });
+    set({
+      tabsByCollection: newMap,
+      collections: collections.map((c) => (c.id === collectionId ? { ...c, updatedAt: now } : c)),
+    });
 
     try {
-      const ops: SyncOpInput[] = finalTabs.map((tab) => ({
-        opId: crypto.randomUUID(),
-        entityType: "tab",
-        entitySyncId: tab.syncId,
-        action: "update",
-        payload: {
-          syncId: tab.syncId,
-          order: tab.order,
-          updatedAt: now,
-          deletedAt: null,
+      const ops: SyncOpInput[] = [
+        ...finalTabs.map((tab) => ({
+          opId: crypto.randomUUID(),
+          entityType: "tab" as const,
+          entitySyncId: tab.syncId,
+          action: "update" as const,
+          payload: {
+            syncId: tab.syncId,
+            order: tab.order,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
+        })),
+        {
+          opId: crypto.randomUUID(),
+          entityType: "collection" as const,
+          entitySyncId: parentCol.syncId,
+          action: "update" as const,
+          payload: {
+            syncId: parentCol.syncId,
+            ...(parentCol.workspaceSyncId ? { parentSyncId: parentCol.workspaceSyncId } : {}),
+            name: parentCol.name,
+            order: parentCol.order,
+            updatedAt: now,
+            deletedAt: null,
+          },
+          createdAt: now,
         },
-        createdAt: now,
-      }));
+      ];
 
       await mutateWithOutbox(async () => {
         await db.collectionTabs.bulkPut(finalTabs);
+        await db.tabCollections.update(collectionId, { updatedAt: now });
       }, ops);
     } catch (err) {
       console.error("[store] failed to sort collection:", err);
