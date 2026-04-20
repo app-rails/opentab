@@ -14,6 +14,7 @@
     "./components/input": "./src/components/input.tsx",
     "./components/popover": "./src/components/popover.tsx",
     "./components/switch": "./src/components/switch.tsx",
+    "./components/toggle": "./src/components/toggle.tsx",
     "./components/tooltip": "./src/components/tooltip.tsx",
     "./lib/utils": "./src/lib/utils.ts",
     "./globals.css": "./src/styles/globals.css"
