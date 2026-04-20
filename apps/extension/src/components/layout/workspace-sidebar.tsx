@@ -91,6 +91,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
   const { t } = useTranslation();
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Workspace | null>(null);
+  const themeLabel = t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) });
   const langLabel =
     locale === "en" ? t("sidebar.language_label_en") : t("sidebar.language_label_zh");
   const langAbbr = locale === "en" ? t("sidebar.language_en") : t("sidebar.language_zh");
@@ -270,12 +271,10 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
               <ThemeToggler
                 type="icon"
                 className="inline-flex size-6 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground [&_svg]:text-sidebar-foreground/70"
-                aria-label={t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) })}
+                aria-label={themeLabel}
               />
             </TooltipTrigger>
-            <TooltipContent>
-              {t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) })}
-            </TooltipContent>
+            <TooltipContent>{themeLabel}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>

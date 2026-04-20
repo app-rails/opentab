@@ -3,10 +3,7 @@ import { flushSync } from "react-dom";
 import { MSG } from "./constants";
 import { getSettings, saveSettings, type ThemeMode } from "./settings";
 
-// Note: TS 5.9+ lib.dom.d.ts already declares Document.startViewTransition
-// (non-optional). The typeof document.startViewTransition === "function"
-// runtime check below is still needed — Firefox and older Safari don't
-// implement the API even though the type exists.
+// Runtime check still needed: Firefox and older Safari lack startViewTransition.
 
 function resolveEffective(mode: ThemeMode): "light" | "dark" {
   if (mode === "system") {
@@ -59,10 +56,6 @@ export function useTheme() {
     return () => mql.removeEventListener("change", onChange);
   }, [mode]);
 
-  useEffect(() => {
-    applyTheme(mode);
-  }, [mode]);
-
   const cycleTheme = useCallback(
     async (anchor?: HTMLElement | null) => {
       if (isAnimatingRef.current) return;
@@ -87,10 +80,7 @@ export function useTheme() {
 
       isAnimatingRef.current = true;
       try {
-        // Defensive: if startViewTransition throws synchronously, fall back to
-        // instant swap. The callback never ran, so apply the mode change here
-        // so the finally block's saveSettings persists a mode that's actually
-        // visible on screen.
+        // Defensive fallback for sync throw: callback never ran, so apply inline.
         let transition: ReturnType<Document["startViewTransition"]>;
         try {
           transition = document.startViewTransition(() => {
@@ -137,11 +127,15 @@ export function useTheme() {
     [mode],
   );
 
-  const setTheme = useCallback(async (next: ThemeMode) => {
-    setMode(next);
-    applyTheme(next);
-    await saveSettings({ theme: next });
-  }, []);
+  const setTheme = useCallback(
+    async (next: ThemeMode) => {
+      if (next === mode) return;
+      setMode(next);
+      applyTheme(next);
+      await saveSettings({ theme: next });
+    },
+    [mode],
+  );
 
   return { mode, cycleTheme, setTheme };
 }

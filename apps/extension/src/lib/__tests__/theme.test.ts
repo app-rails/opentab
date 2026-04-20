@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/settings", () => ({
   getSettings: vi.fn(),
   saveSettings: vi.fn().mockResolvedValue(undefined),
-  updateSettings: vi.fn().mockResolvedValue(undefined),
 }));
 
 const defaultSettings = {
@@ -70,7 +69,6 @@ function installMocks({
   vi.stubGlobal("chrome", {
     runtime: {
       onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
-      sendMessage: vi.fn().mockResolvedValue(undefined),
     },
   });
 }
