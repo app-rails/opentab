@@ -6,110 +6,108 @@
 
 ## Goal
 
-Upgrade the sidebar theme toggle from an instant class-swap into a smooth circular ripple reveal anchored to the clicked button, using the browser's native View Transitions API. Preserves the existing 3-mode cycle (`system → light → dark → system`) and all current behavior (Dexie persistence, cross-tab sync, system-preference follow).
+Replace the sidebar's instant theme class-swap with a smooth circular ripple reveal by migrating an existing `ThemeToggler` component (and its minimum dependency tree) into OpenTab, then adapting it to OpenTab's 3-mode (`system / light / dark`) theme model and `@opentab/ui` component package.
 
 ## Non-Goals (YAGNI)
 
-- No new UI library, no new Radix primitives, no segmented control refactor.
-- No animation on the Settings page theme picker (the existing 3-button radio group stays as-is — instant mode selection is the right semantic there).
-- No reusable `<ThemeSegmentedControl>` or shared `ToggleGroup` component.
-- No cross-tab animation — only the tab that received the user click animates; other tabs update instantly via the existing `SETTINGS_CHANGED` broadcast.
-- No animation anchor support for non-user-triggered theme changes (initial mount, cross-tab updates, system-preference changes while `mode === "system"`).
-- No user-facing configuration of duration, easing, or enable/disable toggle.
+- **Not a redesign.** We migrate the component verbatim, then adapt imports, `useTheme`, and the animated toggler's 2-state logic to our 3-mode cycle. No bespoke component built from scratch.
+- **Not a Settings page change.** The existing hand-rolled 3-button radio group in `settings/App.tsx:184-201` stays. The migrated `<ThemeToggler type="toggle" />` variant is available but not wired in this iteration.
+- **Not a batch shadcn library import.** Only the components that the migrated `ThemeToggler` component tree actually references (`toggle`, `toggle-group`) plus `sonner` (explicitly requested) are added to `@opentab/ui`. Other shadcn components the reference project exposes are out of scope.
+- **No cross-tab animation.** Only the tab receiving the user click animates; other tabs update instantly via the existing `SETTINGS_CHANGED` broadcast.
+- **No user-facing configuration** of animation duration, easing, or an enable/disable flag.
 
-## User Experience
+## Migration Scope
 
-### Sidebar
+### Files to migrate
 
-The sidebar currently shows a single `icon-xs` button at `workspace-sidebar.tsx:282-289` that cycles through `system / light / dark`. Icon matches current mode (`Monitor / Sun / Moon`). Tooltip and `aria-label` already localized via i18next keys `sidebar.theme_label`, `sidebar.theme_{mode}`.
-
-After this change:
-
-- The button is replaced by a `<ThemeToggler />` component with identical visual footprint (same size, same icons, same tooltip copy, same neighbor layout).
-- Clicking cycles modes identically, **but** a circular reveal animation plays: a circle clip-path grows from the button's center until it covers the viewport, revealing the new theme underneath.
-- When clicking a cycle step that does not actually change the effective color (e.g. `system → light` while the OS preference is already light), the animation is skipped — colors don't change, so a ripple would be misleading.
-- Rapid repeat clicks during an active animation are ignored (button stays responsive visually but the second click is dropped until the ripple finishes).
-
-### Settings page
-
-No change. `settings/App.tsx:184-201` keeps its hand-rolled 3-button radio group. Users who want to return to `system` mode continue to use Settings.
-
-## Architecture
-
-The change is localized to the extension app; no new packages, no new npm dependencies. The browser's View Transitions API (Chrome 111+, available in MV3) powers the animation.
-
-### Files touched
-
-| Path | Change |
+| Source (reference project) | Target (OpenTab) |
 |---|---|
-| `apps/extension/src/components/theme-toggler.tsx` | **New.** ~40-line presentational component. |
-| `apps/extension/src/lib/theme.ts` | **Modified.** `cycleTheme` signature gains an optional `anchor` parameter and embeds animation orchestration. |
-| `apps/extension/src/components/layout/workspace-sidebar.tsx` | **Modified.** Replace inline `<Tooltip><Button onClick={cycleTheme}>…</Button></Tooltip>` block with `<ThemeToggler />`. |
-| `apps/extension/src/lib/__tests__/theme.test.ts` | **New.** Unit tests for `cycleTheme` animation/fallback paths. |
-| `apps/extension/src/components/__tests__/theme-toggler.test.tsx` | **New.** Component render + click tests. |
+| `shared/components/ui/toggle.tsx` | `packages/ui/src/components/toggle.tsx` |
+| `shared/components/ui/toggle-group.tsx` | `packages/ui/src/components/toggle-group.tsx` |
+| `shared/components/ui/sonner.tsx` | `packages/ui/src/components/sonner.tsx` |
+| `shared/components/magicui/animated-theme-toggler.tsx` | `apps/extension/src/components/animated-theme-toggler.tsx` |
+| `shared/blocks/common/theme-toggler.tsx` | `apps/extension/src/components/theme-toggler.tsx` |
 
-### Responsibility split
+### Dependency changes
 
-- **`<ThemeToggler />`** holds the DOM anchor ref, picks the icon for the current mode, and calls `cycleTheme(buttonRef.current)` on click. Knows nothing about View Transitions, animation lifecycle, or reduced-motion detection. Pure presentation + ref plumbing.
-- **`useTheme().cycleTheme(anchor?)`** owns: advancing the mode, computing whether to animate, driving the View Transition, holding the in-flight animation lock, and persisting via `saveSettings`. Animation logic lives here so any future consumer can trigger a ripple by passing an anchor element — no duplication.
+- **Add** `sonner` to `packages/ui/package.json` `dependencies`.
+- **No new `@radix-ui/react-*` packages.** OpenTab's `packages/ui` already depends on the unified `radix-ui ^1.4.3` package, which re-exports all Radix primitives including `Toggle` and `ToggleGroup`. The migration must convert per-package imports (`import * as TogglePrimitive from "@radix-ui/react-toggle"`) to the unified-package form (`import { Toggle as TogglePrimitive } from "radix-ui"`).
+- **`lucide-react`** version stays at OpenTab's `^1.7.0`. Verify the icons the migrated files use (`SunDim`, `Moon`, `Monitor`, `Sun`) are exported by this version.
 
-## Component: `<ThemeToggler />`
+### `packages/ui/package.json` — `exports` additions
 
-Single button, no internal state beyond refs. Uses `useTheme()` for `mode` and `cycleTheme`, `useTranslation()` for the `aria-label` and tooltip.
-
-```tsx
-const ICON = { system: Monitor, light: Sun, dark: Moon } as const;
-
-export function ThemeToggler({ className }: { className?: string }) {
-  const { mode, cycleTheme } = useTheme();
-  const { t } = useTranslation();
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const Icon = ICON[mode];
-  const label = t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) });
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          ref={buttonRef}
-          variant="ghost"
-          size="icon-xs"
-          onClick={() => cycleTheme(buttonRef.current)}
-          aria-label={label}
-          className={className}
-        >
-          <Icon className="size-4 text-sidebar-foreground/70" />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
-}
+```json
+"./components/toggle": "./src/components/toggle.tsx",
+"./components/toggle-group": "./src/components/toggle-group.tsx",
+"./components/sonner": "./src/components/sonner.tsx"
 ```
 
-Notes:
-- Icon follows the current **mode** (`Monitor / Sun / Moon`), not the effective resolved color. Matches the existing sidebar behavior — switching mode to `system` shows `Monitor` even if OS is dark.
-- Tooltip and `aria-label` use the same existing i18n keys the old inline button used, so locale files need no changes.
-- The component swallows the `className` prop so callers can tweak placement but nothing else — it is a self-contained control.
+## Mechanical Adaptations During Migration
 
-## Hook change: `cycleTheme(anchor?)`
+Apply these globally to every migrated file (search-and-replace, case-sensitive):
 
-Current signature (`theme.ts:61-67`):
+1. `import { useTheme } from "next-themes";` → `import { useTheme } from "@/lib/theme";` (only in `animated-theme-toggler.tsx` and `theme-toggler.tsx`)
+2. `@/shared/components/ui/*` → `@opentab/ui/components/*`
+3. `@/shared/components/magicui/animated-theme-toggler` → `./animated-theme-toggler` (local, same dir)
+4. `@/shared/lib/utils` → `@opentab/ui/lib/utils`
+5. `import * as TogglePrimitive from "@radix-ui/react-toggle";` → `import { Toggle as TogglePrimitive } from "radix-ui";`
+6. `import * as ToggleGroupPrimitive from "@radix-ui/react-toggle-group";` → `import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui";`
+7. Hard-coded English `aria-label` strings → i18next `t(...)` calls using existing keys `sidebar.theme_label`, `sidebar.theme_{mode}` (both already in locale files).
+
+## Runtime Adaptations (Beyond Search-and-Replace)
+
+### `useTheme` return shape
+
+The migrated files expect `{ theme, setTheme }` from `next-themes`. OpenTab's `useTheme` returns `{ mode, cycleTheme, setTheme }`. Adapt the destructurings in both migrated components:
+
+- `const { theme, setTheme } = useTheme();` → `const { mode: theme, setTheme, cycleTheme } = useTheme();` (alias `mode` as `theme` to minimize body diffs), OR rename all `theme` usages to `mode` for consistency with OpenTab conventions — we go with the rename, since the file is now OpenTab code.
+
+### `AnimatedThemeToggler` — 2-state → 3-mode
+
+The reference `AnimatedThemeToggler` is hard-coded to toggle between `light` and `dark` and manually mutates `document.documentElement.classList.toggle("dark")`. Adapt as follows:
+
+- **Click behavior**: call `cycleTheme(buttonRef.current)` (anchored) instead of `setTheme(dark ? "dark" : "light")`. The hook owns the 3-mode cycle, effective-color guard, and animation orchestration.
+- **Icon selection**: use the `ICON[mode]` map (`system → Monitor`, `light → Sun`, `dark → Moon`) — matches current sidebar behavior and covers the `system` mode the reference version cannot represent.
+- **Remove inline `document.startViewTransition` + `clipPath` animation code**: move this logic into `useTheme().cycleTheme(anchor)` so it applies to any future caller passing an anchor. The component is reduced to: a ref, an `onClick` handler, and the icon.
+
+The resulting `animated-theme-toggler.tsx` becomes a thin visual wrapper. Its core value (the circular clip-path reveal) now lives in `theme.ts`, where it can be triggered from other anchors if needed.
+
+### `ThemeToggler` variants
+
+The reference component exposes three types: `icon`, `button`, `toggle`.
+
+- `type="icon"` (default): renders `<AnimatedThemeToggler />`. **Used by sidebar.**
+- `type="button"`: renders a static `<Button>` with a `SunDim` icon — the reference version is a stub (the button doesn't actually toggle). Keep the variant as migrated but flag it as a placeholder in a code comment; do not wire it into any call site.
+- `type="toggle"`: renders a `<ToggleGroup>` with 3 items (light/dark/system). Migrated and exported for future use (Settings page could adopt it later), but not wired in this iteration.
+
+All three variants share OpenTab's `useTheme()` for state.
+
+## Wiring Changes
+
+| File | Change |
+|---|---|
+| `apps/extension/src/components/layout/workspace-sidebar.tsx` | Replace the inline `<Tooltip><Button onClick={cycleTheme}>…</Button></Tooltip>` block (lines 278-294) with `<ThemeToggler type="icon" />`. Keep the surrounding Tooltip if the new component does not provide one; otherwise remove the wrapper. Plan step decides based on migrated code. |
+
+No other wiring changes.
+
+## Hook Change: `cycleTheme(anchor?)`
+
+Current signature in `apps/extension/src/lib/theme.ts:61-67`:
 
 ```ts
-const cycleTheme = useCallback(async () => { ... }, [mode]);
+const cycleTheme = useCallback(async () => { /* advance mode + save */ }, [mode]);
 ```
 
 New signature:
 
 ```ts
 const cycleTheme = useCallback(
-  async (anchor?: HTMLElement | null) => { ... },
+  async (anchor?: HTMLElement | null) => { /* advance mode + optionally animate + save */ },
   [mode],
 );
 ```
 
-An `isAnimatingRef = useRef(false)` is added inside the hook body.
+An `isAnimatingRef = useRef(false)` is added inside the hook body for the in-flight lock.
 
 ### Decision tree (pseudo-code)
 
@@ -159,77 +157,97 @@ cycleTheme(anchor):
 
 ### Key points
 
-- **`flushSync` inside the transition callback** is required so React commits the state update and `applyTheme` mutates the `<html>` class list before the View Transition captures the "new" snapshot.
+- **`flushSync` inside the transition callback** ensures React commits the state update and `applyTheme` mutates the `<html>` class list before View Transitions captures the "new" snapshot.
 - **Persistence after the animation** (`saveSettings` in `finally`) keeps the ripple visually leading. The write is idempotent and non-blocking for UX.
-- **Effective-color guard** uses the existing `resolveEffective(mode)` helper in `theme.ts:5-10`. Cycling `system → light` while the OS is in light mode returns the same effective color → no animation.
-- **Lock cleared on `transition.finished`**, not on a timer. If the browser throttles or frame-drops, the lock tracks the actual animation, not a magic number.
-- **TypeScript**: `document.startViewTransition` may be absent from lib.dom in older TS configs. We'll narrow via `typeof` check; if needed, add a minimal ambient declaration in a local `.d.ts`.
+- **Effective-color guard** uses the existing `resolveEffective(mode)` helper in `theme.ts:5-10`. Cycling `system → light` while OS is light returns the same effective color → no animation.
+- **Lock cleared on `transition.finished`**, not a timer. Tracks actual animation, not a magic number.
+- **TypeScript**: `document.startViewTransition` may be absent from older `lib.dom`. Narrow via `typeof` check; if TS complains, add a minimal ambient `.d.ts` declaration.
 
-## Fallback matrix
+## Fallback Matrix
 
 | Condition | Behavior |
 |---|---|
-| `anchor` is `null` / omitted (e.g. called from Settings via `setTheme`, called on initial load, future programmatic callers) | Instant swap (same as today). |
+| `anchor` is null/omitted (initial mount, cross-tab handler, Settings' `setTheme`) | Instant swap. |
 | `typeof document.startViewTransition !== "function"` | Instant swap. |
 | `matchMedia("(prefers-reduced-motion: reduce)").matches` | Instant swap. |
-| `resolveEffective(mode) === resolveEffective(next)` | Instant swap. Colors don't change so a ripple would be misleading. |
-| `document.startViewTransition` throws synchronously (shouldn't in MV3 Chrome, defensive) | Caught; fall back to instant swap; log at `console.warn`. |
-| `saveSettings` rejects (Dexie error, etc.) | Surface via `console.error`; state + DOM already reflect the new mode for this session; persistence just skipped. Matches current behavior on `saveSettings` failure. |
+| `resolveEffective(mode) === resolveEffective(next)` | Instant swap. |
+| `document.startViewTransition` throws synchronously (defensive) | Caught; instant swap; `console.warn`. |
+| `saveSettings` rejects (Dexie error) | `console.error`; mode already updated in memory and on DOM; persistence skipped for this call. Matches current behavior. |
 
-## Cross-tab & multi-window behavior
+## Cross-Tab Behavior
 
-Unchanged. The current tab calls `saveSettings` which triggers `chrome.runtime.sendMessage({ type: SETTINGS_CHANGED })` (`settings.ts:65`). Other extension tabs' `useTheme` listener (`theme.ts:34-45`) picks it up and calls `applyTheme(newMode)` directly — no `anchor` means no animation, which is correct: those tabs didn't receive the click, their users shouldn't see a ripple originating from an invisible coordinate.
+Unchanged. `saveSettings` broadcasts `SETTINGS_CHANGED`; other extension tabs' `useTheme` listener (`theme.ts:34-45`) picks it up and calls `applyTheme(newMode)` directly — no anchor → no animation in passive tabs, which is correct.
 
-## Animation parameters
+## Animation Parameters
 
 | Property | Value | Rationale |
 |---|---|---|
-| Duration | 400ms | Shorter than a typical "notice" animation (700ms) because a small sidebar button produces a fast, close-to-viewport ripple. |
-| Easing | `ease-out` | Decelerates as the ripple hits the edges — matches the way a physical expanding circle loses momentum. |
-| Clip path | Circle from button center expanding to `max(distance_to_any_corner)` | Ensures the ripple reaches every pixel, regardless of button position. |
-| Pseudo-element | `::view-transition-new(root)` | Standard VT target for the incoming snapshot. |
+| Duration | 400ms | Shorter than the reference's 700ms — the sidebar button sits close to viewport edges, so the ripple completes faster physically. |
+| Easing | `ease-out` | Decelerates as the ripple fills the viewport. |
+| Clip path | Circle from button center to `max(distance_to_any_corner)` | Guarantees full viewport coverage regardless of button position. |
+| Pseudo-element | `::view-transition-new(root)` | Standard VT target. |
 
-No user-facing config. These live as constants next to `cycleTheme` so a later revision (or a `--theme-transition-duration` CSS custom property migration) can lift them out easily.
+Constants live next to `cycleTheme` for easy tuning.
+
+## Files Touched (Summary)
+
+| Path | Change |
+|---|---|
+| `packages/ui/src/components/toggle.tsx` | **New (migrated)** |
+| `packages/ui/src/components/toggle-group.tsx` | **New (migrated)** |
+| `packages/ui/src/components/sonner.tsx` | **New (migrated)** |
+| `packages/ui/package.json` | **Modified.** Add `sonner` to deps; add 3 new `exports` entries. |
+| `apps/extension/src/components/animated-theme-toggler.tsx` | **New (migrated + adapted).** Thin visual wrapper; animation logic lives in the hook. |
+| `apps/extension/src/components/theme-toggler.tsx` | **New (migrated + adapted).** 3 variants; default `icon` used by sidebar. |
+| `apps/extension/src/lib/theme.ts` | **Modified.** `cycleTheme(anchor?)` + animation orchestration + lock. |
+| `apps/extension/src/components/layout/workspace-sidebar.tsx` | **Modified.** One-line swap to `<ThemeToggler type="icon" />`. |
+| `apps/extension/src/lib/__tests__/theme.test.ts` | **New.** Unit tests for `cycleTheme` paths. |
+| `apps/extension/src/components/__tests__/theme-toggler.test.tsx` | **New.** Component render + click tests. |
 
 ## Testing
 
 ### Unit tests — `lib/__tests__/theme.test.ts`
 
-Vitest + jsdom. Mock `document.startViewTransition`, `document.documentElement.animate`, and `window.matchMedia` per-test.
+Vitest + jsdom. Mock `document.startViewTransition`, `document.documentElement.animate`, `window.matchMedia` per-test.
 
 Cases:
-1. `cycleTheme()` without anchor → instant path: `startViewTransition` NOT called, `applyTheme` called with next mode, `saveSettings` called with next mode.
-2. `cycleTheme(buttonEl)` happy path: `startViewTransition` called, callback invokes `flushSync(applyTheme)`, `documentElement.animate` called with correct clip-path endpoints, `saveSettings` called.
-3. `prefers-reduced-motion: reduce` → instant path even with anchor.
-4. `startViewTransition` undefined → instant path even with anchor.
-5. `resolveEffective` unchanged across cycle step (simulate OS-light + `system → light`) → instant path.
-6. Second `cycleTheme(buttonEl)` call while first is in flight → second returns immediately; `startViewTransition` call count stays at 1.
-7. After `transition.finished` resolves, a subsequent `cycleTheme(buttonEl)` call proceeds normally (lock released).
+1. `cycleTheme()` no anchor → instant: `startViewTransition` NOT called, `applyTheme` and `saveSettings` called with `next`.
+2. `cycleTheme(buttonEl)` happy path: `startViewTransition` called, `flushSync(applyTheme)` inside, `documentElement.animate` called with correct clip-path endpoints.
+3. `prefers-reduced-motion: reduce` → instant even with anchor.
+4. `startViewTransition` undefined → instant even with anchor.
+5. Cycle step with unchanged effective color (OS-light + `system → light`) → instant.
+6. Second `cycleTheme(buttonEl)` while first is in flight → second returns immediately; `startViewTransition` call count stays at 1.
+7. After `transition.finished`, subsequent call proceeds (lock released).
 
 ### Component tests — `components/__tests__/theme-toggler.test.tsx`
 
-Testing Library + vitest + jsdom. Mock `useTheme` to return a controllable `{ mode, cycleTheme }`.
+Testing Library + vitest + jsdom. Mock `useTheme`. Cover the `type="icon"` variant (the only wired variant).
 
 Cases:
-1. Renders `Monitor` icon when `mode === "system"`, `Sun` for `light`, `Moon` for `dark`.
-2. Click invokes `cycleTheme` with a non-null `HTMLButtonElement` (the button's own ref).
-3. `aria-label` and tooltip content are present and localized (verifies i18n wiring).
+1. `type="icon"` renders `Monitor` when `mode === "system"`, `Sun` for `light`, `Moon` for `dark`.
+2. Click invokes `cycleTheme` with a non-null `HTMLButtonElement`.
+3. `aria-label` present and matches the i18n key for current mode.
 
-View-Transition visuals are not asserted — jsdom does not implement the API, and the animation-call-site assertions in the hook tests give sufficient coverage.
+`type="toggle"` and `type="button"` variants not asserted (migrated but not wired; deferred until adopted).
 
-## Open risks
+View Transition visuals not asserted (jsdom limitation; hook tests cover call sites).
 
-- **TS typings for `startViewTransition`**: if `@types/react-dom` + TS lib config don't ship the type, a local ambient declaration is needed. Low risk; 5 minutes if it comes up.
-- **Stacked extension panels**: the ripple animates `<html>`, so it covers the whole tab. In the extension's full-page "tabs" entrypoint this is the expected behavior. Verify visually on the popup and settings entrypoints too — if either uses a nested iframe, ripple scope may look odd (expected to be fine, but worth a manual check).
-- **Flicker on transition teardown**: if `flushSync` timing is off, a brief flash of pre-transition paint can appear. Mitigation: the `applyTheme` mutation and `setMode` both run inside the same `flushSync` call, so DOM and React state update atomically before VT captures the new frame.
+## Open Risks
 
-## Implementation order (build sequence)
+- **`lucide-react ^1.7.0` vs reference `^0.543.0`**: icon availability must be verified before migration. Specifically `SunDim` (used in the `type="button"` stub). If missing, substitute with the closest available (`Sun`) in that variant.
+- **`radix-ui` unified package export names**: confirm `radix-ui` actually exports both `Toggle` and `ToggleGroup` namespaces; if not, the migrated files must fall back to installing the per-package radix deps.
+- **TypeScript `startViewTransition` typing**: may need a local ambient `.d.ts`.
+- **Flicker on transition teardown**: both `setMode` and `applyTheme` run inside the same `flushSync`, so VT captures atomically.
 
-1. Extend `useTheme().cycleTheme` to accept `anchor?` and implement the animation orchestration. Update the one existing call site (`workspace-sidebar.tsx`) to pass `null` temporarily to verify nothing breaks.
-2. Add hook unit tests; confirm all 7 cases pass.
-3. Create `<ThemeToggler />` component.
-4. Swap the sidebar inline button for `<ThemeToggler />`.
-5. Add component tests.
-6. Manual verification: toggle through the cycle with reduced-motion off and on; verify cross-tab propagation (two extension tabs open, click in one, other updates instantly without a ghost ripple).
+## Implementation Order (Build Sequence)
 
-Each step is independently reviewable and keeps the app in a working state.
+1. **Migrate UI primitives** to `packages/ui`: copy `toggle.tsx`, `toggle-group.tsx`, `sonner.tsx`; apply mechanical replacements (imports, `cn` path, radix unified-package form); update `packages/ui/package.json` (add `sonner` dep + 3 exports). Type-check `packages/ui` passes.
+2. **Migrate `animated-theme-toggler.tsx`** to `apps/extension/src/components/`: replace `useTheme`, strip the inline `startViewTransition` code (now lives in hook), rewire to `cycleTheme(buttonRef.current)`, swap icon logic to `ICON[mode]`.
+3. **Migrate `theme-toggler.tsx`** to `apps/extension/src/components/`: adapt imports, `useTheme` destructuring, i18n `aria-label`s; keep all 3 variants, comment `type="button"` as placeholder.
+4. **Extend `useTheme().cycleTheme`** to accept `anchor?` and orchestrate the View Transition + animate + lock.
+5. **Write unit tests** for `cycleTheme` (7 cases). All pass.
+6. **Swap sidebar button** for `<ThemeToggler type="icon" />` in `workspace-sidebar.tsx`.
+7. **Write component tests** for the `icon` variant (3 cases). All pass.
+8. **Manual verification**: cycle sidebar → observe ripple; toggle OS reduced-motion → confirm instant swap; open two extension tabs → click in one → other updates without ghost ripple.
+
+Each step leaves the app in a working state.
