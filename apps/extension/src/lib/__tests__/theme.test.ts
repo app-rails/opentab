@@ -48,20 +48,24 @@ function installMocks({
 
   document.documentElement.animate = vi.fn() as typeof document.documentElement.animate;
 
-  type DocLike = Document & { startViewTransition?: unknown };
-  if (supportsVT) {
-    (document as DocLike).startViewTransition = vi.fn((cb: () => void) => {
-      cb();
-      return {
-        ready: Promise.resolve(),
-        finished: transitionFinished,
-        updateCallbackDone: Promise.resolve(),
-        skipTransition: vi.fn(),
-      };
-    });
-  } else {
-    delete (document as DocLike).startViewTransition;
-  }
+  // TS 5.9 lib.dom types `Document.startViewTransition` as non-optional, so we
+  // can't assign a mock directly or delete it. Route through Object.defineProperty
+  // to bypass type checking while preserving runtime behaviour.
+  Object.defineProperty(document, "startViewTransition", {
+    configurable: true,
+    writable: true,
+    value: supportsVT
+      ? vi.fn((cb: () => void) => {
+          cb();
+          return {
+            ready: Promise.resolve(),
+            finished: transitionFinished,
+            updateCallbackDone: Promise.resolve(),
+            skipTransition: vi.fn(),
+          };
+        })
+      : undefined,
+  });
 
   vi.stubGlobal("chrome", {
     runtime: {

@@ -282,7 +282,7 @@ export function WorkspaceSidebar({ collapsed, onToggleCollapse }: WorkspaceSideb
               <Button
                 variant="ghost"
                 size="icon-xs"
-                onClick={cycleTheme}
+                onClick={() => void cycleTheme()}
                 aria-label={t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) })}
               >
                 <ThemeIcon className="size-4 text-sidebar-foreground/70" />
