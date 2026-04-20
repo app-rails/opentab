@@ -67,6 +67,7 @@ The migrated sonner wrapper must not import `next-themes` (not a `packages/ui` d
 ```tsx
 // packages/ui/src/components/sonner.tsx
 "use client";
+import type { CSSProperties } from "react";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
 const Toaster = ({ theme = "system", ...props }: ToasterProps) => (
@@ -78,7 +79,7 @@ const Toaster = ({ theme = "system", ...props }: ToasterProps) => (
         "--normal-bg": "var(--popover)",
         "--normal-text": "var(--popover-foreground)",
         "--normal-border": "var(--border)",
-      } as React.CSSProperties
+      } as CSSProperties
     }
     {...props}
   />
@@ -86,6 +87,8 @@ const Toaster = ({ theme = "system", ...props }: ToasterProps) => (
 
 export { Toaster };
 ```
+
+Import `CSSProperties` as a type-only import — with TS's `react-jsx` transform, the `React` namespace is not in scope, so the reference version's `as React.CSSProperties` would fail `tsc --noEmit`.
 
 `ToasterProps["theme"]` from `sonner` is already `"light" | "dark" | "system"`, so callers wiring this in the extension pass `mode` directly: `<Toaster theme={mode} />`. No call site is wired in this iteration — this is infrastructure only.
 
@@ -133,9 +136,22 @@ const handleThemeChange = (value: string) => {
 
 | File | Change |
 |---|---|
-| `apps/extension/src/components/layout/workspace-sidebar.tsx` | **Keep** the existing `<Tooltip><TooltipTrigger asChild>...<TooltipContent/>` wrapper (lines 280-294). Replace only the inner `<Button>` block (lines 282-289) with `<ThemeToggler type="icon" aria-label={label} />`. Preserves the tooltip copy and localization without re-implementing it inside the migrated component. `TooltipContent` text comes from the existing i18n key (unchanged). |
+| `apps/extension/src/components/layout/workspace-sidebar.tsx` | **Keep** the existing `<Tooltip><TooltipTrigger asChild>...<TooltipContent/>` wrapper (lines 280-294). Replace only the inner `<Button>` block (lines 282-289) with `<ThemeToggler type="icon" aria-label={label} />`. Preserves the tooltip copy and localization without re-implementing it inside the migrated component. `TooltipContent` text comes from the existing i18n key (unchanged). **Also remove the now-unused bindings left behind by the swap** — see next section. |
 
 This works because the adapted `ThemeToggler` (`type="icon"`) forwards `ref` and `...props` to its root `<button>`, so Radix's `<TooltipTrigger asChild>` can inject its control props. Without the ref/props forwarding adaptation above, this wiring would silently break the tooltip.
+
+### Sidebar dead-code cleanup (required to pass lint)
+
+Biome's `recommended: true` (see `biome.json`) enables `noUnusedImports` and `noUnusedVariables`. After the swap, the following become unreferenced and must be removed in the **same change** as the wiring update:
+
+| Line(s) in `workspace-sidebar.tsx` | Dead after swap | Action |
+|---|---|---|
+| `10-16` (icon import group) | `Monitor`, `Moon`, `Sun` | Remove from the `lucide-react` import list. Keep `ChevronLeft`, `Download`, `PanelLeft`, `Plus`, `Settings`, `Upload`. |
+| `33` | `const THEME_ICON = {…} as const;` | Delete the line. |
+| `100` | `const { mode, cycleTheme } = useTheme();` | Drop `cycleTheme`; keep `mode` — still used at lines 286 and 292 for the Tooltip aria-label/content. New: `const { mode } = useTheme();` |
+| `105` | `const ThemeIcon = THEME_ICON[mode];` | Delete the line. |
+
+`pnpm --filter @opentab/extension lint` must pass after step 6 of the Implementation Order.
 
 No other wiring changes.
 
@@ -303,7 +319,7 @@ View Transition visuals not asserted (jsdom limitation; hook tests cover call si
 3. **Migrate `theme-toggler.tsx`** to `apps/extension/src/components/`: drop `type="button"` stub; adapt imports, `useTheme` destructuring, i18n `aria-label`s; add the `isThemeMode` narrowing for `type="toggle"`.
 4. **Extend `useTheme().cycleTheme`** to accept `anchor?` and orchestrate the View Transition + animate + lock.
 5. **Write unit tests** for `cycleTheme` (7 cases). All pass.
-6. **Swap sidebar inner Button** for `<ThemeToggler type="icon" aria-label={label} />` in `workspace-sidebar.tsx`; keep the outer `<Tooltip>` wrapper intact.
+6. **Swap sidebar inner Button** for `<ThemeToggler type="icon" aria-label={label} />` in `workspace-sidebar.tsx`; keep the outer `<Tooltip>` wrapper intact. In the same commit, remove the now-unused bindings (`THEME_ICON` const, `ThemeIcon` local, `cycleTheme` destructure, and `Monitor`/`Moon`/`Sun` icon imports) — see the cleanup table under Wiring Changes. `pnpm --filter @opentab/extension lint` must pass.
 7. **Write component tests** for the `icon` variant (3 cases). All pass.
 8. **Manual verification**: cycle sidebar → observe ripple; toggle OS reduced-motion → confirm instant swap; open two extension tabs → click in one → other updates without ghost ripple; hover sidebar button → confirm Tooltip still appears.
 
