@@ -629,17 +629,10 @@ import { flushSync } from "react-dom";
 import { MSG } from "./constants";
 import { getSettings, saveSettings, type ThemeMode } from "./settings";
 
-// Ambient augmentation — lib.dom in older TS configs may not ship startViewTransition.
-declare global {
-  interface Document {
-    startViewTransition?(callback: () => void | Promise<void>): {
-      ready: Promise<void>;
-      finished: Promise<void>;
-      updateCallbackDone: Promise<void>;
-      skipTransition(): void;
-    };
-  }
-}
+// Note: TS 5.9+ `lib.dom.d.ts` already declares `Document.startViewTransition`
+// (non-optional). The `typeof document.startViewTransition === "function"`
+// runtime check below is still needed — Firefox and older Safari don't implement
+// the API even though the type exists.
 
 function resolveEffective(mode: ThemeMode): "light" | "dark" {
   if (mode === "system") {
@@ -720,12 +713,29 @@ export function useTheme() {
 
       isAnimatingRef.current = true;
       try {
-        const transition = document.startViewTransition!(() => {
-          flushSync(() => {
-            setMode(next);
-            applyTheme(next);
+        // Defensive: if startViewTransition throws synchronously (shouldn't
+        // happen in spec-compliant browsers, but matches the spec's fallback
+        // matrix), fall back to instant swap. The callback never ran, so
+        // apply the mode change here so the finally block's saveSettings
+        // persists a mode that's actually visible on screen.
+        let transition: ReturnType<Document["startViewTransition"]>;
+        try {
+          transition = document.startViewTransition(() => {
+            flushSync(() => {
+              setMode(next);
+              applyTheme(next);
+            });
           });
-        });
+        } catch (err) {
+          console.warn(
+            "document.startViewTransition threw synchronously; falling back to instant swap",
+            err,
+          );
+          setMode(next);
+          applyTheme(next);
+          return;
+        }
+
         await transition.ready;
 
         const rect = anchor!.getBoundingClientRect();
@@ -1007,7 +1017,7 @@ Replace lines 282-289 (the `<Button variant="ghost" size="icon-xs" onClick={cycl
 ```tsx
 <ThemeToggler
   type="icon"
-  className="inline-flex size-6 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground [&_svg]:size-3 [&_svg]:text-sidebar-foreground/70"
+  className="inline-flex size-6 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground [&_svg]:text-sidebar-foreground/70"
   aria-label={t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) })}
 />
 ```
