@@ -1,8 +1,16 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { ChevronRightIcon, ExternalLinkIcon, FoldersIcon, LayersIcon } from "lucide-react";
+import {
+  ChevronRightIcon,
+  ExternalLinkIcon,
+  FoldersIcon,
+  LayersIcon,
+  PencilIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { useState } from "react";
 import { data, Link } from "react-router";
 import { DateTimeDisplay } from "~/components/datetime-display";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { collectionTabs, tabCollections, workspaces } from "~/drizzle/schema";
@@ -203,16 +211,30 @@ export default function WorkspaceDetailRoute({
           </span>
           <h1 className="font-semibold text-2xl">{workspace.name}</h1>
         </div>
-        <p className="flex items-center gap-3 text-muted-foreground text-sm">
-          <span className="inline-flex items-center gap-1">
-            <FoldersIcon className="size-3.5" />
-            {collections.length} collection{collections.length === 1 ? "" : "s"}
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <LayersIcon className="size-3.5" />
-            {totalTabs} tab{totalTabs === 1 ? "" : "s"}
-          </span>
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="flex items-center gap-3 text-muted-foreground text-sm">
+            <span className="inline-flex items-center gap-1">
+              <FoldersIcon className="size-3.5" />
+              {collections.length} collection{collections.length === 1 ? "" : "s"}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <LayersIcon className="size-3.5" />
+              {totalTabs} tab{totalTabs === 1 ? "" : "s"}
+            </span>
+          </p>
+          <Button asChild size="sm" variant="outline">
+            <Link to={`/dash/${workspace.syncId}/edit`}>
+              <PencilIcon className="size-4" />
+              Rename
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link to={`/dash/${workspace.syncId}/delete`}>
+              <Trash2Icon className="size-4" />
+              Delete
+            </Link>
+          </Button>
+        </div>
       </header>
 
       {collections.length === 0 ? (

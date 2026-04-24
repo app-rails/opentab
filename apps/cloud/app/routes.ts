@@ -33,11 +33,14 @@ export default [
     ]),
   ]),
 
-  // Dashboard routes (workspace read-only viewer)
+  // Dashboard routes (workspace read-only viewer + Phase-2 Web editing)
   ...prefix("dash", [
     layout("routes/dash/layout.tsx", [
       index("routes/dash/index.tsx"),
+      route("workspaces/new", "routes/dash/workspaces.new.tsx"),
       route(":workspaceSyncId", "routes/dash/$workspaceSyncId.tsx"),
+      route(":workspaceSyncId/edit", "routes/dash/$workspaceSyncId.edit.tsx"),
+      route(":workspaceSyncId/delete", "routes/dash/$workspaceSyncId.delete.tsx"),
     ]),
   ]),
 

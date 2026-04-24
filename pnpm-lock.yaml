@@ -104,6 +104,9 @@ importers:
       drizzle-orm:
         specifier: ~0.45.1
         version: 0.45.2(@libsql/client@0.17.3)(@opentelemetry/api@1.9.1)(kysely@0.28.16)
+      fractional-indexing:
+        specifier: ^3.2.0
+        version: 3.2.0
       isbot:
         specifier: ^5.1.36
         version: 5.1.39

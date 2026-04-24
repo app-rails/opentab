@@ -1,7 +1,8 @@
 import { and, count, eq, isNull } from "drizzle-orm";
-import { FoldersIcon, LayersIcon } from "lucide-react";
+import { FoldersIcon, LayersIcon, PlusIcon } from "lucide-react";
 import { data, Link } from "react-router";
 import { DateTimeDisplay } from "~/components/datetime-display";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { collectionTabs, tabCollections, workspaces } from "~/drizzle/schema";
 import { getPageTitle } from "~/lib/utils";
@@ -120,15 +121,23 @@ export default function DashIndexRoute({
 }: Route.ComponentProps) {
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="font-semibold text-2xl">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">
-          {wsCards.length} workspace{wsCards.length === 1 ? "" : "s"}
-          <span className="mx-1.5">·</span>
-          {totalCollections} collection{totalCollections === 1 ? "" : "s"}
-          <span className="mx-1.5">·</span>
-          {totalTabs} tab{totalTabs === 1 ? "" : "s"}
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="font-semibold text-2xl">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">
+            {wsCards.length} workspace{wsCards.length === 1 ? "" : "s"}
+            <span className="mx-1.5">·</span>
+            {totalCollections} collection{totalCollections === 1 ? "" : "s"}
+            <span className="mx-1.5">·</span>
+            {totalTabs} tab{totalTabs === 1 ? "" : "s"}
+          </p>
+        </div>
+        <Button asChild>
+          <Link to="/dash/workspaces/new">
+            <PlusIcon className="size-4" />
+            Create workspace
+          </Link>
+        </Button>
       </header>
 
       {wsCards.length === 0 ? (
