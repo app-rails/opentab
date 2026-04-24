@@ -319,7 +319,7 @@ function CollectionBlock({
           </div>
         </CardHeader>
         <CollapsibleContent>
-          <CardContent className="pt-4">
+          <CardContent className="space-y-3 pt-4">
             {tabs.length === 0 ? (
               <p className="text-muted-foreground text-sm">No tabs in this collection.</p>
             ) : (
@@ -329,6 +329,14 @@ function CollectionBlock({
                 ))}
               </ul>
             )}
+            <div>
+              <Button asChild size="sm" variant="outline">
+                <Link to={`/dash/collections/${collection.syncId}/tabs/new`}>
+                  <PlusIcon className="size-4" />
+                  Add tab
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </CollapsibleContent>
       </Card>
@@ -339,12 +347,12 @@ function CollectionBlock({
 function TabRow({ tab }: { tab: TabView }) {
   const title = tab.title || tab.url;
   return (
-    <li>
+    <li className="group flex items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-accent/40">
       <a
         href={tab.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-accent/40"
+        className="flex min-w-0 flex-1 items-center gap-3"
       >
         {tab.favIconUrl ? (
           <img src={tab.favIconUrl} alt="" className="size-4 shrink-0 rounded-sm" loading="lazy" />
@@ -355,8 +363,26 @@ function TabRow({ tab }: { tab: TabView }) {
         <span className="hidden max-w-[40%] truncate text-muted-foreground text-xs md:inline">
           {tab.url}
         </span>
-        <ExternalLinkIcon className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
       </a>
+      <ExternalLinkIcon className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+        <Button asChild size="sm" variant="ghost" aria-label="Edit tab">
+          <Link
+            to={`/dash/collections/${tab.collectionSyncId}/tabs/${tab.syncId}/edit`}
+            title="Edit tab"
+          >
+            <PencilIcon className="size-3.5" />
+          </Link>
+        </Button>
+        <Button asChild size="sm" variant="ghost" aria-label="Delete tab">
+          <Link
+            to={`/dash/collections/${tab.collectionSyncId}/tabs/${tab.syncId}/delete`}
+            title="Delete tab"
+          >
+            <Trash2Icon className="size-3.5" />
+          </Link>
+        </Button>
+      </div>
     </li>
   );
 }

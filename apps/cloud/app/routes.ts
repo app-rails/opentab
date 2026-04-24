@@ -50,6 +50,18 @@ export default [
         ":workspaceSyncId/collections/:collectionSyncId/delete",
         "routes/dash/$workspaceSyncId.collections.$collectionSyncId.delete.tsx",
       ),
+      route(
+        "collections/:collectionSyncId/tabs/new",
+        "routes/dash/collections.$collectionSyncId.tabs.new.tsx",
+      ),
+      route(
+        "collections/:collectionSyncId/tabs/:tabSyncId/edit",
+        "routes/dash/collections.$collectionSyncId.tabs.$tabSyncId.edit.tsx",
+      ),
+      route(
+        "collections/:collectionSyncId/tabs/:tabSyncId/delete",
+        "routes/dash/collections.$collectionSyncId.tabs.$tabSyncId.delete.tsx",
+      ),
     ]),
   ]),
 
