@@ -56,6 +56,7 @@
     "spin-delay": "^2.0.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
+    "uuid": "^10",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -67,6 +68,7 @@
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^10",
     "drizzle-kit": "^0.31.10",
     "tailwindcss": "^4.2.2",
     "tsx": "^4.21.0",
