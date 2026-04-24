@@ -133,4 +133,36 @@ describe("getLocalProfileId", () => {
 
     expect(id).toBe("ws-fallback");
   });
+
+  it("serializes concurrent calls to avoid duplicate adoption and writes", async () => {
+    const { set } = installBrowserMock();
+    getFirstMock().mockResolvedValue({
+      id: 1,
+      accountId: "concurrent-ws-id",
+      name: "First",
+      icon: "folder",
+      order: "a0",
+      syncId: "sync-1",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+
+    // Fire two concurrent calls without awaiting the first
+    const promise1 = getLocalProfileId();
+    const promise2 = getLocalProfileId();
+
+    const [id1, id2] = await Promise.all([promise1, promise2]);
+
+    // Both should resolve to the same id
+    expect(id1).toBe("concurrent-ws-id");
+    expect(id2).toBe("concurrent-ws-id");
+
+    // Only one call to writeStoredProfileId should occur (serialization key assertion)
+    expect(set).toHaveBeenCalledTimes(1);
+    expect(set).toHaveBeenCalledWith({ opentab_local_profile_id_v1: "concurrent-ws-id" });
+
+    // The workspace lookup is called once (orderBy returns a chainable object,
+    // so we check the .first() call to verify single adoption attempt)
+    expect(getFirstMock()).toHaveBeenCalledTimes(1);
+  });
 });

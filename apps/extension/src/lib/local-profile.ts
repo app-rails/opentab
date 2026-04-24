@@ -24,6 +24,7 @@ type RawAuthStorage = {
 };
 
 let cached: string | null = null;
+let initPromise: Promise<string> | null = null;
 
 async function readStoredProfileId(): Promise<string | null> {
   const result = await browser.storage.local.get(STORAGE_KEY);
@@ -65,22 +66,30 @@ async function adoptFromOldestWorkspace(): Promise<string | null> {
  * The resolved id is persisted back to `chrome.storage.local` under
  * `opentab_local_profile_id_v1` and cached in module memory so subsequent
  * calls avoid repeated async lookups.
+ *
+ * Concurrent calls are serialized: if adoption is already in flight, subsequent
+ * callers await the shared promise instead of kicking off duplicate adoption.
  */
 export async function getLocalProfileId(): Promise<string> {
   if (cached) return cached;
+  if (initPromise) return initPromise;
 
-  const stored = await readStoredProfileId();
-  if (stored) {
-    cached = stored;
-    return stored;
-  }
+  initPromise = (async () => {
+    const stored = await readStoredProfileId();
+    if (stored) {
+      cached = stored;
+      return stored;
+    }
 
-  const adopted = (await adoptFromAuthStorage()) ?? (await adoptFromOldestWorkspace());
-  const id = adopted ?? crypto.randomUUID();
+    const adopted = (await adoptFromAuthStorage()) ?? (await adoptFromOldestWorkspace());
+    const id = adopted ?? crypto.randomUUID();
 
-  await writeStoredProfileId(id);
-  cached = id;
-  return id;
+    await writeStoredProfileId(id);
+    cached = id;
+    return id;
+  })();
+
+  return initPromise;
 }
 
 /**
@@ -88,4 +97,5 @@ export async function getLocalProfileId(): Promise<string> {
  */
 export function __resetLocalProfileIdCacheForTests(): void {
   cached = null;
+  initPromise = null;
 }
