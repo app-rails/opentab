@@ -8,6 +8,13 @@
       "when": 1777027027136,
       "tag": "0000_tranquil_amazoness",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1777027850907,
+      "tag": "0001_fantastic_gamma_corps",
+      "breakpoints": true
     }
   ]
 }
