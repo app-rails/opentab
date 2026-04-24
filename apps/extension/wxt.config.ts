@@ -10,8 +10,22 @@ export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: {
     permissions: ["storage", "alarms", "tabs", "downloads"],
+    // Hosts are requested at runtime by the sync-setup wizard (spec §2.4.5).
+    // Declaring this empty keeps the install-time prompt clean and forces an
+    // explicit per-host permission dialog for the user-entered server URL.
+    optional_host_permissions: [],
     action: {},
     chrome_url_overrides: { newtab: "tabs.html" },
+    // The setup-callback bridge must be reachable as a web-accessible resource
+    // so the `/connect/extension` redirect can land back on the extension URL.
+    // Narrow `matches` to https + localhost to prevent arbitrary sites from
+    // embedding or deep-linking to the callback page.
+    web_accessible_resources: [
+      {
+        resources: ["setup-callback.html"],
+        matches: ["https://*/*", "http://localhost/*"],
+      },
+    ],
   },
   vite: () => ({
     plugins: [tailwindcss()],
