@@ -1,26 +1,19 @@
 import { Button } from "@opentab/ui/components/button";
-import { Input } from "@opentab/ui/components/input";
-import { Switch } from "@opentab/ui/components/switch";
 import { cn } from "@opentab/ui/lib/utils";
 import { Check, Copy, Download, Upload } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { checkHealth } from "@/lib/api";
+import { SyncSetupWizard } from "@/components/settings/sync-setup-wizard";
+import { SyncStatusCard } from "@/components/settings/sync-status-card";
 import { getBuildString } from "@/lib/build-info";
 import { exportAllData } from "@/lib/export";
 import { processImportFile } from "@/lib/import/process-file";
 import { useLocale } from "@/lib/locale";
-import {
-  type AppSettings,
-  getSettings,
-  type Locale,
-  saveSettings,
-  type ThemeMode,
-} from "@/lib/settings";
+import { type AppSettings, getSettings, type Locale, type ThemeMode } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
+import { useSyncAuthState } from "@/lib/use-sync-auth-state";
 
 type SettingsPanel = "general" | "import-export";
-type ConnectionStatus = "not_enabled" | "testing" | "connected" | "disconnected";
 
 const THEME_OPTIONS = [
   { value: "light" as ThemeMode, labelKey: "settings.appearance.theme_light" as const },
@@ -33,28 +26,12 @@ const LANGUAGE_OPTIONS = [
   { value: "zh" as Locale, native: "中文", labelKey: "settings.appearance.lang_zh" as const },
 ];
 
-function useDebouncedSave(delayMs: number) {
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  return useCallback(
-    (partial: Partial<AppSettings>) => {
-      clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        void saveSettings(partial).catch((error) => {
-          console.error("Failed to save settings:", error);
-        });
-      }, delayMs);
-    },
-    [delayMs],
-  );
-}
-
 export default function App() {
   const [activePanel, setActivePanel] = useState<SettingsPanel>("general");
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("not_enabled");
   const [isExporting, setIsExporting] = useState(false);
-  const debouncedSave = useDebouncedSave(500);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const syncAuth = useSyncAuthState();
 
   const { mode: themeMode, setTheme } = useTheme();
   const { locale, setLocale } = useLocale();
@@ -63,31 +40,8 @@ export default function App() {
   useEffect(() => {
     getSettings().then((loaded) => {
       setSettings(loaded);
-      setConnectionStatus(loaded.server_enabled ? "disconnected" : "not_enabled");
     });
   }, []);
-
-  const handleToggle = useCallback(async (enabled: boolean) => {
-    setSettings((prev) => (prev ? { ...prev, server_enabled: enabled } : prev));
-    setConnectionStatus(enabled ? "disconnected" : "not_enabled");
-    await saveSettings({ server_enabled: enabled });
-  }, []);
-
-  const handleUrlChange = useCallback(
-    (url: string) => {
-      setSettings((prev) => (prev ? { ...prev, server_url: url } : prev));
-      setConnectionStatus("disconnected");
-      debouncedSave({ server_url: url });
-    },
-    [debouncedSave],
-  );
-
-  const handleTestConnection = useCallback(async () => {
-    if (!settings) return;
-    setConnectionStatus("testing");
-    const ok = await checkHealth(settings.server_url);
-    setConnectionStatus(ok ? "connected" : "disconnected");
-  }, [settings]);
 
   const handleThemeChange = useCallback(
     (theme: ThemeMode) => {
@@ -227,50 +181,23 @@ export default function App() {
               <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
                 {t("settings.server.title")}
               </h3>
-              <div
-                className="flex items-center justify-between"
-                title={t("settings.server.enable_disabled_tooltip")}
-              >
-                <label htmlFor="server-sync" className="font-medium text-sm">
-                  {t("settings.server.enable")}
-                </label>
-                <Switch
-                  id="server-sync"
-                  checked={settings.server_enabled}
-                  onCheckedChange={handleToggle}
-                  disabled
-                  aria-label={t("settings.server.enable_disabled_tooltip")}
+              {syncAuth.kind === "authenticated" ? (
+                <SyncStatusCard auth={syncAuth} />
+              ) : wizardOpen ? (
+                <SyncSetupWizard
+                  onClose={() => setWizardOpen(false)}
+                  onCancel={() => setWizardOpen(false)}
                 />
-              </div>
-              {settings.server_enabled && (
-                <>
-                  <div className="space-y-2">
-                    <label htmlFor="server-url" className="font-medium text-sm">
-                      {t("settings.server.url_label")}
-                    </label>
-                    <Input
-                      id="server-url"
-                      value={settings.server_url}
-                      onChange={(e) => handleUrlChange(e.target.value)}
-                      placeholder={t("settings.server.url_placeholder")}
-                    />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleTestConnection}
-                      disabled={connectionStatus === "testing"}
-                    >
-                      {connectionStatus === "testing"
-                        ? t("settings.server.testing")
-                        : t("settings.server.test")}
-                    </Button>
-                    <StatusIndicator status={connectionStatus} />
-                  </div>
-                </>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-muted-foreground text-sm">
+                    Sync your workspaces across devices via the OpenTab sync server.
+                  </p>
+                  <Button size="sm" onClick={() => setWizardOpen(true)}>
+                    Enable Sync
+                  </Button>
+                </div>
               )}
-              {!settings.server_enabled && <StatusIndicator status="not_enabled" />}
 
               <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
                 {t("settings.about.title")}
@@ -334,26 +261,6 @@ function BuildInfo() {
       {copied && (
         <span className="text-muted-foreground text-xs">{t("settings.about.copied")}</span>
       )}
-    </div>
-  );
-}
-
-function StatusIndicator({ status }: { status: ConnectionStatus }) {
-  const { t } = useTranslation();
-  const config = {
-    not_enabled: { color: "bg-muted-foreground/40", text: t("settings.server.status.not_enabled") },
-    testing: { color: "bg-[var(--status-yellow)]", text: t("settings.server.status.testing") },
-    connected: { color: "bg-[var(--status-green)]", text: t("settings.server.status.connected") },
-    disconnected: {
-      color: "bg-[var(--status-red)]",
-      text: t("settings.server.status.disconnected"),
-    },
-  }[status];
-
-  return (
-    <div className="flex items-center gap-2 text-muted-foreground text-sm">
-      <span className={`size-2 rounded-full ${config.color}`} />
-      {config.text}
     </div>
   );
 }
