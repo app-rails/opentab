@@ -207,10 +207,10 @@ export const worker = await ReactRouter("worker", {
     DB: db,
     APP_KV: kv,
     APP_URL: env.APP_URL,
-    BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET,
+    BETTER_AUTH_SECRET: alchemy.secret.env("BETTER_AUTH_SECRET"),
     BETTER_AUTH_ADMIN_USER_ID: env.BETTER_AUTH_ADMIN_USER_ID,
     GITHUB_CLIENT_ID: env.GITHUB_CLIENT_ID,
-    GITHUB_CLIENT_SECRET: alchemy.secret.env.GITHUB_CLIENT_SECRET,
+    GITHUB_CLIENT_SECRET: alchemy.secret.env("GITHUB_CLIENT_SECRET"),
   },
 });
 
@@ -227,9 +227,13 @@ await app.finalize();
 
 Key choices:
 
-- `alchemy.secret.env.X` — used for true secrets (signing keys, OAuth
+- `alchemy.secret.env("X")` — used for true secrets (signing keys, OAuth
   secret). Throws at plan time if the env var is missing. The value is
-  encrypted at rest in CloudflareStateStore using `ALCHEMY_PASSWORD`.
+  encrypted at rest in CloudflareStateStore using `ALCHEMY_PASSWORD`. We
+  use the call form (not the proxy property access) because `apps/cloud`
+  enables `noUncheckedIndexedAccess`, which makes `alchemy.secret.env.X`
+  resolve to `Secret<string> | undefined` — incompatible with binding
+  field types.
 - `env.X` (plain) — used for non-secret bindings (`APP_URL`,
   `GITHUB_CLIENT_ID`, `BETTER_AUTH_ADMIN_USER_ID`).
 - `D1Database`'s `migrationsDir` + `migrationsTable` makes Alchemy own the
