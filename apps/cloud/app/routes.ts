@@ -39,7 +39,18 @@ export default [
     route("auth/*", "routes/api/better.tsx"),
     route("theme-switcher", "routes/api/theme-switcher.ts"),
     route("health", "routes/api/health.ts"),
+
+    // Sync endpoints (spec §2.3)
+    route("sync/push", "routes/api/sync/push.ts"),
+    route("sync/pull", "routes/api/sync/pull.ts"),
+    route("sync/snapshot", "routes/api/sync/snapshot.ts"),
+
+    // Extension setup exchange (spec §4.1)
+    route("extension/exchange/consume", "routes/api/extension/exchange/consume.ts"),
   ]),
+
+  // Extension connect / approve UI (cookie-authenticated)
+  ...prefix("connect", [route("extension", "routes/connect/extension.tsx")]),
 
   // Not found
   route("*", "routes/not-found.tsx"),
