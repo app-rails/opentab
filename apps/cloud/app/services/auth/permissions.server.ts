@@ -9,21 +9,21 @@ export type PermissionPayload = Record<string, string[]>;
  * @param message - The message to display when the user is not authorized.
  */
 export async function requirePermission(
-	userId: string,
-	permissions: PermissionPayload,
-	message?: string,
+  userId: string,
+  permissions: PermissionPayload,
+  message?: string,
 ) {
-	const result = await auth.api.userHasPermission({
-		body: { userId, permissions },
-	});
+  const result = await auth.api.userHasPermission({
+    body: { userId, permissions },
+  });
 
-	if (!result.success) {
-		throw new Response(message ?? "You are not authorized to view this page.", {
-			status: 403,
-		});
-	}
+  if (!result.success) {
+    throw new Response(message ?? "You are not authorized to view this page.", {
+      status: 403,
+    });
+  }
 
-	return true;
+  return true;
 }
 
 /**
@@ -32,13 +32,10 @@ export async function requirePermission(
  * @param userId - The ID of the user to check permissions for.
  * @param permissions - Resource → actions map (matches admin plugin access control).
  */
-export async function checkPermission(
-	userId: string,
-	permissions: PermissionPayload,
-) {
-	const result = await auth.api.userHasPermission({
-		body: { userId, permissions },
-	});
+export async function checkPermission(userId: string, permissions: PermissionPayload) {
+  const result = await auth.api.userHasPermission({
+    body: { userId, permissions },
+  });
 
-	return result.success;
+  return result.success;
 }

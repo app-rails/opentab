@@ -10,20 +10,16 @@ import { cn } from "~/lib/utils";
  * @returns Formatted date string in format: 2025/10/12 12:00:00
  */
 export function DateTimeDisplay({
-	date,
-	className,
+  date,
+  className,
 }: {
-	date: Date | string | number | null | undefined;
-	className?: string;
+  date: Date | string | number | null | undefined;
+  className?: string;
 }) {
-	const hints = useOptionalHints();
-	const formatted = formatDateTimeWithHints(date, {
-		timeZone: hints?.timeZone,
-		locale: "en-US", // Use fixed locale for consistent format
-	});
-	return (
-		<span className={cn("text-muted-foreground text-sm", className)}>
-			{formatted}
-		</span>
-	);
+  const hints = useOptionalHints();
+  const formatted = formatDateTimeWithHints(date, {
+    timeZone: hints?.timeZone,
+    locale: "en-US", // Use fixed locale for consistent format
+  });
+  return <span className={cn("text-muted-foreground text-sm", className)}>{formatted}</span>;
 }

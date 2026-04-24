@@ -4,19 +4,19 @@ import type { Config } from "drizzle-kit";
 const D1_DIR = ".wrangler/state/v3/d1/miniflare-D1DatabaseObject";
 
 const getD1Url = (): string => {
-	if (!existsSync(D1_DIR)) return "";
+  if (!existsSync(D1_DIR)) return "";
 
-	const sqliteFile = readdirSync(D1_DIR).find((f) => f.endsWith(".sqlite"));
-	return sqliteFile ? `${D1_DIR}/${sqliteFile}` : "";
+  const sqliteFile = readdirSync(D1_DIR).find((f) => f.endsWith(".sqlite"));
+  return sqliteFile ? `${D1_DIR}/${sqliteFile}` : "";
 };
 
 export const d1Url = getD1Url();
 
 export default {
-	schema: "./drizzle/schema/index.ts",
-	out: "./drizzle/migrations",
-	dialect: "sqlite",
-	dbCredentials: {
-		url: d1Url,
-	},
+  schema: "./drizzle/schema/index.ts",
+  out: "./drizzle/migrations",
+  dialect: "sqlite",
+  dbCredentials: {
+    url: d1Url,
+  },
 } satisfies Config;

@@ -31,67 +31,67 @@ import type { Textarea } from "~/components/ui/textarea";
  * @see {@link https://conform.guide/api/react/future/FormOptionsProvider | Conform FormOptionsProvider}
  */
 export function defineCustomMetadata<FieldShape, ErrorShape>(
-	metadata: BaseMetadata<FieldShape, ErrorShape>,
+  metadata: BaseMetadata<FieldShape, ErrorShape>,
 ) {
-	return {
-		get inputProps() {
-			return {
-				id: metadata.id,
-				name: metadata.name,
-				defaultValue: metadata.defaultValue,
-				required: metadata.required,
-				minLength: metadata.minLength,
-				maxLength: metadata.maxLength,
-				pattern: metadata.pattern,
-				min: metadata.min,
-				max: metadata.max,
-				step: metadata.step,
-				"aria-invalid": metadata.ariaInvalid,
-				"aria-describedby": metadata.ariaDescribedBy,
-			} satisfies Partial<ComponentProps<typeof Input>>;
-		},
-		get textareaProps() {
-			return {
-				id: metadata.id,
-				name: metadata.name,
-				defaultValue: metadata.defaultValue,
-				required: metadata.required,
-				"aria-invalid": metadata.ariaInvalid,
-				"aria-describedby": metadata.ariaDescribedBy,
-			} satisfies Partial<ComponentProps<typeof Textarea>>;
-		},
-		get selectProps() {
-			return {
-				name: metadata.name,
-				defaultValue: metadata.defaultValue,
-				required: metadata.required,
-			} satisfies Partial<ComponentProps<typeof Select>>;
-		},
-		get checkboxProps() {
-			return {
-				name: metadata.name,
-				value: "on",
-				defaultChecked: metadata.defaultChecked,
-			} satisfies Partial<React.ComponentProps<typeof Checkbox>>;
-		},
-		get radioGroupProps() {
-			return {
-				name: metadata.name,
-				defaultValue: metadata.defaultValue,
-			} satisfies Partial<React.ComponentProps<typeof RadioGroup>>;
-		},
-		get switchProps() {
-			return {
-				id: metadata.id,
-				name: metadata.name,
-				defaultChecked: metadata.defaultChecked,
-				required: metadata.required,
-			} satisfies Partial<ComponentProps<typeof Switch>>;
-		},
-	};
+  return {
+    get inputProps() {
+      return {
+        id: metadata.id,
+        name: metadata.name,
+        defaultValue: metadata.defaultValue,
+        required: metadata.required,
+        minLength: metadata.minLength,
+        maxLength: metadata.maxLength,
+        pattern: metadata.pattern,
+        min: metadata.min,
+        max: metadata.max,
+        step: metadata.step,
+        "aria-invalid": metadata.ariaInvalid,
+        "aria-describedby": metadata.ariaDescribedBy,
+      } satisfies Partial<ComponentProps<typeof Input>>;
+    },
+    get textareaProps() {
+      return {
+        id: metadata.id,
+        name: metadata.name,
+        defaultValue: metadata.defaultValue,
+        required: metadata.required,
+        "aria-invalid": metadata.ariaInvalid,
+        "aria-describedby": metadata.ariaDescribedBy,
+      } satisfies Partial<ComponentProps<typeof Textarea>>;
+    },
+    get selectProps() {
+      return {
+        name: metadata.name,
+        defaultValue: metadata.defaultValue,
+        required: metadata.required,
+      } satisfies Partial<ComponentProps<typeof Select>>;
+    },
+    get checkboxProps() {
+      return {
+        name: metadata.name,
+        value: "on",
+        defaultChecked: metadata.defaultChecked,
+      } satisfies Partial<React.ComponentProps<typeof Checkbox>>;
+    },
+    get radioGroupProps() {
+      return {
+        name: metadata.name,
+        defaultValue: metadata.defaultValue,
+      } satisfies Partial<React.ComponentProps<typeof RadioGroup>>;
+    },
+    get switchProps() {
+      return {
+        id: metadata.id,
+        name: metadata.name,
+        defaultChecked: metadata.defaultChecked,
+        required: metadata.required,
+      } satisfies Partial<ComponentProps<typeof Switch>>;
+    },
+  };
 }
 
 declare module "@conform-to/react/future" {
-	interface CustomMetadata<FieldShape, ErrorShape>
-		extends ReturnType<typeof defineCustomMetadata<FieldShape, ErrorShape>> {}
+  interface CustomMetadata<FieldShape, ErrorShape>
+    extends ReturnType<typeof defineCustomMetadata<FieldShape, ErrorShape>> {}
 }
