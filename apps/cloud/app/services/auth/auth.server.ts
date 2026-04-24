@@ -7,6 +7,7 @@ import {
   lastLoginMethod as lastLoginMethodPlugin,
   username as usernamePlugin,
 } from "better-auth/plugins";
+import { getExtensionOrigins } from "~/lib/allowlist-origins";
 import { appName, cookiePrefix } from "~/lib/config";
 import { db } from "../db.server";
 import { isDevelopment } from "../env.server";
@@ -18,7 +19,7 @@ const options = {
   appName,
   baseURL,
   secret: env.BETTER_AUTH_SECRET,
-  trustedOrigins: [baseURL, "http://localhost:4173"],
+  trustedOrigins: [baseURL, "http://localhost:4173", ...getExtensionOrigins(env)],
 
   database: drizzleAdapter(db, {
     provider: "sqlite",
