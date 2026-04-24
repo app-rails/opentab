@@ -5,7 +5,7 @@ build/
 .turbo/
 .husky/
 .vscode/
-.wrangler/
+.alchemy/
 .react-router/
 **/migrations/
 
@@ -13,8 +13,6 @@ build/
 LICENSE
 pnpm-lock.yaml
 package-lock.json
-wrangler.toml
-wrangler.jsonc
 .cursorrules
 .cursorignore
 .gitignore

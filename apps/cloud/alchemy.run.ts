@@ -68,7 +68,7 @@ export const worker = await ReactRouter("worker", {
 // CustomDomain takes `workerName: string` (not the worker resource object).
 // Pass the worker's `name` so Alchemy binds the domain to the freshly
 // created/updated worker. Verified via alchemy/cloudflare/custom-domain.d.ts
-// in alchemy@^0.91.
+// in alchemy@^0.93.
 await CustomDomain("custom-domain", {
   name: hostname,
   workerName: worker.name,
