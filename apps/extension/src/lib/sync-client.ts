@@ -1,0 +1,209 @@
+import {
+  type ExchangeConsumeRequest,
+  type ExchangeConsumeResponse,
+  exchangeConsumeRequestSchema,
+  exchangeConsumeResponseSchema,
+  type HealthResponse,
+  healthResponseSchema,
+  PROTOCOL_VERSION,
+  type PullResponse,
+  type PushOp,
+  type PushResponse,
+  pullResponseSchema,
+  pushResponseSchema,
+  type SnapshotResponse,
+  SyncErrorCode,
+  snapshotResponseSchema,
+} from "@opentab/protocol";
+import { MSG } from "./constants";
+import { clearSyncAuth, getSyncAuth } from "./sync-auth-storage";
+
+/**
+ * Structural schema interface — avoids a direct `zod` dependency in the
+ * extension. Every schema surfaced from `@opentab/protocol` supplies a
+ * `.parse(data: unknown) => T` method, which is all this module needs.
+ */
+type Parser<T> = { parse: (data: unknown) => T };
+
+/** Typed error thrown by non-2xx responses that aren't handled inline. */
+export class SyncClientError extends Error {
+  constructor(
+    public readonly code: string,
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "SyncClientError";
+  }
+}
+
+interface RequestInitInternal<T> {
+  path: string;
+  method: "GET" | "POST";
+  body?: unknown;
+  parser: Parser<T>;
+  /** Set to true for endpoints that must NOT carry the Authorization header. */
+  publicEndpoint?: boolean;
+}
+
+/**
+ * Best-effort broadcast of a lifecycle message to other extension surfaces.
+ * sendMessage throws when no listener is registered (e.g. no open views); we
+ * swallow that — the broadcast is informational.
+ */
+function broadcast(type: string): void {
+  try {
+    const maybePromise = chrome.runtime.sendMessage({ type });
+    if (maybePromise && typeof (maybePromise as Promise<unknown>).catch === "function") {
+      (maybePromise as Promise<unknown>).catch(() => {});
+    }
+  } catch {
+    // no receivers — ignore
+  }
+}
+
+/**
+ * HTTP client for the sync protocol (spec §2.4.4).
+ *
+ * Every request carries protocol + extension version headers so the server's
+ * protocol-version middleware (Task 24) can gate on them. 401 responses clear
+ * local auth and broadcast SYNC_AUTH_REQUIRED; 426 broadcasts
+ * SYNC_PROTOCOL_MISMATCH; other non-2xx codes surface as `SyncClientError`.
+ */
+export class SyncClient {
+  private readonly extensionVersion: string;
+
+  constructor(
+    private readonly host: string,
+    private readonly token: string,
+  ) {
+    this.extensionVersion = chrome.runtime.getManifest().version;
+  }
+
+  async health(): Promise<HealthResponse> {
+    return this.request({
+      path: "/api/health",
+      method: "GET",
+      parser: healthResponseSchema,
+      publicEndpoint: true,
+    });
+  }
+
+  async consumeExchange(req: ExchangeConsumeRequest): Promise<ExchangeConsumeResponse> {
+    // Validate the outgoing body locally too — a bad deviceId here would 400
+    // with an obscure server-side message otherwise.
+    const body = exchangeConsumeRequestSchema.parse(req);
+    return this.request({
+      path: "/api/extension/exchange/consume",
+      method: "POST",
+      body,
+      parser: exchangeConsumeResponseSchema,
+      publicEndpoint: true,
+    });
+  }
+
+  async push(ops: PushOp[]): Promise<PushResponse> {
+    // NB: no `deviceId` in the body — the server derives it from the bearer.
+    return this.request({
+      path: "/api/sync/push",
+      method: "POST",
+      body: { ops },
+      parser: pushResponseSchema,
+    });
+  }
+
+  async pull(cursor: number, limit?: number): Promise<PullResponse> {
+    return this.request({
+      path: "/api/sync/pull",
+      method: "POST",
+      body: limit === undefined ? { cursor } : { cursor, limit },
+      parser: pullResponseSchema,
+    });
+  }
+
+  async snapshot(): Promise<SnapshotResponse> {
+    return this.request({
+      path: "/api/sync/snapshot",
+      method: "GET",
+      parser: snapshotResponseSchema,
+    });
+  }
+
+  private buildHeaders(hasBody: boolean, publicEndpoint: boolean): Record<string, string> {
+    const headers: Record<string, string> = {
+      "x-opentab-protocol-version": PROTOCOL_VERSION,
+      "x-opentab-extension-version": this.extensionVersion,
+    };
+    if (hasBody) headers["content-type"] = "application/json";
+    if (!publicEndpoint) headers.authorization = `Bearer ${this.token}`;
+    return headers;
+  }
+
+  private async request<T>(init: RequestInitInternal<T>): Promise<T> {
+    const hasBody = init.body !== undefined;
+    const headers = this.buildHeaders(hasBody, init.publicEndpoint === true);
+
+    const url = `${this.host}${init.path}`;
+    const response = await fetch(url, {
+      method: init.method,
+      headers,
+      body: hasBody ? JSON.stringify(init.body) : undefined,
+    });
+
+    if (response.status === 401) {
+      await clearSyncAuth();
+      broadcast(MSG.SYNC_AUTH_REQUIRED);
+      const { code, message } = await readErrorCode(response, SyncErrorCode.UNAUTHORIZED);
+      throw new SyncClientError(code, 401, message);
+    }
+
+    if (response.status === 426) {
+      broadcast(MSG.SYNC_PROTOCOL_MISMATCH);
+      const { code, message } = await readErrorCode(response, SyncErrorCode.API_VERSION_MISMATCH);
+      throw new SyncClientError(code, 426, message);
+    }
+
+    if (!response.ok) {
+      const { code, message } = await readErrorCode(response, SyncErrorCode.INTERNAL);
+      throw new SyncClientError(code, response.status, message);
+    }
+
+    const json = (await response.json()) as unknown;
+    return init.parser.parse(json);
+  }
+}
+
+/**
+ * Pull `code` + `message` out of an error response body if present, falling
+ * back to a sensible default when the server response isn't JSON-shaped as
+ * expected (e.g. a bare HTTP text body from a misbehaving proxy).
+ */
+async function readErrorCode(
+  response: Response,
+  fallbackCode: string,
+): Promise<{ code: string; message: string }> {
+  try {
+    const body = (await response.json()) as { code?: unknown; message?: unknown };
+    const code = typeof body.code === "string" ? body.code : fallbackCode;
+    const message =
+      typeof body.message === "string"
+        ? body.message
+        : `HTTP ${response.status} ${response.statusText}`;
+    return { code, message };
+  } catch {
+    return {
+      code: fallbackCode,
+      message: `HTTP ${response.status} ${response.statusText}`,
+    };
+  }
+}
+
+/**
+ * Convenience: build a `SyncClient` from persisted sync-auth state. Returns
+ * `null` if the user hasn't completed the exchange flow.
+ */
+export async function createSyncClientFromState(): Promise<SyncClient | null> {
+  const state = await getSyncAuth();
+  if (state.kind !== "authenticated") return null;
+  return new SyncClient(state.host, state.deviceToken);
+}
