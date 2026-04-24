@@ -3,6 +3,13 @@ import { drizzle } from "drizzle-orm/libsql";
 import { d1Url } from "../../drizzle.config";
 import { accounts, users } from "../schema/auth";
 
+if (!d1Url) {
+  console.error(
+    "❌ Local D1 file not found at .alchemy/miniflare/v3/d1/. Run `pnpm --filter @opentab/cloud dev` once first to materialize the local emulator.",
+  );
+  process.exit(1);
+}
+
 const db = drizzle(`file:${d1Url}`);
 
 const ADMIN_USER_ID = "F9CgW4v5USKvUNTIGBiafa6xrgDjaOhS";
