@@ -34,7 +34,12 @@ export default [
   ]),
 
   // Dashboard routes (workspace read-only viewer)
-  ...prefix("dash", [layout("routes/dash/layout.tsx", [index("routes/dash/index.tsx")])]),
+  ...prefix("dash", [
+    layout("routes/dash/layout.tsx", [
+      index("routes/dash/index.tsx"),
+      route(":workspaceSyncId", "routes/dash/$workspaceSyncId.tsx"),
+    ]),
+  ]),
 
   // Admin routes
   ...prefix("admin", [
