@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "opentab-cloud",
+  "main": "./workers/app.ts",
+  "compatibility_date": "2026-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "directory": "./build/client" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "opentab-cloud",
+      "database_id": "PLACEHOLDER_CREATE_AFTER_RUN",
+      "migrations_dir": "./drizzle/migrations"
+    }
+  ],
+  "kv_namespaces": [
+    { "binding": "APP_KV", "id": "PLACEHOLDER_CREATE_AFTER_RUN" }
+  ],
+  "vars": {
+    "APP_ENV": "production",
+    "APP_URL": "https://opentab.dev",
+    "BETTER_AUTH_URL": "https://opentab.dev"
+  }
+}
