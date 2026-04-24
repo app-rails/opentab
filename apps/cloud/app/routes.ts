@@ -33,6 +33,9 @@ export default [
     ]),
   ]),
 
+  // Dashboard routes (workspace read-only viewer)
+  ...prefix("dash", [layout("routes/dash/layout.tsx", [index("routes/dash/index.tsx")])]),
+
   // Admin routes
   ...prefix("admin", [
     layout("routes/admin/layout.tsx", [

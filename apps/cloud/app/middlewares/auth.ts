@@ -5,7 +5,7 @@ import { safeRedirectPath } from "~/lib/safe-redirect";
 import { auth } from "~/services/auth/auth.server";
 
 // Protected routes
-const PROTECTED_ROUTES = ["/admin", "/settings", "/connect", "/devices"] as const;
+const PROTECTED_ROUTES = ["/admin", "/settings", "/connect", "/devices", "/dash"] as const;
 
 // Guest only routes
 const GUEST_ONLY_ROUTES = ["/auth/sign-in", "/auth/sign-up"] as const;
