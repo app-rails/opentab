@@ -39,7 +39,6 @@ apps/server/data/*.db-shm
 .mf
 .wrangler
 .dev.vars*
-worker-configuration.d.ts
 
 # Worktrees
 .worktrees/
