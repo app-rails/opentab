@@ -21,6 +21,7 @@
     "react-router.config.ts",
     "vite.config.ts",
     "drizzle.config.ts",
+    "alchemy.run.ts",
     "worker-configuration.d.ts",
     ".react-router/types/**/*"
   ]
