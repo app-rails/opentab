@@ -1,5 +1,6 @@
 import Dexie from "dexie";
 import { generateKeyBetween } from "fractional-indexing";
+import { v7 as uuidv7 } from "uuid";
 import { db } from "@/lib/db";
 import { bulkMutateWithOutbox, type SyncOpInput } from "@/lib/mutate-with-outbox";
 import { resolveAccountId } from "@/lib/resolve-account-id";
@@ -50,7 +51,7 @@ async function addTabsToCollection(
       title: tab.title,
       favIconUrl: tab.favIconUrl,
       order,
-      syncId: crypto.randomUUID(),
+      syncId: uuidv7(),
       createdAt: now,
       updatedAt: now,
     };
@@ -60,7 +61,7 @@ async function addTabsToCollection(
 
   for (const rec of records) {
     ops.push({
-      opId: crypto.randomUUID(),
+      opId: uuidv7(),
       entityType: "tab",
       entitySyncId: rec.syncId,
       action: "create",
@@ -101,7 +102,7 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
         const lastWsOrder = await getLastOrder("workspaces");
         const now = Date.now();
         const newOrder = generateKeyBetween(lastWsOrder, null);
-        const syncId = crypto.randomUUID();
+        const syncId = uuidv7();
         wsId = (await db.workspaces.add({
           accountId,
           name: wsPlan.name,
@@ -115,7 +116,7 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
         workspaceCount++;
 
         ops.push({
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "workspace",
           entitySyncId: syncId,
           action: "create",
@@ -145,7 +146,7 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
           const order = generateKeyBetween(lastColOrder, null);
           lastColOrder = order;
           const now = Date.now();
-          const colSyncId = crypto.randomUUID();
+          const colSyncId = uuidv7();
           const colId = (await db.tabCollections.add({
             workspaceId: wsId,
             name: colPlan.name,
@@ -157,7 +158,7 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
           collectionCount++;
 
           ops.push({
-            opId: crypto.randomUUID(),
+            opId: uuidv7(),
             entityType: "collection",
             entitySyncId: colSyncId,
             action: "create",
@@ -202,7 +203,7 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
 
             for (const tab of tabsToDelete) {
               ops.push({
-                opId: crypto.randomUUID(),
+                opId: uuidv7(),
                 entityType: "tab",
                 entitySyncId: tab.syncId,
                 action: "delete",
@@ -226,7 +227,7 @@ export async function executeImport(plan: ImportPlan): Promise<ImportResult> {
               const tab = await db.collectionTabs.get(update.existingTabId);
               if (tab) {
                 ops.push({
-                  opId: crypto.randomUUID(),
+                  opId: uuidv7(),
                   entityType: "tab",
                   entitySyncId: tab.syncId,
                   action: "update",

@@ -1,3 +1,4 @@
+import { v7 as uuidv7 } from "uuid";
 import { db } from "./db";
 
 /**
@@ -59,9 +60,9 @@ async function adoptFromOldestWorkspace(): Promise<string | null> {
  *   2. The oldest persisted workspace's `accountId`.
  *
  * Only if both adoption paths yield nothing do we fall back to generating a
- * fresh id via `crypto.randomUUID()`. (Task 31 will later migrate fresh ids to
- * UUID v7; `crypto.randomUUID()` generates v4, which is acceptable as a
- * bootstrap fallback until that migration lands.)
+ * fresh id via `uuidv7()` — a time-ordered RFC 9562 identifier that sorts
+ * lexicographically by creation time, consistent with every other id we mint
+ * in the extension.
  *
  * The resolved id is persisted back to `chrome.storage.local` under
  * `opentab_local_profile_id_v1` and cached in module memory so subsequent
@@ -82,7 +83,7 @@ export async function getLocalProfileId(): Promise<string> {
     }
 
     const adopted = (await adoptFromAuthStorage()) ?? (await adoptFromOldestWorkspace());
-    const id = adopted ?? crypto.randomUUID();
+    const id = adopted ?? uuidv7();
 
     await writeStoredProfileId(id);
     cached = id;

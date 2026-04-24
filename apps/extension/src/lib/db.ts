@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from "dexie";
 import { generateKeyBetween } from "fractional-indexing";
+import { v7 as uuidv7 } from "uuid";
 import { upgradeV5 } from "@/lib/dexie-migrations/v5-uuid-v7";
 import type { ViewMode } from "@/lib/view-mode";
 
@@ -195,7 +196,7 @@ db.version(4)
     const workspaces = await tx.table("workspaces").toArray();
     for (const ws of workspaces) {
       await tx.table("workspaces").update(ws.id, {
-        syncId: crypto.randomUUID(),
+        syncId: uuidv7(),
         deletedAt: null,
         lastOpId: "",
       });
@@ -209,7 +210,7 @@ db.version(4)
     const collections = await tx.table("tabCollections").toArray();
     for (const col of collections) {
       await tx.table("tabCollections").update(col.id, {
-        syncId: crypto.randomUUID(),
+        syncId: uuidv7(),
         workspaceSyncId: wsMap.get(col.workspaceId) ?? "",
         deletedAt: null,
         lastOpId: "",
@@ -224,7 +225,7 @@ db.version(4)
     const tabs = await tx.table("collectionTabs").toArray();
     for (const tab of tabs) {
       await tx.table("collectionTabs").update(tab.id, {
-        syncId: crypto.randomUUID(),
+        syncId: uuidv7(),
         collectionSyncId: colMap.get(tab.collectionId) ?? "",
         deletedAt: null,
         lastOpId: "",

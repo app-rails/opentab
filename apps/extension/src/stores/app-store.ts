@@ -1,4 +1,5 @@
 import { generateKeyBetween } from "fractional-indexing";
+import { v7 as uuidv7 } from "uuid";
 import { create } from "zustand";
 import {
   type DedupResult,
@@ -264,7 +265,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       name: validName,
       icon: validatedIcon(icon),
       order: newOrder,
-      syncId: crypto.randomUUID(),
+      syncId: uuidv7(),
       createdAt: now,
       updatedAt: now,
     };
@@ -273,7 +274,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       newId = (await db.workspaces.add(workspace)) as number;
     }, [
       {
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "workspace",
         entitySyncId: workspace.syncId,
         action: "create",
@@ -316,7 +317,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await db.workspaces.update(id, { name: validName, updatedAt: now });
       }, [
         {
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "workspace",
           entitySyncId: prev.syncId,
           action: "update",
@@ -348,7 +349,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await db.workspaces.update(id, { icon: validIcon, updatedAt: now });
       }, [
         {
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "workspace",
           entitySyncId: prev.syncId,
           action: "update",
@@ -380,7 +381,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await db.workspaces.update(id, { viewMode: mode, updatedAt: now });
       }, [
         {
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "workspace",
           entitySyncId: prev.syncId,
           action: "update",
@@ -423,7 +424,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const ops: SyncOpInput[] = [
       {
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "workspace",
         entitySyncId: target.syncId,
         action: "delete",
@@ -431,7 +432,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         createdAt: now,
       },
       ...collections.map((c) => ({
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "collection" as const,
         entitySyncId: c.syncId,
         action: "delete" as const,
@@ -439,7 +440,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         createdAt: now,
       })),
       ...tabs.map((t) => ({
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "tab" as const,
         entitySyncId: t.syncId,
         action: "delete" as const,
@@ -494,7 +495,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await db.workspaces.update(id, { order: newOrder, updatedAt: now });
       }, [
         {
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "workspace",
           entitySyncId: prev.syncId,
           action: "update",
@@ -528,7 +529,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       workspaceSyncId: parentWs.syncId,
       name: validName,
       order: newOrder,
-      syncId: crypto.randomUUID(),
+      syncId: uuidv7(),
       createdAt: now,
       updatedAt: now,
     };
@@ -537,7 +538,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       newId = (await db.tabCollections.add(collection)) as number;
     }, [
       {
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "collection",
         entitySyncId: collection.syncId,
         action: "create",
@@ -582,7 +583,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await db.tabCollections.update(id, { name: validName, updatedAt: now });
       }, [
         {
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "collection",
           entitySyncId: prev.syncId,
           action: "update",
@@ -617,7 +618,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const ops: SyncOpInput[] = [
       {
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "collection",
         entitySyncId: collection.syncId,
         action: "delete",
@@ -625,7 +626,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         createdAt: now,
       },
       ...tabs.map((t) => ({
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "tab" as const,
         entitySyncId: t.syncId,
         action: "delete" as const,
@@ -672,7 +673,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await db.tabCollections.update(id, { order: newOrder, updatedAt: now });
       }, [
         {
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "collection",
           entitySyncId: prev.syncId,
           action: "update",
@@ -714,7 +715,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       title: tab.title,
       favIconUrl: tab.favIconUrl,
       order: newOrder,
-      syncId: crypto.randomUUID(),
+      syncId: uuidv7(),
       createdAt: now,
       updatedAt: now,
     };
@@ -723,7 +724,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       newId = (await db.collectionTabs.add(newTab)) as number;
     }, [
       {
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "tab",
         entitySyncId: newTab.syncId,
         action: "create",
@@ -775,7 +776,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await db.tabCollections.update(collectionId, { updatedAt: now });
       }, [
         {
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "tab",
           entitySyncId: tab.syncId,
           action: "delete",
@@ -783,7 +784,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           createdAt: now,
         },
         {
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "collection",
           entitySyncId: parentCol.syncId,
           action: "update",
@@ -826,7 +827,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await db.collectionTabs.update(tabId, { order: newOrder, updatedAt: now });
       }, [
         {
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "tab",
           entitySyncId: tab!.syncId,
           action: "update",
@@ -866,9 +867,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     const finalTabs = withOrders.map((tab) => ({
       ...tab,
       updatedAt: now,
-      lastOpId: crypto.randomUUID(),
+      lastOpId: uuidv7(),
     }));
-    const collectionOpId = crypto.randomUUID();
+    const collectionOpId = uuidv7();
 
     const newMap = new Map(tabsByCollection);
     newMap.set(collectionId, finalTabs);
@@ -961,8 +962,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Pre-generate opIds per tab + for the collection op so we can persist
       // each row's lastOpId to match what we stage in the outbox (needed for
       // LWW tiebreaking when timestamps collide on sync).
-      const tabOps = tabsToRemove.map((tab) => ({ tab, opId: crypto.randomUUID() }));
-      const collectionOpId = crypto.randomUUID();
+      const tabOps = tabsToRemove.map((tab) => ({ tab, opId: uuidv7() }));
+      const collectionOpId = uuidv7();
 
       const ops: SyncOpInput[] = [
         ...tabOps.map(({ tab, opId }) => ({
@@ -1036,7 +1037,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await db.collectionTabs.update(tabId, { ...updates, updatedAt: now });
       }, [
         {
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "tab",
           entitySyncId: tab.syncId,
           action: "update",
@@ -1074,7 +1075,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       workspaceId: activeWorkspaceId,
       name: validName,
       order: collectionOrder,
-      syncId: crypto.randomUUID(),
+      syncId: uuidv7(),
       createdAt: now,
       updatedAt: now,
     };
@@ -1089,7 +1090,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         title: tab.title,
         favIconUrl: tab.favIconUrl,
         order: tabOrder,
-        syncId: crypto.randomUUID(),
+        syncId: uuidv7(),
         createdAt: now,
         updatedAt: now,
       });
@@ -1098,7 +1099,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const ops: SyncOpInput[] = [
       {
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "collection",
         entitySyncId: collection.syncId,
         action: "create",
@@ -1113,7 +1114,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         createdAt: now,
       },
       ...collectionTabs.map((t) => ({
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "tab" as const,
         entitySyncId: t.syncId,
         action: "create" as const,
@@ -1203,7 +1204,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         });
       }, [
         {
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "tab",
           entitySyncId: tab.syncId,
           action: "update",
@@ -1265,7 +1266,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         });
       }, [
         {
-          opId: crypto.randomUUID(),
+          opId: uuidv7(),
           entityType: "collection",
           entitySyncId: collection.syncId,
           action: "update",

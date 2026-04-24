@@ -1,5 +1,6 @@
 import { UUID_V7_REGEX } from "@opentab/protocol";
 import type { Transaction } from "dexie";
+import { v4 as uuidv4 } from "uuid";
 import { describe, expect, it } from "vitest";
 import { upgradeV5 } from "@/lib/dexie-migrations/v5-uuid-v7";
 
@@ -56,16 +57,18 @@ function makeTx(tables: Record<string, Record<string, unknown>[]>): Transaction 
 }
 
 /**
- * Seed a v4-style database: all syncId / opId values are UUID v4
- * (via crypto.randomUUID in the real upgrade path).
+ * Seed a v4-style database: all syncId / opId values are UUID v4, matching
+ * what the legacy v4 migration produced before Task 36 switched id
+ * production over to UUID v7. Keeping v4 here is load-bearing — the whole
+ * point of the v5 upgrade is to rewrite these v4 values as v7.
  */
 function seed() {
-  const wsSync1 = crypto.randomUUID();
-  const wsSync2 = crypto.randomUUID();
-  const colSync1 = crypto.randomUUID();
-  const colSync2 = crypto.randomUUID();
-  const tabSync1 = crypto.randomUUID();
-  const outboxOpId = crypto.randomUUID();
+  const wsSync1 = uuidv4();
+  const wsSync2 = uuidv4();
+  const colSync1 = uuidv4();
+  const colSync2 = uuidv4();
+  const tabSync1 = uuidv4();
+  const outboxOpId = uuidv4();
 
   return {
     workspaces: [

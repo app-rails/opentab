@@ -1,6 +1,7 @@
 import { type PushOp, SyncErrorCode } from "@opentab/protocol";
 import Dexie from "dexie";
 import { generateKeyBetween } from "fractional-indexing";
+import { v7 as uuidv7 } from "uuid";
 import { MSG } from "./constants";
 import type { CollectionTab, SyncOp, TabCollection } from "./db";
 import { db } from "./db";
@@ -255,7 +256,7 @@ export class SyncEngine {
 
     for (const ws of workspaces) {
       ops.push({
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "workspace",
         entitySyncId: ws.syncId,
         action: "create",
@@ -275,7 +276,7 @@ export class SyncEngine {
     for (const col of allCollections) {
       const ws = workspaces.find((w) => w.id === col.workspaceId);
       ops.push({
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "collection",
         entitySyncId: col.syncId,
         action: "create",
@@ -294,7 +295,7 @@ export class SyncEngine {
     for (const tab of allTabs) {
       const col = allCollections.find((c) => c.id === tab.collectionId);
       ops.push({
-        opId: crypto.randomUUID(),
+        opId: uuidv7(),
         entityType: "tab",
         entitySyncId: tab.syncId,
         action: "create",
@@ -661,7 +662,7 @@ export class SyncEngine {
         if (remaining === 0) {
           await db.workspaces.add({
             accountId,
-            syncId: crypto.randomUUID(),
+            syncId: uuidv7(),
             name: "Default",
             icon: "folder",
             order: generateKeyBetween(null, null),
@@ -811,7 +812,7 @@ export class SyncEngine {
       if (wsCount === 0) {
         await db.workspaces.add({
           accountId,
-          syncId: crypto.randomUUID(),
+          syncId: uuidv7(),
           name: "Default",
           icon: "folder",
           order: generateKeyBetween(null, null),

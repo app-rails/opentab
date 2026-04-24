@@ -1,3 +1,4 @@
+import { UUID_V7_REGEX } from "@opentab/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => {
@@ -13,8 +14,6 @@ vi.mock("@/lib/db", () => {
 
 import { db } from "@/lib/db";
 import { __resetLocalProfileIdCacheForTests, getLocalProfileId } from "@/lib/local-profile";
-
-const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type StorageRecord = Record<string, unknown>;
 
@@ -96,7 +95,7 @@ describe("getLocalProfileId", () => {
 
     const id = await getLocalProfileId();
 
-    expect(id).toMatch(UUID_V4_RE);
+    expect(id).toMatch(UUID_V7_REGEX);
     expect(set).toHaveBeenCalledWith({ opentab_local_profile_id_v1: id });
     expect(store.opentab_local_profile_id_v1).toBe(id);
   });

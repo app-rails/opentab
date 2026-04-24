@@ -5,8 +5,8 @@ import { v7 as uuidv7 } from "uuid";
  * Dexie v5 upgrade: regenerate every syncId and opId as UUID v7, rewriting
  * child references in a single pass. Per spec §2.4.2.
  *
- * Why: v4 stamped rows with `crypto.randomUUID()` (v4). UUID v7 is
- * lexicographically time-ordered and aligns with the server's sync
+ * Why: the v4 migration stamped rows with random UUID v4 strings. UUID v7
+ * is lexicographically time-ordered and aligns with the server's sync
  * protocol, which requires v7 strings. After this upgrade, all persisted
  * ids conform to `UUID_V7_REGEX`.
  *
