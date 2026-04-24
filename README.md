@@ -7,16 +7,16 @@ A Chrome extension for managing browser tabs with workspaces and collections.
 ```
 apps/
   extension/       Chrome extension (WXT + React + Tailwind)
-  server/          Backend server (Hono + tRPC + Drizzle)
-  web/             Web management panel (React + TanStack Router)
 packages/
-  api/             tRPC router definitions
-  auth/            better-auth configuration factory
   config/          Shared TypeScript configuration
-  db/              Drizzle ORM schema and database client
-  shared/          Shared types (AuthState, HealthResponse)
+  protocol/        Wire protocol types (coming Phase 1)
+  shared/          Shared types and utilities
   ui/              shadcn/ui component library
 ```
+
+**Phase 0 (current)**: Extension runs local-first only. Phase 1 will introduce `apps/cloud` (React Router 7 + Cloudflare Workers).
+
+See [Phase 1 design spec](docs/superpowers/specs/2026-04-24-apps-cloud-design.md) and [Phase 1 plan](docs/superpowers/plans/2026-04-24-apps-cloud.md).
 
 ## Getting Started
 
@@ -36,8 +36,6 @@ pnpm install
 ```bash
 pnpm dev                                    # Start all packages
 pnpm --filter @opentab/extension dev        # Extension only
-pnpm --filter @opentab/server dev           # Server only
-pnpm --filter @opentab/web dev              # Web app only
 ```
 
 ### Build
@@ -54,30 +52,21 @@ Build output: `apps/extension/.output/chrome-mv3/`
 2. Enable **Developer mode**
 3. Click **Load unpacked**, select `apps/extension/.output/chrome-mv3`
 
-### Tests
-
-```bash
-cd apps/server && pnpm test
-```
 
 ## Architecture
 
-The extension runs **local-first** by default — no server required. All tab and workspace data is stored in IndexedDB (Dexie).
-
-Server sync is opt-in: go to **Settings** (gear icon at bottom of sidebar) to enable it and configure the server URL.
+The extension runs **local-first** — all tab and workspace data is stored in IndexedDB (Dexie). Server sync is temporarily disabled in Phase 0 and will be restored in Phase 1.
 
 ### Extension Pages
 
 | Page | Description |
 |------|-------------|
 | `tabs.html` | Main dashboard — workspaces, collections, live tabs |
-| `settings.html` | Server sync configuration |
+| `settings.html` | Extension preferences |
 | `import.html` | Import from other tab managers |
 
 ### Tech Stack
 
 - **Extension**: [WXT](https://wxt.dev), React 19, Tailwind v4, Zustand, Dexie (IndexedDB), @dnd-kit, i18next
-- **Server**: Hono, tRPC, Drizzle ORM (SQLite/PostgreSQL), better-auth (anonymous + email/password + OAuth)
-- **Web**: React 19, TanStack Router, TanStack Query, tRPC client
-- **Shared Packages**: `@opentab/ui` (shadcn components), `@opentab/api` (tRPC), `@opentab/auth`, `@opentab/db`, `@opentab/config`
+- **Shared Packages**: `@opentab/ui` (shadcn components), `@opentab/config`, `@opentab/protocol`, `@opentab/shared`
 - **Tooling**: pnpm workspaces, Turborepo, Biome (lint + format), lefthook (git hooks)

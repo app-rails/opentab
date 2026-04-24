@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OpenTab is a Chrome extension for managing browser tabs with workspaces and collections. It runs **local-first** (IndexedDB via Dexie) with optional server sync (Hono + better-auth).
+OpenTab is a Chrome extension for managing browser tabs with workspaces and collections. It runs **local-first** (IndexedDB via Dexie). Phase 1 will add cloud sync via `apps/cloud` (React Router 7 + Cloudflare Workers).
 
-**Monorepo layout**: `apps/extension/` (Chrome extension), `apps/server/` (backend), `apps/web/` (management panel), `packages/` (shared libraries: config, db, auth, api, ui, shared).
+**Monorepo layout (Phase 0)**: `apps/extension/` (Chrome extension), `packages/` (shared libraries: config, protocol, shared, ui).
 
 ## Commands
 
@@ -14,15 +14,10 @@ OpenTab is a Chrome extension for managing browser tabs with workspaces and coll
 pnpm install                                # Install dependencies
 pnpm dev                                    # Start all packages (turbo)
 pnpm --filter @opentab/extension dev        # Extension only
-pnpm --filter @opentab/server dev           # Server only
 pnpm build                                  # Production build (turbo)
 pnpm lint                                   # TypeScript check + Biome lint (turbo)
 pnpm format                                 # Auto-format with Biome
 pnpm check                                  # Check formatting with Biome
-
-# Server tests
-cd apps/server && pnpm test                 # Run all vitest tests
-cd apps/server && pnpm vitest run <file>    # Run a single test file
 ```
 
 Build output: `apps/extension/.output/chrome-mv3/` — load unpacked in `chrome://extensions/`.
@@ -47,22 +42,17 @@ Build output: `apps/extension/.output/chrome-mv3/` — load unpacked in `chrome:
 - **i18next** for internationalization; locale files in `src/locales/`
 - Path alias: `@/` maps to `./src/`
 
-### Server (`apps/server/`)
+### Cloud (`apps/cloud/`)
 
-- **Hono** HTTP framework on port 3001
-- **better-auth** via `@opentab/auth` package (anonymous + bearer + email/password + OAuth)
-- **Drizzle ORM** via `@opentab/db` package (SQLite default, optional PostgreSQL)
-- **tRPC** via `@opentab/api` package (type-safe API layer)
-- CORS configured via `TRUSTED_ORIGINS` and `TRUSTED_EXTENSION_ORIGINS` env vars
-- Environment validation via `@t3-oss/env-core` + Zod
+**Phase 1 feature** — coming soon. See [Phase 1 design spec](../docs/superpowers/specs/2026-04-24-apps-cloud-design.md) and [Phase 1 plan](../docs/superpowers/plans/2026-04-24-apps-cloud.md).
 
-### Auth Flow
+### Offline & Sync (Phase 0)
 
-The extension works offline by default with a local UUID. When server sync is enabled: extension calls `/api/auth/sign-in/anonymous` → gets bearer token → stores it in `browser.storage.local` under the `opentab_auth` key → uses it for subsequent API calls.
+Extension runs offline-only in Phase 0. All CRUD operations go through Dexie (IndexedDB). Phase 1 will introduce an explicit setup wizard for server sync via `apps/cloud`.
 
 ## Key Patterns
 
 - **Radix UI + Dialog**: When triggering a Dialog from a DropdownMenu, use `onCloseAutoFocus` with a ref to prevent focus from returning to the trigger — avoids `aria-hidden` warnings. Always include `DialogDescription` in `DialogContent`.
 - **Chrome APIs**: The extension uses `chrome.storage`, `chrome.alarms`, `chrome.tabs`, and `chrome.downloads` permissions (declared in `wxt.config.ts`).
-- **Offline-first**: All CRUD operations go through Dexie first. Server sync is a secondary layer.
+- **Dexie (IndexedDB)**: All CRUD operations go through Dexie. Phase 1 will introduce server sync as an optional secondary layer.
 - **Extension icons**: WXT auto-detects `public/icon/{16,32,48,96,128}.png` for the manifest `icons` field. When adding or changing visual assets (logo, favicon), always keep `public/icon/` and `public/favicon*` in sync.
