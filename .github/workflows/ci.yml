@@ -10,25 +10,62 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
-  ci:
-    name: Lint & Type Check
-    runs-on: ubuntu-latest
+permissions:
+  contents: read
 
+jobs:
+  lint:
+    name: Biome lint
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "pnpm"
-
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
 
-      - name: Lint
-        run: pnpm lint
+  typecheck:
+    needs: lint
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check-types
 
-      - name: Type check
-        run: pnpm check-types
+  test:
+    needs: typecheck
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @opentab/config test
+      - run: pnpm --filter @opentab/cloud test
+
+  build:
+    needs: typecheck
+    name: Build (smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @opentab/cloud build
