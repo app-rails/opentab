@@ -3,14 +3,7 @@ export interface HealthResponse {
   timestamp: number;
 }
 
-export type AuthState =
-  | {
-      mode: "online";
-      accountId: string;
-      sessionToken: string;
-      localUuid?: string;
-    }
-  | {
-      mode: "offline";
-      localUuid: string;
-    };
+export type AuthState = {
+  mode: "offline";
+  localUuid: string;
+};
