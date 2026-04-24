@@ -1,8 +1,0 @@
-import { publicProcedure, router } from "../trpc.js";
-
-export const healthRouter = router({
-  check: publicProcedure.query(() => ({
-    status: "ok" as const,
-    timestamp: Date.now(),
-  })),
-});
