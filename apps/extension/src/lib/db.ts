@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from "dexie";
 import { generateKeyBetween } from "fractional-indexing";
+import { upgradeV5 } from "@/lib/dexie-migrations/v5-uuid-v7";
 import type { ViewMode } from "@/lib/view-mode";
 
 export interface Account {
@@ -230,6 +231,22 @@ db.version(4)
       });
     }
   });
+
+// v5: regenerate every syncId/opId as UUID v7 and rewrite child references.
+// Schema stays identical to v4; only row content changes.
+db.version(5)
+  .stores({
+    accounts: "++id, accountId",
+    workspaces: "++id, &syncId, accountId, order, [accountId+order], deletedAt",
+    tabCollections: "++id, &syncId, workspaceId, workspaceSyncId, [workspaceId+order], deletedAt",
+    collectionTabs:
+      "++id, &syncId, collectionId, collectionSyncId, [collectionId+order], deletedAt",
+    settings: "key",
+    importSessions: "++id, createdAt",
+    syncOutbox: "++id, &opId, [status+createdAt], [status+nextRetryAt], [status+syncedAt]",
+    syncMeta: "key",
+  })
+  .upgrade(upgradeV5);
 
 // Handle version-change events from other connections (e.g. service worker vs newtab page).
 // When another connection needs to upgrade the schema, close this connection gracefully
