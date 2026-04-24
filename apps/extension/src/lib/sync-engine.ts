@@ -1,7 +1,6 @@
+import { type PushOp, SyncErrorCode } from "@opentab/protocol";
 import Dexie from "dexie";
 import { generateKeyBetween } from "fractional-indexing";
-import { initializeAuth } from "./auth-manager";
-import { clearAuthState, getAuthState } from "./auth-storage";
 import { MSG } from "./constants";
 import type { CollectionTab, SyncOp, TabCollection } from "./db";
 import { db } from "./db";
@@ -9,7 +8,7 @@ import { activeCollections, activeTabs, activeWorkspaces } from "./db-queries";
 import { newPendingOp, type SyncOpInput } from "./mutate-with-outbox";
 import { resolveAccountId } from "./resolve-account-id";
 import { getSettings } from "./settings";
-import { getExtensionTRPCClient } from "./trpc";
+import { createSyncClientFromState, type SyncClient, SyncClientError } from "./sync-client";
 import type { ViewMode } from "./view-mode";
 
 // ---------------------------------------------------------------------------
@@ -38,26 +37,20 @@ const CLEANUP_RETENTION_DAYS = 7;
 const CLEANUP_RETENTION_MS = CLEANUP_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 const FULL_RESET_TTL_MS = 60_000;
 
+/**
+ * Error codes that indicate the SyncClient has already broadcasted a
+ * lifecycle message (see sync-client.ts) and the engine should stop the
+ * current cycle silently instead of logging/retrying.
+ */
+const TERMINAL_BROADCAST_CODES: ReadonlySet<string> = new Set([
+  SyncErrorCode.UNAUTHORIZED,
+  SyncErrorCode.DEVICE_NOT_REGISTERED,
+  SyncErrorCode.API_VERSION_MISMATCH,
+]);
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function isUnauthorizedError(err: unknown): boolean {
-  if (typeof err === "object" && err !== null) {
-    const e = err as Record<string, unknown>;
-    // tRPC error shape
-    if (e.data && typeof e.data === "object") {
-      const data = e.data as Record<string, unknown>;
-      if (data.code === "UNAUTHORIZED") return true;
-    }
-    // TRPCClientError shape
-    if (e.message && typeof e.message === "string" && e.message.includes("UNAUTHORIZED"))
-      return true;
-    if ((e as { shape?: { data?: { code?: string } } }).shape?.data?.code === "UNAUTHORIZED")
-      return true;
-  }
-  return false;
-}
 
 function backoffMs(attempt: number): number {
   return Math.min(1000 * 2 ** attempt, 300_000);
@@ -75,15 +68,22 @@ function existingWinsLWW(
   return false;
 }
 
-function toWireOp(op: SyncOp) {
+/**
+ * Convert a local outbox row into the wire-format `PushOp`. Payload fields are
+ * forwarded untouched — server-side zod will reject malformed payloads with
+ * INVALID_PAYLOAD and the engine will mark only the offending op as failed.
+ *
+ * NB: the wire schema uses a single dotted `kind` (e.g. `workspace.create`)
+ * whereas the local SyncOp row splits that across `entityType` + `action`.
+ */
+function toWireOp(op: SyncOp): PushOp {
+  const kind = `${op.entityType}.${op.action}` as PushOp["kind"];
   return {
+    kind,
     opId: op.opId,
-    entityType: op.entityType,
     entitySyncId: op.entitySyncId,
-    action: op.action,
-    payload: op.payload as never,
-    timestamp: op.createdAt,
-  };
+    payload: op.payload,
+  } as PushOp;
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +93,8 @@ function toWireOp(op: SyncOp) {
 export class SyncEngine {
   private isSyncing = false;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(private readonly client: SyncClient) {}
 
   // ---- public API -------------------------------------------------------
 
@@ -124,12 +126,6 @@ export class SyncEngine {
     if (this.isSyncing) return;
     this.isSyncing = true;
     try {
-      // Phase 0 stub: AuthState is offline-only, so server sync is disabled.
-      // Phase 1 restores the online-mode guard and proceeds with push/pull.
-      const auth = await getAuthState();
-      const online = (auth as { mode?: string } | null)?.mode === "online";
-      if (!online) return;
-
       const settings = await getSettings();
       if (!settings.server_enabled) return;
 
@@ -142,6 +138,12 @@ export class SyncEngine {
         this.broadcastSyncApplied();
       }
     } catch (err) {
+      if (isTerminalBroadcastError(err)) {
+        // sync-client already broadcasted SYNC_AUTH_REQUIRED /
+        // SYNC_PROTOCOL_MISMATCH and cleared auth; stop gracefully so the
+        // next cycle waits for the user to re-authenticate.
+        return;
+      }
       console.error("[sync] sync error:", err);
     } finally {
       this.isSyncing = false;
@@ -170,14 +172,11 @@ export class SyncEngine {
 
     if (retryableOps.length === 0) return;
 
-    const trpc = await this.getTRPC();
     try {
-      const result = await trpc.sync.push.mutate({
-        ops: retryableOps.map(toWireOp),
-      });
+      const result = await this.client.push(retryableOps.map(toWireOp));
 
-      // Mark synced
-      const syncedOpIds = new Set([...result.applied, ...result.duplicates]);
+      // Mark synced: applied ∪ duplicates ∪ lwwSkipped are all terminal.
+      const syncedOpIds = new Set([...result.applied, ...result.duplicates, ...result.lwwSkipped]);
       const idsToSync = retryableOps.filter((op) => syncedOpIds.has(op.opId)).map((op) => op.id!);
       if (idsToSync.length > 0) {
         await db.syncOutbox
@@ -185,7 +184,8 @@ export class SyncEngine {
           .anyOf(idsToSync)
           .modify({ status: "synced", syncedAt: now });
       }
-    } catch {
+    } catch (err) {
+      if (isTerminalBroadcastError(err)) return;
       // Increment attempt count for all retryable ops
       for (const op of retryableOps) {
         const newAttempt = op.attemptCount + 1;
@@ -265,6 +265,8 @@ export class SyncEngine {
           icon: ws.icon,
           order: ws.order,
           viewMode: ws.viewMode ?? null,
+          updatedAt: ws.updatedAt,
+          deletedAt: null,
         },
         createdAt: now,
       });
@@ -282,6 +284,8 @@ export class SyncEngine {
           name: col.name,
           order: col.order,
           parentSyncId: col.workspaceSyncId || ws?.syncId || "",
+          updatedAt: col.updatedAt,
+          deletedAt: null,
         },
         createdAt: now,
       });
@@ -301,6 +305,8 @@ export class SyncEngine {
           favIconUrl: tab.favIconUrl ?? null,
           order: tab.order,
           parentSyncId: tab.collectionSyncId || col?.syncId || "",
+          updatedAt: tab.updatedAt,
+          deletedAt: null,
         },
         createdAt: now,
       });
@@ -319,10 +325,6 @@ export class SyncEngine {
 
   // ---- private ----------------------------------------------------------
 
-  private async getTRPC() {
-    return getExtensionTRPCClient();
-  }
-
   private broadcastSyncApplied() {
     chrome.runtime.sendMessage({ type: MSG.SYNC_APPLIED }).catch(() => {});
   }
@@ -331,7 +333,6 @@ export class SyncEngine {
 
   private async push(): Promise<void> {
     const startTime = Date.now();
-    const trpc = await this.getTRPC();
 
     for (let batch = 0; batch < PUSH_LOOP_BATCH_LIMIT; batch++) {
       if (Date.now() - startTime > PUSH_LOOP_TIME_LIMIT) break;
@@ -345,12 +346,18 @@ export class SyncEngine {
       if (pendingOps.length === 0) break;
 
       try {
-        const result = await trpc.sync.push.mutate({
-          ops: pendingOps.map(toWireOp),
-        });
+        const result = await this.client.push(pendingOps.map(toWireOp));
 
-        // Mark accepted + duplicates as synced
-        const syncedOpIds = new Set([...result.applied, ...result.duplicates]);
+        // Mark applied ∪ duplicates ∪ lwwSkipped as synced. All three buckets
+        // are terminal: `applied` is server-applied, `duplicates` means the
+        // server already has this opId recorded, and `lwwSkipped` means the
+        // server saw a newer version and will not apply — retrying any of
+        // these would be wasted work.
+        const syncedOpIds = new Set([
+          ...result.applied,
+          ...result.duplicates,
+          ...result.lwwSkipped,
+        ]);
         const now = Date.now();
 
         const idsToSync = pendingOps.filter((op) => syncedOpIds.has(op.opId)).map((op) => op.id!);
@@ -361,39 +368,30 @@ export class SyncEngine {
             .modify({ status: "synced", syncedAt: now });
         }
 
-        // Handle partial failure
+        // Handle partial failure: exactly one op (at `error.opId`) is marked
+        // failed for retry; the server short-circuits the batch so any ops
+        // after the failing one remain in `pending` for the next cycle.
         if (result.error) {
-          const failedIds = pendingOps
-            .filter((op) => !syncedOpIds.has(op.opId))
-            .map((op) => op.id!);
-          if (failedIds.length > 0) {
-            // Use first op's attemptCount as representative (all same batch)
-            const newAttempt = pendingOps[0].attemptCount + 1;
-            const backoff = backoffMs(newAttempt);
-            await db.syncOutbox
-              .where("id")
-              .anyOf(failedIds)
-              .modify({
+          const failingOp = pendingOps.find((op) => op.opId === result.error!.opId);
+          if (failingOp) {
+            const newAttempt = failingOp.attemptCount + 1;
+            if (newAttempt >= MAX_ATTEMPT_COUNT) {
+              await db.syncOutbox.update(failingOp.id!, { status: "dead" });
+            } else {
+              await db.syncOutbox.update(failingOp.id!, {
                 status: "failed" as const,
                 attemptCount: newAttempt,
-                lastError: result.error,
-                nextRetryAt: Date.now() + backoff,
+                lastError: `${result.error.code}: ${result.error.message}`,
+                nextRetryAt: Date.now() + backoffMs(newAttempt),
               });
+            }
           }
           break;
         }
       } catch (err) {
-        if (isUnauthorizedError(err)) {
-          // Re-authenticate and continue
-          try {
-            const settings = await getSettings();
-            await clearAuthState();
-            await initializeAuth(settings.server_url);
-            continue;
-          } catch (authErr) {
-            console.error("[sync] re-auth failed:", authErr);
-            break;
-          }
+        if (isTerminalBroadcastError(err)) {
+          // sync-client already broadcasted; don't increment attempt counts.
+          break;
         }
 
         // Network / other error: mark all as failed with backoff
@@ -424,24 +422,14 @@ export class SyncEngine {
   private async pull(): Promise<number> {
     let totalApplied = 0;
     let cursor = await this.getCursor();
-    const trpc = await this.getTRPC();
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      let result: Awaited<ReturnType<typeof trpc.sync.pull.query>>;
+      let result: Awaited<ReturnType<SyncClient["pull"]>>;
       try {
-        result = await trpc.sync.pull.query({ cursor, limit: 100 });
+        result = await this.client.pull(cursor, 100);
       } catch (err) {
-        if (isUnauthorizedError(err)) {
-          try {
-            const settings = await getSettings();
-            await clearAuthState();
-            await initializeAuth(settings.server_url);
-            continue;
-          } catch {
-            break;
-          }
-        }
+        if (isTerminalBroadcastError(err)) break;
         console.error("[sync] pull error:", err);
         break;
       }
@@ -454,7 +442,7 @@ export class SyncEngine {
       if (result.changes.length === 0) break;
 
       // Pre-fetch opIds for self-echo check
-      const batchOpIds = result.changes.map((c: ChangeEntry) => c.opId);
+      const batchOpIds = result.changes.map((c) => c.opId);
       const localOps = await db.syncOutbox.where("opId").anyOf(batchOpIds).toArray();
       const localOpIdSet = new Set(localOps.map((o) => o.opId));
 
@@ -734,8 +722,7 @@ export class SyncEngine {
     await db.syncMeta.put({ key: "fullResetLock", value: now });
 
     try {
-      const trpc = await this.getTRPC();
-      const snapshot = await trpc.sync.snapshot.query();
+      const snapshot = await this.client.snapshot();
       const accountId = await resolveAccountId();
 
       await db.transaction(
@@ -758,7 +745,7 @@ export class SyncEngine {
               order: String(ws.order ?? generateKeyBetween(null, null)),
               viewMode: (ws.viewMode as ViewMode | undefined) ?? undefined,
               deletedAt: typeof ws.deletedAt === "number" ? ws.deletedAt : null,
-              lastOpId: typeof ws.lastOpId === "string" ? ws.lastOpId : "",
+              lastOpId: "",
               createdAt: typeof ws.createdAt === "number" ? ws.createdAt : Date.now(),
               updatedAt: typeof ws.updatedAt === "number" ? ws.updatedAt : Date.now(),
             });
@@ -768,7 +755,7 @@ export class SyncEngine {
           // Write collections
           const colSyncIdToLocalId = new Map<string, number>();
           for (const col of snapshot.collections) {
-            const parentSyncId = String(col.parentSyncId ?? col.workspaceSyncId ?? "");
+            const parentSyncId = String(col.parentSyncId ?? "");
             const workspaceId = wsSyncIdToLocalId.get(parentSyncId);
             if (workspaceId == null) {
               console.warn(
@@ -784,7 +771,7 @@ export class SyncEngine {
               name: String(col.name ?? "Untitled"),
               order: String(col.order ?? generateKeyBetween(null, null)),
               deletedAt: typeof col.deletedAt === "number" ? col.deletedAt : null,
-              lastOpId: typeof col.lastOpId === "string" ? col.lastOpId : "",
+              lastOpId: "",
               createdAt: typeof col.createdAt === "number" ? col.createdAt : Date.now(),
               updatedAt: typeof col.updatedAt === "number" ? col.updatedAt : Date.now(),
             });
@@ -793,7 +780,7 @@ export class SyncEngine {
 
           // Write tabs
           for (const tab of snapshot.tabs) {
-            const parentSyncId = String(tab.parentSyncId ?? tab.collectionSyncId ?? "");
+            const parentSyncId = String(tab.parentSyncId ?? "");
             const collectionId = colSyncIdToLocalId.get(parentSyncId);
             if (collectionId == null) {
               console.warn("[sync] fullReset: skipping tab with unknown parent:", parentSyncId);
@@ -808,7 +795,7 @@ export class SyncEngine {
               favIconUrl: tab.favIconUrl != null ? String(tab.favIconUrl) : undefined,
               order: String(tab.order ?? generateKeyBetween(null, null)),
               deletedAt: typeof tab.deletedAt === "number" ? tab.deletedAt : null,
-              lastOpId: typeof tab.lastOpId === "string" ? tab.lastOpId : "",
+              lastOpId: "",
               createdAt: typeof tab.createdAt === "number" ? tab.createdAt : Date.now(),
               updatedAt: typeof tab.updatedAt === "number" ? tab.updatedAt : Date.now(),
             });
@@ -854,4 +841,25 @@ export class SyncEngine {
   private async setCursor(cursor: number): Promise<void> {
     await db.syncMeta.put({ key: "pullCursor", value: cursor });
   }
+}
+
+/**
+ * Factory: builds a `SyncEngine` wired to persisted auth. Returns `null` when
+ * the extension isn't in the `authenticated` state — callers should treat
+ * that as "sync is dormant" and not attempt to operate on the engine.
+ */
+export async function createSyncEngine(): Promise<SyncEngine | null> {
+  const client = await createSyncClientFromState();
+  if (client === null) return null;
+  return new SyncEngine(client);
+}
+
+/**
+ * Identify errors thrown by `SyncClient` that indicate the client already
+ * broadcasted a lifecycle message (SYNC_AUTH_REQUIRED / SYNC_PROTOCOL_MISMATCH)
+ * and cleared any ephemeral state. Callers should stop the current cycle
+ * silently — retrying would only hit the same 401/426 again.
+ */
+function isTerminalBroadcastError(err: unknown): boolean {
+  return err instanceof SyncClientError && TERMINAL_BROADCAST_CODES.has(err.code);
 }
