@@ -5,6 +5,7 @@ import {
   FoldersIcon,
   LayersIcon,
   PencilIcon,
+  PlusIcon,
   Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
@@ -237,6 +238,16 @@ export default function WorkspaceDetailRoute({
         </div>
       </header>
 
+      <div className="flex items-center justify-between">
+        <h2 className="font-medium text-lg">Collections</h2>
+        <Button asChild size="sm">
+          <Link to={`/dash/${workspace.syncId}/collections/new`}>
+            <PlusIcon className="size-4" />
+            Create collection
+          </Link>
+        </Button>
+      </div>
+
       {collections.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center text-muted-foreground text-sm">
@@ -248,6 +259,7 @@ export default function WorkspaceDetailRoute({
           {collections.map((c) => (
             <CollectionBlock
               key={c.syncId}
+              workspaceSyncId={workspace.syncId}
               collection={c}
               tabs={tabsByCollection[c.syncId] ?? []}
             />
@@ -258,27 +270,53 @@ export default function WorkspaceDetailRoute({
   );
 }
 
-function CollectionBlock({ collection, tabs }: { collection: CollectionView; tabs: TabView[] }) {
+function CollectionBlock({
+  workspaceSyncId,
+  collection,
+  tabs,
+}: {
+  workspaceSyncId: string;
+  collection: CollectionView;
+  tabs: TabView[];
+}) {
   const [open, setOpen] = useState(true);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <Card>
         <CardHeader className="pb-0">
-          <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 text-left focus:outline-none">
-            <div className="flex items-center gap-2">
+          <div className="flex w-full items-center justify-between gap-3">
+            <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 text-left focus:outline-none">
               <ChevronRightIcon
                 className={cn(
-                  "size-4 text-muted-foreground transition-transform",
+                  "size-4 shrink-0 text-muted-foreground transition-transform",
                   open && "rotate-90",
                 )}
               />
               <CardTitle className="truncate">{collection.name}</CardTitle>
-              <span className="text-muted-foreground text-xs">
+              <span className="shrink-0 text-muted-foreground text-xs">
                 {tabs.length} tab{tabs.length === 1 ? "" : "s"}
               </span>
+            </CollapsibleTrigger>
+            <div className="flex shrink-0 items-center gap-2">
+              <DateTimeDisplay date={collection.updatedAt} className="text-xs" />
+              <Button asChild size="sm" variant="ghost" aria-label="Rename collection">
+                <Link
+                  to={`/dash/${workspaceSyncId}/collections/${collection.syncId}/edit`}
+                  title="Rename collection"
+                >
+                  <PencilIcon className="size-4" />
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="ghost" aria-label="Delete collection">
+                <Link
+                  to={`/dash/${workspaceSyncId}/collections/${collection.syncId}/delete`}
+                  title="Delete collection"
+                >
+                  <Trash2Icon className="size-4" />
+                </Link>
+              </Button>
             </div>
-            <DateTimeDisplay date={collection.updatedAt} className="text-xs" />
-          </CollapsibleTrigger>
+          </div>
         </CardHeader>
         <CollapsibleContent>
           <CardContent className="pt-4">

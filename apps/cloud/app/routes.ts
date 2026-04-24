@@ -41,6 +41,15 @@ export default [
       route(":workspaceSyncId", "routes/dash/$workspaceSyncId.tsx"),
       route(":workspaceSyncId/edit", "routes/dash/$workspaceSyncId.edit.tsx"),
       route(":workspaceSyncId/delete", "routes/dash/$workspaceSyncId.delete.tsx"),
+      route(":workspaceSyncId/collections/new", "routes/dash/$workspaceSyncId.collections.new.tsx"),
+      route(
+        ":workspaceSyncId/collections/:collectionSyncId/edit",
+        "routes/dash/$workspaceSyncId.collections.$collectionSyncId.edit.tsx",
+      ),
+      route(
+        ":workspaceSyncId/collections/:collectionSyncId/delete",
+        "routes/dash/$workspaceSyncId.collections.$collectionSyncId.delete.tsx",
+      ),
     ]),
   ]),
 
