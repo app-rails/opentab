@@ -3,7 +3,7 @@ import { generateKeyBetween } from "fractional-indexing";
 import { initializeAuth } from "./auth-manager";
 import { clearAuthState, getAuthState } from "./auth-storage";
 import { MSG } from "./constants";
-import type { CollectionTab, SyncOp, TabCollection, Workspace } from "./db";
+import type { CollectionTab, SyncOp, TabCollection } from "./db";
 import { db } from "./db";
 import { activeCollections, activeTabs, activeWorkspaces } from "./db-queries";
 import { newPendingOp, type SyncOpInput } from "./mutate-with-outbox";
@@ -124,8 +124,11 @@ export class SyncEngine {
     if (this.isSyncing) return;
     this.isSyncing = true;
     try {
+      // Phase 0 stub: AuthState is offline-only, so server sync is disabled.
+      // Phase 1 restores the online-mode guard and proceeds with push/pull.
       const auth = await getAuthState();
-      if (auth?.mode !== "online") return;
+      const online = (auth as { mode?: string } | null)?.mode === "online";
+      if (!online) return;
 
       const settings = await getSettings();
       if (!settings.server_enabled) return;
@@ -451,7 +454,7 @@ export class SyncEngine {
       if (result.changes.length === 0) break;
 
       // Pre-fetch opIds for self-echo check
-      const batchOpIds = result.changes.map((c) => c.opId);
+      const batchOpIds = result.changes.map((c: ChangeEntry) => c.opId);
       const localOps = await db.syncOutbox.where("opId").anyOf(batchOpIds).toArray();
       const localOpIdSet = new Set(localOps.map((o) => o.opId));
 

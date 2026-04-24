@@ -1,29 +1,10 @@
-import type { AppRouter } from "@opentab/api";
-import { createTRPCClient, httpLink } from "@trpc/client";
-import { getAuthState } from "./auth-storage";
-import { getSettings } from "./settings";
+// Phase 0 stub — Phase 1 replaces this with a protocol-typed sync client.
+// The return type is intentionally `any` so existing sync-engine call sites
+// still type-check; at runtime the stub throws before any method is invoked.
 
-let _cached: { url: string; client: ReturnType<typeof createTRPCClient<AppRouter>> } | null = null;
-
-export async function getExtensionTRPCClient() {
-  const settings = await getSettings();
-  if (_cached?.url === settings.server_url) return _cached.client;
-
-  const client = createTRPCClient<AppRouter>({
-    links: [
-      httpLink({
-        url: `${settings.server_url}/trpc`,
-        headers: async () => {
-          const auth = await getAuthState();
-          if (auth?.mode === "online") {
-            return { Authorization: `Bearer ${auth.sessionToken}` };
-          }
-          return {};
-        },
-      }),
-    ],
-  });
-
-  _cached = { url: settings.server_url, client };
-  return client;
+// biome-ignore lint/suspicious/noExplicitAny: Phase 0 stub; typed client arrives in Phase 1.
+export async function getExtensionTRPCClient(): Promise<any> {
+  throw new Error(
+    "Sync client not available in Phase 0. See docs/superpowers/specs/2026-04-24-apps-cloud-design.md",
+  );
 }

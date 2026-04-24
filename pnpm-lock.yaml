@@ -41,18 +41,15 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.4)
-      '@opentab/api':
-        specifier: workspace:^
-        version: link:../../packages/api
+      '@opentab/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
       '@opentab/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@opentab/ui':
         specifier: workspace:^
         version: link:../../packages/ui
-      '@trpc/client':
-        specifier: ^11.16.0
-        version: 11.16.0(@trpc/server@11.16.0(typescript@5.9.3))(typescript@5.9.3)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

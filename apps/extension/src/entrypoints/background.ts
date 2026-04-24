@@ -71,12 +71,9 @@ export default defineBackground(() => {
         return;
       }
 
-      const state = await attemptRegistration(settings.server_url);
-
-      if (state?.mode === "online") {
-        await browser.alarms.clear(AUTH_RETRY_ALARM);
-        console.log("[bg] now online — retry alarm cleared");
-      }
+      // Phase 0: attemptRegistration always returns an offline state. The retry
+      // alarm stays armed until Phase 1 restores online registration.
+      await attemptRegistration(settings.server_url);
     } else if (alarm.name === SYNC_POLL_ALARM) {
       console.log("[bg] sync-poll alarm fired");
       try {
