@@ -14,9 +14,12 @@ packages/
   ui/              shadcn/ui component library
 ```
 
-**Phase 0 (current)**: Extension runs local-first only. Phase 1 will introduce `apps/cloud` (React Router 7 + Cloudflare Workers).
+**Phase 1 (in progress)**: `apps/cloud` — React Router v7 + Cloudflare Workers + D1 + KV. Deployment is managed by Alchemy IaC.
 
-See [Phase 1 design spec](docs/superpowers/specs/2026-04-24-apps-cloud-design.md) and [Phase 1 plan](docs/superpowers/plans/2026-04-24-apps-cloud.md).
+See:
+- [Product design](docs/superpowers/specs/2026-04-24-apps-cloud-design.md)
+- [Deployment design (Alchemy IaC)](docs/superpowers/specs/2026-04-24-apps-cloud-deployment-alchemy-design.md)
+- [Phase 1 plan](docs/superpowers/plans/2026-04-24-apps-cloud.md)
 
 ## Getting Started
 
