@@ -75,7 +75,7 @@ CI calls only `deploy` (with stage-aware env injection); no human runs
 | 5 | env validation | zod schemas live in `packages/config/src/env/`. Four entrypoints exposed: `./env/schemas`, `./env/node`, `./env/worker`, `./env/browser` (browser is a placeholder) |
 | 6 | State store | `CloudflareStateStore` (self-provisioned on the CF account; no R2 bucket needed). `ALCHEMY_STATE_TOKEN` and `ALCHEMY_PASSWORD` are **never rotated** after first deploy |
 | 7 | CI triggers | One `ci.yml` (PR + push main → lint/typecheck/test/build); one `deploy.yml` (workflow_dispatch on `main` → dev; tag `v*.*.*` → prod). PRs do not deploy |
-| 8 | Custom domains | `dev` → `opentab-dev.apprails.io`; `prod` → `opentab.apprails.io`. Bound declaratively via Alchemy `WorkersCustomDomain`. Requires `apprails.io` zone hosted on Cloudflare |
+| 8 | Custom domains | `dev` → `opentab-dev.apprails.io`; `prod` → `opentab.apprails.io`. Bound declaratively via Alchemy `CustomDomain`. Requires `apprails.io` zone hosted on Cloudflare |
 | 9 | OAuth isolation | One GitHub OAuth app per stage. env schema exposes a single `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` pair; CI selects the per-stage value via GitHub Actions environment-scoped secrets (same secret name, different values per environment) |
 | 10 | `alchemy destroy` | Manual only. Never wired to CI. Destroys all resources for the stage including D1 data |
 | 11 | Local dev DB path | Owned by `alchemy dev` via miniflare-style emulation (`.alchemy/local/`). `db:seed:local` and `db:studio` continue to work; the exact local D1 file path resolution is finalized in the implementation plan |
@@ -160,10 +160,10 @@ contract; load-bearing details only):
 ```ts
 import alchemy from "alchemy";
 import {
+  CustomDomain,
   D1Database,
   KVNamespace,
   ReactRouter,
-  WorkersCustomDomain,
 } from "alchemy/cloudflare";
 import { CloudflareStateStore } from "alchemy/state";
 import { getAlchemyEnv } from "@opentab/config/env/node";
@@ -214,9 +214,9 @@ export const worker = await ReactRouter("worker", {
   },
 });
 
-await WorkersCustomDomain("custom-domain", {
+await CustomDomain("custom-domain", {
   name: hostname,
-  worker,
+  workerName: worker.name,
   zoneId: env.CLOUDFLARE_ZONE_ID, // apprails.io zone
 });
 
@@ -235,7 +235,7 @@ Key choices:
 - `D1Database`'s `migrationsDir` + `migrationsTable` makes Alchemy own the
   migration application step — no separate `wrangler d1 migrations apply`
   command is needed, locally or remotely.
-- `WorkersCustomDomain` requires `CLOUDFLARE_ZONE_ID` for the
+- `CustomDomain` requires `CLOUDFLARE_ZONE_ID` for the
   `apprails.io` zone (added to the env schema; obtained from CF dashboard
   → DNS → Overview).
 
@@ -431,7 +431,7 @@ ALCHEMY_STAGE=<stage> [CI=true] pnpm --filter @opentab/cloud deploy
    that are not yet in the `d1_migrations` tracking table.
 6. Builds the worker (via `react-router build`), uploads, replaces the
    live worker version.
-7. Updates `WorkersCustomDomain` if the hostname / zone changed.
+7. Updates `CustomDomain` if the hostname / zone changed.
 8. Writes new state back to CloudflareStateStore.
 9. Prints the resulting `https://<hostname>` URL.
 
@@ -802,7 +802,7 @@ Append:
 | `alchemy deploy` returns 401 / 403 on first run | CF API token missing scopes | Re-mint with §5.2 scopes; update `CLOUDFLARE_API_TOKEN` secret |
 | State unreadable after a deploy attempt | `ALCHEMY_PASSWORD` was changed | Restore the original password. If lost, set `forceUpdate: true` in `alchemy.run.ts` for one deploy to re-adopt — Alchemy re-discovers existing CF resources by name |
 | `alchemy deploy` cannot read state at all | `ALCHEMY_STATE_TOKEN` was rotated or revoked | Restore the original token. Same `forceUpdate: true` recovery as above; this is why the token is **never** rotated |
-| `WorkersCustomDomain` create fails | `apprails.io` zone not yet on Cloudflare | Add the zone in CF dashboard (no nameserver change needed if using subzone delegation; otherwise update registrar) |
+| `CustomDomain` create fails | `apprails.io` zone not yet on Cloudflare | Add the zone in CF dashboard (no nameserver change needed if using subzone delegation; otherwise update registrar) |
 | `prod` deploy refuses to start | `CI=true` not set | Always set in `deploy.yml`. Local emergency deploys: `ALCHEMY_STAGE=prod CI=true pnpm --filter @opentab/cloud deploy` |
 | New developer can't run `pnpm dev` | Missing or incomplete `.env` | `cp apps/cloud/.env.example apps/cloud/.env` and fill values; zod prints which keys failed |
 | `pnpm build` fails on CI before any deploy | `cloudflare:*` specifiers unresolved | The vite.config gating in §4.2 must register them as SSR builtins when the Alchemy plugin is absent |

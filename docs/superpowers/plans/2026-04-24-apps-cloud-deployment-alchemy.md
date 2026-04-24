@@ -352,7 +352,6 @@ export type BaseEnv = z.infer<typeof BaseSchema>;
 
 export const WorkerEnvSchema = z.object({
   APP_URL: z
-    .string()
     .url()
     .refine((s) => s.startsWith("https://"), {
       message: "APP_URL must use https://",
@@ -605,10 +604,10 @@ git commit -m "chore(cloud): add alchemy + @opentab/config dependencies"
 ```ts
 import alchemy from "alchemy";
 import {
+  CustomDomain,
   D1Database,
   KVNamespace,
   ReactRouter,
-  WorkersCustomDomain,
 } from "alchemy/cloudflare";
 import { CloudflareStateStore } from "alchemy/state";
 import { getAlchemyEnv } from "@opentab/config/env/node";
@@ -675,9 +674,13 @@ export const worker = await ReactRouter("worker", {
   },
 });
 
-await WorkersCustomDomain("custom-domain", {
+// CustomDomain takes `workerName: string` (not the worker resource object).
+// Pass the worker's `name` so Alchemy binds the domain to the freshly
+// created/updated worker. Verified via alchemy/cloudflare/custom-domain.d.ts
+// in alchemy@^0.91.
+await CustomDomain("custom-domain", {
   name: hostname,
-  worker,
+  workerName: worker.name,
   zoneId: env.CLOUDFLARE_ZONE_ID,
 });
 
@@ -719,13 +722,15 @@ Then:
 pnpm --filter @opentab/cloud check-types
 ```
 
-Expected: exit 0. If `WorkersCustomDomain` does not exist on this Alchemy version, fall back to deferring custom-domain wiring to a later task — but verify first by checking the import surface:
+Expected: exit 0.
+
+Sanity-check the import surface (Alchemy's exports may have shifted between releases):
 
 ```bash
-pnpm --filter @opentab/cloud exec node -e "import('alchemy/cloudflare').then(m => console.log(Object.keys(m).filter(k => /Domain|D1|KV|ReactRouter/.test(k))))" --input-type=module
+pnpm --filter @opentab/cloud exec node -e "import('alchemy/cloudflare').then(m => console.log(Object.keys(m).filter(k => /CustomDomain|D1Database|KVNamespace|ReactRouter/.test(k))))" --input-type=module
 ```
 
-Expected: array includes `D1Database`, `KVNamespace`, `ReactRouter`, `WorkersCustomDomain` (or close variants — adjust import name if different).
+Expected: array includes `CustomDomain`, `D1Database`, `KVNamespace`, `ReactRouter`. If `CustomDomain` is missing on the installed version, check the d.ts under `node_modules/alchemy/lib/cloudflare/` for the right name and adjust the import.
 
 - [ ] **Step 3: Commit**
 
@@ -741,7 +746,9 @@ git commit -m "feat(cloud): add alchemy.run.ts with D1 + KV + worker + custom do
 **Files:**
 - Modify: `apps/cloud/vite.config.ts`
 
-**What and why:** Replace `@cloudflare/vite-plugin` with `alchemy/cloudflare/react-router`. Gate the plugin on `existsSync(.alchemy/local/wrangler.jsonc)` so a fresh clone running `pnpm build` (CI before any deploy) still produces a worker bundle. When the plugin is absent, register `cloudflare:*` specifiers as SSR builtins so Vite externalizes them.
+**What and why:** Replace the user-written `cloudflare()` plugin call with the gated `alchemyPlugin()`. Gate it on `existsSync(.alchemy/local/wrangler.jsonc)` so a fresh clone running `pnpm build` (CI before any deploy) still produces a worker bundle. When the plugin is absent, register `cloudflare:*` specifiers as SSR builtins so Vite externalizes them.
+
+**Do not remove `@cloudflare/vite-plugin` from devDependencies.** It is a non-optional `peerDependencies` entry of `alchemy@^0.91` (verified via `alchemy/package.json`). `alchemy/cloudflare/react-router/plugin.js` re-imports `cloudflare` from it under the hood. Keep it installed; just stop calling it directly from our `vite.config.ts`.
 
 - [ ] **Step 1: Replace `apps/cloud/vite.config.ts`**
 
@@ -759,10 +766,12 @@ import tsconfigPaths from "vite-tsconfig-paths";
 // `alchemy dev` / `alchemy deploy`. A fresh clone running `pnpm build`
 // (CI before any deploy) would crash without it. Gate the plugin so
 // CI-only build still works; Alchemy itself owns deploys via `pnpm deploy`.
+//
+// Two-step gate: file must exist AND alchemyPlugin() must return a non-null
+// value. The plugin returns null during react-router typegen runs.
 const wranglerPath = resolve(__dirname, ".alchemy/local/wrangler.jsonc");
-const alchemyPlugins: PluginOption[] = existsSync(wranglerPath)
-  ? [alchemyPlugin() as PluginOption]
-  : [];
+const maybePlugin = existsSync(wranglerPath) ? alchemyPlugin() : null;
+const alchemyPlugins: PluginOption[] = maybePlugin ? [maybePlugin as PluginOption] : [];
 
 export default defineConfig({
   plugins: [
@@ -810,27 +819,13 @@ pnpm --filter @opentab/cloud build
 
 Expected: build succeeds. The output `build/server/` exists. The fallback SSR builtins branch is exercised. No `cloudflare:workers` resolution errors.
 
-If the build fails because `wrangler types` (which produces `worker-configuration.d.ts`) hasn't run, ignore for now — Task 12 removes the `worker-configuration.d.ts` dependency and Task 14 deletes the file.
+If the build fails because `worker-configuration.d.ts` is missing or stale, leave that for Task 13 (it replaces the file with a hand shim).
 
-- [ ] **Step 3: Remove `@cloudflare/vite-plugin` from devDependencies**
-
-```bash
-pnpm --filter @opentab/cloud remove @cloudflare/vite-plugin
-```
-
-- [ ] **Step 4: Verify build still works**
+- [ ] **Step 3: Commit**
 
 ```bash
-pnpm --filter @opentab/cloud build
-```
-
-Expected: still passes.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add apps/cloud/vite.config.ts apps/cloud/package.json pnpm-lock.yaml
-git commit -m "feat(cloud): swap @cloudflare/vite-plugin for gated alchemy plugin"
+git add apps/cloud/vite.config.ts
+git commit -m "feat(cloud): swap cloudflare() plugin for gated alchemyPlugin()"
 ```
 
 ---
@@ -840,9 +835,9 @@ git commit -m "feat(cloud): swap @cloudflare/vite-plugin for gated alchemy plugi
 **Files:**
 - Modify: `apps/cloud/workers/app.ts`
 
-**What and why:** The Worker entrypoint should validate `env` once at request time using `parseWorkerEnv` from `@opentab/config/env/worker`. Today it just trusts the `Env` type from the auto-generated `worker-configuration.d.ts`. After this change, missing/invalid bindings throw a clear zod error instead of failing deeper in BetterAuth or Drizzle.
+**What and why:** Validate `env` exactly once per worker isolate (not per request) using `parseWorkerEnv` from `@opentab/config/env/worker`. Module-scope memo: the first request inside a fresh isolate triggers the parse; every subsequent request hits the cached `WorkerEnv`. If parse throws, every request in this isolate 500s — that is the correct loud failure for misconfigured bindings.
 
-The `Env` interface is still provided by `worker-configuration.d.ts` at this point in the plan — Task 13 deletes it and replaces it with a hand-maintained shim.
+The `Env` interface is still provided by `worker-configuration.d.ts` at this point in the plan — Task 13 replaces it with a hand-maintained shim.
 
 - [ ] **Step 1: Replace `apps/cloud/workers/app.ts`**
 
@@ -864,13 +859,20 @@ const requestHandler = createRequestHandler(
   import.meta.env.MODE,
 );
 
+// Cache the parse result per worker isolate. The CF Workers runtime keeps
+// `env` referentially stable for the lifetime of the isolate, so a single
+// parse covers every subsequent request.
+let parsedEnvCheckedFor: unknown = null;
+const ensureWorkerEnv = (env: unknown): void => {
+  if (parsedEnvCheckedFor !== env) {
+    parseWorkerEnv(env);
+    parsedEnvCheckedFor = env;
+  }
+};
+
 export default {
   async fetch(request, env, ctx) {
-    // Validate the slice of env our handlers actually depend on. The full
-    // CF Env type (DB, APP_KV, etc.) flows through unchanged via the Env
-    // intersection above — parseWorkerEnv only enforces the application-level
-    // contract.
-    parseWorkerEnv(env);
+    ensureWorkerEnv(env);
 
     const context = new RouterContextProvider();
     return await requestHandler(
@@ -920,7 +922,11 @@ import { resolve } from "node:path";
 import type { Config } from "drizzle-kit";
 
 // alchemy dev's miniflare persists at <workspaceRoot>/.alchemy/miniflare/v3/.
-// From apps/cloud/, the workspace root is two levels up.
+// `workspaceRoot` is computed by Alchemy via `findWorkspaceRootSync`, which
+// returns the pnpm-workspace.yaml directory. In this monorepo that is two
+// levels above apps/cloud/. The hardcoded `../../` walk holds as long as
+// the project stays at apps/cloud/ and pnpm-workspace.yaml stays at the
+// repo root — both invariants of this monorepo.
 const D1_DIR = resolve(
   __dirname,
   "../../.alchemy/miniflare/v3/d1/miniflare-D1DatabaseObject",
@@ -1052,13 +1058,9 @@ Removed (compared to the previous version):
 - `preview` — `wrangler dev`'s preview mode; not used in the new flow.
 - `db:migrate:local`, `db:migrate:remote`, `db:drop` — Alchemy applies migrations automatically.
 
-- [ ] **Step 2: Remove `wrangler` from `devDependencies`**
+**Keep `wrangler` in `devDependencies`.** Alchemy declares it as a non-optional `peerDependencies` entry; removing it triggers a pnpm "missing peer" warning and may break Alchemy code paths that shell out to wrangler internally. The plan's intent — "no human runs `wrangler` directly" — is satisfied by removing the scripts above; the dependency itself stays.
 
-```bash
-pnpm --filter @opentab/cloud remove wrangler
-```
-
-- [ ] **Step 3: Verify scripts still resolve and typecheck passes**
+- [ ] **Step 2: Verify scripts still resolve and typecheck passes**
 
 ```bash
 pnpm --filter @opentab/cloud check-types
@@ -1066,11 +1068,11 @@ pnpm --filter @opentab/cloud check-types
 
 Expected: exit 0. (`react-router typegen` writes to `.react-router/types/`; that path is already in `tsconfig.json`'s `rootDirs`.)
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add apps/cloud/package.json pnpm-lock.yaml
-git commit -m "chore(cloud): rewrite scripts for alchemy; drop wrangler dep"
+git add apps/cloud/package.json
+git commit -m "chore(cloud): rewrite scripts for alchemy; keep wrangler peer dep"
 ```
 
 ---
@@ -1092,13 +1094,29 @@ grep -rn 'wrangler.jsonc' apps/cloud --include='*.ts' --include='*.tsx' --includ
 
 Expected: no matches in active source.
 
-- [ ] **Step 2: Delete the wrangler config files**
+- [ ] **Step 2: Remove `worker-configuration.d.ts` from gitignores**
+
+The file is currently gitignored (root `.gitignore` line `worker-configuration.d.ts` and `apps/cloud/.gitignore` line `worker-configuration.d.ts`). Without this step, `git add apps/cloud/worker-configuration.d.ts` later in this task silently skips the new shim and the next `pnpm install` on a fresh clone would have no `Env` interface.
+
+Edit `.gitignore` (root) — remove the line `worker-configuration.d.ts` (under the `# Cloudflare` section).
+
+Edit `apps/cloud/.gitignore` — remove the line `worker-configuration.d.ts`.
+
+Verify:
+
+```bash
+git check-ignore -v apps/cloud/worker-configuration.d.ts 2>/dev/null && echo "STILL IGNORED — re-check edits" || echo "tracked (good)"
+```
+
+Expected: prints `tracked (good)`.
+
+- [ ] **Step 3: Delete the wrangler config files**
 
 ```bash
 git rm apps/cloud/wrangler.jsonc apps/cloud/wrangler.jsonc.example
 ```
 
-- [ ] **Step 3: Replace `apps/cloud/worker-configuration.d.ts` with the hand shim**
+- [ ] **Step 4: Replace `apps/cloud/worker-configuration.d.ts` with the hand shim**
 
 ```ts
 /// <reference types="@cloudflare/workers-types" />
@@ -1116,7 +1134,7 @@ interface Env {
 }
 ```
 
-- [ ] **Step 4: Ensure `@cloudflare/workers-types` is installed**
+- [ ] **Step 5: Ensure `@cloudflare/workers-types` is installed**
 
 ```bash
 pnpm --filter @opentab/cloud list @cloudflare/workers-types 2>/dev/null
@@ -1128,7 +1146,7 @@ If absent (likely — wrangler bundled the types previously), install:
 pnpm --filter @opentab/cloud add -D @cloudflare/workers-types
 ```
 
-- [ ] **Step 5: Verify typecheck and build still pass**
+- [ ] **Step 6: Verify typecheck and build still pass**
 
 ```bash
 pnpm --filter @opentab/cloud check-types
@@ -1137,10 +1155,10 @@ pnpm --filter @opentab/cloud build
 
 Expected: both pass. If a binding referenced in app code (`DB`, `APP_KV`, etc.) does not exist on `Env`, add it to the shim — symptom is "Property 'X' does not exist on type 'Env'".
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add apps/cloud/worker-configuration.d.ts apps/cloud/package.json pnpm-lock.yaml
+git add .gitignore apps/cloud/.gitignore apps/cloud/worker-configuration.d.ts apps/cloud/package.json pnpm-lock.yaml
 git commit -m "chore(cloud): delete wrangler.jsonc; replace worker types with shim"
 ```
 
@@ -1224,18 +1242,27 @@ Replace `"wrangler.jsonc"` with `"alchemy.run.ts"`:
 
 - [ ] **Step 2: Update root `package.json` scripts**
 
-Remove the line:
+Remove the line `"cloud:db:migrate:local": "pnpm --filter @opentab/cloud db:migrate:local",` from the `scripts` block. The surrounding context after the edit:
 
 ```json
-    "cloud:db:migrate:local": "pnpm --filter @opentab/cloud db:migrate:local",
-```
-
-The block becomes:
-
-```json
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "check-types": "turbo check-types",
+    "lint": "turbo lint",
+    "format": "biome format --write .",
+    "check": "biome check .",
+    "postinstall": "lefthook install",
+    "ext:dev": "pnpm --filter @opentab/extension dev",
+    "cloud:dev": "pnpm --filter @opentab/cloud dev",
+    "cloud:build": "pnpm --filter @opentab/cloud build",
+    "cloud:deploy": "pnpm --filter @opentab/cloud deploy",
     "cloud:db:generate": "pnpm --filter @opentab/cloud db:generate",
     "cloud:db:seed:local": "pnpm --filter @opentab/cloud db:seed:local"
+  },
 ```
+
+Note the trailing comma on `cloud:db:generate` (the line is now followed by another script), and no trailing comma on `cloud:db:seed:local` (last entry).
 
 - [ ] **Step 3: Verify**
 
