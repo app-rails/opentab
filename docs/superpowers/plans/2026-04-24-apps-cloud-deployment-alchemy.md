@@ -27,6 +27,7 @@
 | `packages/config/package.json` | Modify (add `type`, `exports`, deps, scripts) | Group 1 |
 | `packages/config/tsconfig.json` | Create | Group 1 |
 | `packages/config/vitest.config.ts` | Create | Group 1 |
+| `packages/config/src/index.ts` | Create (placeholder for tsc inputs) | Group 1 |
 | `packages/config/src/env/schemas.ts` | Create | Group 1 |
 | `packages/config/src/env/schemas.test.ts` | Create | Group 1 |
 | `packages/config/src/env/node.ts` | Create | Group 1 |
@@ -140,12 +141,22 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 4: Create the env directory placeholder**
+- [ ] **Step 4: Create the env directory placeholder and a root index**
 
 ```bash
 mkdir -p packages/config/src/env
 touch packages/config/src/env/.keep
 ```
+
+Create `packages/config/src/index.ts` with:
+
+```ts
+// Placeholder so `tsc --noEmit` finds at least one input file.
+// Real exports live under ./env/* subpaths.
+export {};
+```
+
+Without at least one `.ts` file in `src/`, `tsc --noEmit` errors with TS18003 ("No inputs were found in config file"). The `.keep` file does not satisfy this — TypeScript only counts `.ts`/`.tsx`. Matches the convention used by `packages/protocol/src/index.ts`.
 
 - [ ] **Step 5: Install deps**
 
@@ -161,7 +172,7 @@ Expected: pnpm resolves `dotenv` and `zod` into `packages/config/node_modules/.p
 pnpm --filter @opentab/config check-types
 ```
 
-Expected: exit 0 (no TS files yet to typecheck, but tsc must resolve the config without error).
+Expected: exit 0.
 
 ```bash
 pnpm --filter @opentab/cloud check-types
