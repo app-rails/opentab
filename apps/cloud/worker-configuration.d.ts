@@ -9,6 +9,7 @@ interface Env {
   APP_URL: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_ADMIN_USER_ID: string;
+  CHROMIUM_EXTENSION_IDS?: string;
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
   SESSION_SECRET: string;
@@ -22,6 +23,7 @@ declare module "cloudflare:workers" {
     APP_URL: string;
     BETTER_AUTH_SECRET: string;
     BETTER_AUTH_ADMIN_USER_ID: string;
+    CHROMIUM_EXTENSION_IDS?: string;
     GITHUB_CLIENT_ID: string;
     GITHUB_CLIENT_SECRET: string;
     SESSION_SECRET: string;

@@ -27,6 +27,7 @@ const validWorkerEnv = {
   BETTER_AUTH_ADMIN_USER_ID: "user_abc",
   GITHUB_CLIENT_ID: "client-id",
   GITHUB_CLIENT_SECRET: "client-secret",
+  SESSION_SECRET: "y".repeat(32),
 };
 
 describe("WorkerEnvSchema", () => {
@@ -42,6 +43,12 @@ describe("WorkerEnvSchema", () => {
 
   it("rejects BETTER_AUTH_SECRET shorter than 32 chars", () => {
     expect(() => WorkerEnvSchema.parse({ ...validWorkerEnv, BETTER_AUTH_SECRET: "short" })).toThrow(
+      /32/,
+    );
+  });
+
+  it("rejects SESSION_SECRET shorter than 32 chars", () => {
+    expect(() => WorkerEnvSchema.parse({ ...validWorkerEnv, SESSION_SECRET: "short" })).toThrow(
       /32/,
     );
   });

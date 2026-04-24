@@ -22,6 +22,9 @@ export const WorkerEnvSchema = z.object({
   BETTER_AUTH_ADMIN_USER_ID: z.string().min(1),
   GITHUB_CLIENT_ID: z.string().min(1),
   GITHUB_CLIENT_SECRET: z.string().min(1),
+  SESSION_SECRET: z
+    .string()
+    .min(32, "SESSION_SECRET must be ≥32 chars (use openssl rand -base64 32)"),
 });
 
 export type WorkerEnv = z.infer<typeof WorkerEnvSchema>;
@@ -31,6 +34,7 @@ export const AlchemyEnvSchema = BaseSchema.extend(WorkerEnvSchema.shape)
     ALCHEMY_STAGE: z.enum(STAGES),
     ALCHEMY_PASSWORD: z.string().min(8, "ALCHEMY_PASSWORD encrypts state secrets; use ≥8 chars"),
     ALCHEMY_STATE_TOKEN: z.string().min(1),
+    CHROMIUM_EXTENSION_IDS: z.string().default(""),
     CLOUDFLARE_ACCOUNT_ID: z.string().min(1),
     CLOUDFLARE_API_TOKEN: z.string().min(1),
     CLOUDFLARE_ZONE_ID: z.string().min(1),

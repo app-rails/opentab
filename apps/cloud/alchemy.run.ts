@@ -54,11 +54,14 @@ export const worker = await ReactRouter("worker", {
   bindings: {
     DB: db,
     APP_KV: kv,
+    APP_ENV: env.ALCHEMY_STAGE === "prod" ? "production" : "development",
     APP_URL: env.APP_URL,
     BETTER_AUTH_SECRET: alchemy.secret.env("BETTER_AUTH_SECRET"),
     BETTER_AUTH_ADMIN_USER_ID: env.BETTER_AUTH_ADMIN_USER_ID,
+    CHROMIUM_EXTENSION_IDS: env.CHROMIUM_EXTENSION_IDS ?? "",
     GITHUB_CLIENT_ID: env.GITHUB_CLIENT_ID,
     GITHUB_CLIENT_SECRET: alchemy.secret.env("GITHUB_CLIENT_SECRET"),
+    SESSION_SECRET: alchemy.secret.env("SESSION_SECRET"),
   },
 });
 
