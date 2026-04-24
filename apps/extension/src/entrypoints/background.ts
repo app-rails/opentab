@@ -1,121 +1,48 @@
-import { attemptRegistration, initializeAuth } from "@/lib/auth-manager";
-import { getAuthState, setAuthState } from "@/lib/auth-storage";
+import { initializeAuth } from "@/lib/auth-manager";
 import { MSG } from "@/lib/constants";
-import { getSettings } from "@/lib/settings";
-import { SyncEngine } from "@/lib/sync-engine";
 
+// Phase 0: server sync is disabled. The sync engine, auth-retry alarm, and
+// sync-poll alarm are all dormant until Phase 1 restores the transport. The
+// SyncEngine class in src/lib/sync-engine.ts still compiles (tests import it
+// and Phase 1 will rewire it) but is never instantiated here.
+const SYNC_POLL_ALARM = "sync-poll";
 const AUTH_RETRY_ALARM = "opentab-auth-retry";
 
-async function setOfflineMode(): Promise<void> {
-  const existing = await getAuthState();
-  await setAuthState({
-    mode: "offline",
-    localUuid: existing?.localUuid ?? crypto.randomUUID(),
-  });
-}
-
 export default defineBackground(() => {
-  console.log("[bg] OpenTab background service worker started");
+  console.log("[bg] OpenTab background service worker started (sync disabled)");
 
-  // --- Sync engine ---
-  const SYNC_POLL_ALARM = "sync-poll";
-  const syncEngine = new SyncEngine();
+  // --- Ensure offline auth state on startup ---
+  // initializeAuth synthesises and persists an offline AuthState (local UUID
+  // only). Keeps chrome.storage.local.opentab_auth populated for callers that
+  // still read it.
+  initializeAuth().catch((err) => console.error("[bg] initializeAuth error:", err));
 
-  async function ensureSyncAlarm(): Promise<void> {
-    const settings = await getSettings();
-    if (settings.server_enabled) {
-      const existing = await browser.alarms.get(SYNC_POLL_ALARM);
-      if (!existing) {
-        await browser.alarms.create(SYNC_POLL_ALARM, {
-          periodInMinutes: Math.max(1, settings.sync_polling_interval / 60_000),
-        });
-        console.log("[bg] sync-poll alarm created");
-      }
-    } else {
-      await browser.alarms.clear(SYNC_POLL_ALARM);
-    }
-  }
-
-  // Ensure sync alarm on startup
-  ensureSyncAlarm().catch((err) => console.error("[bg] ensureSyncAlarm error:", err));
-
-  browser.runtime.onInstalled.addListener(async (details) => {
-    const settings = await getSettings();
-    console.log("[bg] server_enabled:", settings.server_enabled);
-
-    if (settings.server_enabled) {
-      console.log("[bg] server enabled — initializing auth");
-      const state = await initializeAuth(settings.server_url);
-
-      if (details.reason === "install" && state.mode === "offline") {
-        await browser.alarms.create(AUTH_RETRY_ALARM, {
-          periodInMinutes: 1,
-        });
-        console.log("[bg] offline mode — retry alarm created");
-      }
-    } else {
-      console.log("[bg] server disabled — clearing retry alarm and setting offline mode");
-      await browser.alarms.clear(AUTH_RETRY_ALARM);
-      await setOfflineMode();
-    }
+  // --- Clear any zombie alarms left over from previous installs ---
+  // Users upgrading from a build that scheduled sync-poll or auth-retry
+  // alarms should not continue receiving those events while sync is dormant.
+  browser.runtime.onInstalled.addListener(async () => {
+    await Promise.all([
+      browser.alarms.clear(SYNC_POLL_ALARM),
+      browser.alarms.clear(AUTH_RETRY_ALARM),
+    ]);
+    console.log("[bg] cleared legacy sync/auth alarms on install/update");
   });
 
-  browser.alarms.onAlarm.addListener(async (alarm) => {
-    if (alarm.name === AUTH_RETRY_ALARM) {
-      console.log("[bg] auth retry alarm fired");
-      const settings = await getSettings();
-
-      if (!settings.server_enabled) {
-        await browser.alarms.clear(AUTH_RETRY_ALARM);
-        console.log("[bg] server disabled — clearing retry alarm");
-        return;
-      }
-
-      // Phase 0: attemptRegistration always returns an offline state. The retry
-      // alarm stays armed until Phase 1 restores online registration.
-      await attemptRegistration(settings.server_url);
-    } else if (alarm.name === SYNC_POLL_ALARM) {
-      console.log("[bg] sync-poll alarm fired");
-      try {
-        await syncEngine.sync();
-        await syncEngine.retryFailed();
-        await syncEngine.cleanupOutbox();
-      } catch (err) {
-        console.error("[bg] sync-poll error:", err);
-      }
-    }
-  });
+  // Defensive: clear alarms on every startup as well so a long-lived dev
+  // profile that has already passed onInstalled is not stuck with a zombie.
+  Promise.all([
+    browser.alarms.clear(SYNC_POLL_ALARM),
+    browser.alarms.clear(AUTH_RETRY_ALARM),
+  ]).catch((err) => console.error("[bg] alarm cleanup error:", err));
 
   // --- Message listeners ---
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === MSG.SETTINGS_CHANGED) {
-      (async () => {
-        const settings = await getSettings();
-        console.log("[bg] settings changed, server_enabled:", settings.server_enabled);
-
-        if (settings.server_enabled) {
-          const state = await initializeAuth(settings.server_url);
-          if (state.mode === "offline") {
-            await browser.alarms.create(AUTH_RETRY_ALARM, {
-              periodInMinutes: 1,
-            });
-            console.log("[bg] offline after enable — retry alarm created");
-          }
-        } else {
-          await setOfflineMode();
-          await browser.alarms.clear(AUTH_RETRY_ALARM);
-          console.log("[bg] server disabled — set offline, cleared alarm");
-        }
-      })();
-    } else if (message.type === MSG.SYNC_REQUEST) {
-      syncEngine.notifyChange();
-    } else if (message.type === MSG.SYNC_INTERVAL_CHANGED) {
-      (async () => {
-        await browser.alarms.clear(SYNC_POLL_ALARM);
-        await ensureSyncAlarm();
-        console.log("[bg] sync-poll alarm recreated after interval change");
-      })().catch((err) => console.error("[bg] SYNC_INTERVAL_CHANGED error:", err));
-    }
+  // SETTINGS_CHANGED / SYNC_REQUEST / SYNC_INTERVAL_CHANGED are intentionally
+  // no-ops in Phase 0. The settings UI still sends SETTINGS_CHANGED when the
+  // (disabled) toggle is flipped programmatically, and the outbox still emits
+  // SYNC_REQUEST on every mutation; both should be silently ignored here
+  // until Phase 1 restores the sync engine.
+  chrome.runtime.onMessage.addListener((_message) => {
+    // No sync-related message handlers in Phase 0.
   });
 
   // --- Extension icon click: open or focus dashboard tab ---

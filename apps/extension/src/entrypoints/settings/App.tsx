@@ -227,7 +227,10 @@ export default function App() {
               <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
                 {t("settings.server.title")}
               </h3>
-              <div className="flex items-center justify-between">
+              <div
+                className="flex items-center justify-between"
+                title={t("settings.server.enable_disabled_tooltip")}
+              >
                 <label htmlFor="server-sync" className="font-medium text-sm">
                   {t("settings.server.enable")}
                 </label>
@@ -235,6 +238,8 @@ export default function App() {
                   id="server-sync"
                   checked={settings.server_enabled}
                   onCheckedChange={handleToggle}
+                  disabled
+                  aria-label={t("settings.server.enable_disabled_tooltip")}
                 />
               </div>
               {settings.server_enabled && (

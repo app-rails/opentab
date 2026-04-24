@@ -202,6 +202,7 @@
     "server": {
       "title": "Server Sync",
       "enable": "Enable Server Sync",
+      "enable_disabled_tooltip": "Syncing will return in a future release",
       "url_label": "Server URL",
       "url_placeholder": "http://localhost:3001",
       "test": "Test Connection",

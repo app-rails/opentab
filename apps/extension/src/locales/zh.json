@@ -202,6 +202,7 @@
     "server": {
       "title": "服务器同步",
       "enable": "启用服务器同步",
+      "enable_disabled_tooltip": "同步功能将在后续版本中回归",
       "url_label": "服务器地址",
       "url_placeholder": "http://localhost:3001",
       "test": "测试连接",
