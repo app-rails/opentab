@@ -1,0 +1,80 @@
+name: Deploy
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  resolve-stage:
+    name: Resolve target stage
+    runs-on: ubuntu-latest
+    outputs:
+      stage:    ${{ steps.flag.outputs.stage }}
+      env_name: ${{ steps.flag.outputs.env_name }}
+      app_url:  ${{ steps.flag.outputs.app_url }}
+    steps:
+      - id: flag
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v*.*.* ]]; then
+            echo "stage=prod"          >> "$GITHUB_OUTPUT"
+            echo "env_name=production" >> "$GITHUB_OUTPUT"
+            echo "app_url=https://opentab.apprails.io" >> "$GITHUB_OUTPUT"
+          else
+            if [ "$GITHUB_REF_NAME" != "main" ]; then
+              echo "::error::workflow_dispatch only allowed on main (got: $GITHUB_REF_NAME)"
+              exit 1
+            fi
+            echo "stage=dev"     >> "$GITHUB_OUTPUT"
+            echo "env_name=dev"  >> "$GITHUB_OUTPUT"
+            echo "app_url=https://opentab-dev.apprails.io" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: resolve-stage
+    name: Deploy → ${{ needs.resolve-stage.outputs.env_name }}
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ needs.resolve-stage.outputs.env_name }}
+      url:  ${{ needs.resolve-stage.outputs.app_url }}
+    env:
+      CI: "true"
+      ALCHEMY_STAGE: ${{ needs.resolve-stage.outputs.stage }}
+      APP_URL:       ${{ needs.resolve-stage.outputs.app_url }}
+
+      # Account-level (repo-scoped, shared across stages)
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ZONE_ID:    ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      ALCHEMY_PASSWORD:      ${{ secrets.ALCHEMY_PASSWORD }}
+      ALCHEMY_STATE_TOKEN:   ${{ secrets.ALCHEMY_STATE_TOKEN }}
+
+      # Environment-scoped — same name, different value per environment.
+      # GH Actions resolves these from the active environment's secret store
+      # based on `environment.name` above.
+      BETTER_AUTH_SECRET:        ${{ secrets.BETTER_AUTH_SECRET }}
+      BETTER_AUTH_ADMIN_USER_ID: ${{ secrets.BETTER_AUTH_ADMIN_USER_ID }}
+      SESSION_SECRET:            ${{ secrets.SESSION_SECRET }}
+      GITHUB_CLIENT_ID:          ${{ secrets.GITHUB_CLIENT_ID }}
+      GITHUB_CLIENT_SECRET:      ${{ secrets.GITHUB_CLIENT_SECRET }}
+      # Optional: if set at environment level, populates the Chromium OAuth allowlist.
+      CHROMIUM_EXTENSION_IDS:    ${{ secrets.CHROMIUM_EXTENSION_IDS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Deploy via Alchemy
+        run: pnpm --filter @opentab/cloud deploy
