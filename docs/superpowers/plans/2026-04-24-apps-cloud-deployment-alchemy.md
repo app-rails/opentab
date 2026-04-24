@@ -748,7 +748,7 @@ git commit -m "feat(cloud): add alchemy.run.ts with D1 + KV + worker + custom do
 
 **What and why:** Replace the user-written `cloudflare()` plugin call with the gated `alchemyPlugin()`. Gate it on `existsSync(.alchemy/local/wrangler.jsonc)` so a fresh clone running `pnpm build` (CI before any deploy) still produces a worker bundle. When the plugin is absent, register `cloudflare:*` specifiers as SSR builtins so Vite externalizes them.
 
-**Do not remove `@cloudflare/vite-plugin` from devDependencies.** It is a non-optional `peerDependencies` entry of `alchemy@^0.91` (verified via `alchemy/package.json`). `alchemy/cloudflare/react-router/plugin.js` re-imports `cloudflare` from it under the hood. Keep it installed; just stop calling it directly from our `vite.config.ts`.
+**Do not remove `@cloudflare/vite-plugin` from devDependencies.** While pnpm marks it optional in alchemy's `peerDependenciesMeta`, `alchemy/cloudflare/react-router/plugin.js` imports it at module load time. Removing the dep would not trigger a pnpm warning, but the very first `import alchemyPlugin from "alchemy/cloudflare/react-router"` in `vite.config.ts` would crash with `Cannot find module '@cloudflare/vite-plugin'`. Keep it installed; just stop calling it directly from our `vite.config.ts`.
 
 - [ ] **Step 1: Replace `apps/cloud/vite.config.ts`**
 
@@ -1439,7 +1439,7 @@ Actions path.
 |---|---|---|
 | `alchemy deploy` 401 / 403 on first run | API token missing scopes | Add `D1:Edit`, `Workers Scripts:Edit`, `Workers KV:Edit`, `Workers Routes:Edit`, `DNS:Edit` (apprails.io zone) |
 | State unreadable after first deploy | `ALCHEMY_PASSWORD` was changed | Restore old password, or set `forceUpdate: true` in `alchemy.run.ts` once to re-adopt resources |
-| `WorkersCustomDomain` create fails | `apprails.io` zone not on CF | Add the zone to CF dashboard first |
+| `CustomDomain` create fails | `apprails.io` zone not on CF | Add the zone to CF dashboard first |
 | `pnpm db:seed:local` errors with "Local D1 file not found" | Never ran `alchemy dev` | Run `pnpm dev` once to materialize the local emulator |
 | New developer cannot run `pnpm dev` | Missing or incomplete `.env` | `cp .env.example .env` and fill secrets; the parse error names the missing keys |
 | Build fails with `cloudflare:workers` not resolved | `.alchemy/local/wrangler.jsonc` missing AND vite SSR builtins fallback misconfigured | Run `alchemy dev` once, or check `vite.config.ts`'s fallback `environments.ssr.resolve.builtins` |
@@ -1847,6 +1847,6 @@ git commit -m "docs(plan): postscript with first-deploy notes"
 - [ ] All Tasks 1–22 complete; each one committed.
 - [ ] `pnpm lint`, `pnpm check-types`, `pnpm --filter @opentab/cloud test`, `pnpm --filter @opentab/config test`, `pnpm --filter @opentab/cloud build` all pass at root.
 - [ ] `apps/cloud/wrangler.jsonc` and `apps/cloud/wrangler.jsonc.example` are absent from git. `apps/cloud/worker-configuration.d.ts` exists as a hand shim (Task 13).
-- [ ] `git grep -nE 'wrangler|@cloudflare/vite-plugin' apps/cloud packages/config` returns zero hits in source files (excluding lockfile and `worker-configuration.d.ts`'s `@cloudflare/workers-types` reference).
+- [ ] `git grep -nE 'wrangler|@cloudflare/vite-plugin' apps/cloud/workers apps/cloud/app apps/cloud/drizzle apps/cloud/vite.config.ts apps/cloud/alchemy.run.ts packages/config/src` returns zero hits — both packages stay in `apps/cloud/package.json` intentionally (alchemy peer / runtime import) but no source file calls them directly.
 - [ ] CI workflows present at `.github/workflows/{ci,deploy}.yml`.
 - [ ] Operator has performed Task 22 (first deploy succeeded; dev URL responds).
