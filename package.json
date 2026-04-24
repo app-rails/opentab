@@ -8,7 +8,14 @@
     "lint": "turbo lint",
     "format": "biome format --write .",
     "check": "biome check .",
-    "postinstall": "lefthook install"
+    "postinstall": "lefthook install",
+    "ext:dev": "pnpm --filter @opentab/extension dev",
+    "cloud:dev": "pnpm --filter @opentab/cloud dev",
+    "cloud:build": "pnpm --filter @opentab/cloud build",
+    "cloud:deploy": "pnpm --filter @opentab/cloud deploy",
+    "cloud:db:generate": "pnpm --filter @opentab/cloud db:generate",
+    "cloud:db:migrate:local": "pnpm --filter @opentab/cloud db:migrate:local",
+    "cloud:db:seed:local": "pnpm --filter @opentab/cloud db:seed:local"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.9",

@@ -22,6 +22,19 @@
     },
     "destroy": {
       "cache": false
+    },
+    "@opentab/cloud#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "wrangler.jsonc"],
+      "outputs": ["build/**", ".react-router/**", "dist/**"]
+    },
+    "@opentab/cloud#dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "@opentab/cloud#deploy": {
+      "cache": false,
+      "dependsOn": ["@opentab/cloud#build"]
     }
   }
 }
