@@ -38,6 +38,7 @@ async function main() {
   });
 
   console.log("✅ Seeded data successfully!");
+  console.log("Admin user id:", ADMIN_USER_ID);
 }
 
 main().catch((error: unknown) => {
