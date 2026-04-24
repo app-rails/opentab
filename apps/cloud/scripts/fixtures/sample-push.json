@@ -1,0 +1,18 @@
+{
+  "ops": [
+    {
+      "kind": "workspace.create",
+      "opId": "0190c7e8-f9ea-7bbc-8a3f-ab00000000a1",
+      "entitySyncId": "0190c7e8-f9ea-7bbc-8a3f-ab000000b001",
+      "payload": {
+        "syncId": "0190c7e8-f9ea-7bbc-8a3f-ab000000b001",
+        "name": "Handshake Smoke Workspace",
+        "icon": "folder",
+        "viewMode": "default",
+        "order": "a0",
+        "updatedAt": 1713912345000,
+        "deletedAt": null
+      }
+    }
+  ]
+}
