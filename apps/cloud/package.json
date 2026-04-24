@@ -13,6 +13,7 @@
     "preview": "npm run build && vite preview",
     "check-types": "npm run typegen && tsc -b",
     "lint": "biome check .",
+    "test": "vitest run",
     "auth:secret": "pnpm dlx @better-auth/cli@latest secret",
     "auth:generate": "pnpm dlx @better-auth/cli@latest generate --config=./app/services/auth/auth.server.ts --output=./drizzle/schema/auth.ts",
     "db:generate": "drizzle-kit generate",
@@ -74,6 +75,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "8.0.1",
+    "vitest": "^4.1.1",
     "vite-plugin-devtools-json": "^1.0.0",
     "vite-tsconfig-paths": "6.1.1",
     "wrangler": "4.75.0"

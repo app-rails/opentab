@@ -38,6 +38,7 @@ export default [
     route("auth/error", "routes/api/better-error.tsx"),
     route("auth/*", "routes/api/better.tsx"),
     route("theme-switcher", "routes/api/theme-switcher.ts"),
+    route("health", "routes/api/health.ts"),
   ]),
 
   // Not found
