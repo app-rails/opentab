@@ -63,6 +63,7 @@ export const Breadcrumbs: React.FC = () => {
     <Breadcrumb>
       <BreadcrumbList>
         {items.map((item, idx) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: items derived from route matches; order is stable per URL and labels may repeat
           <React.Fragment key={`${item.label}-${idx}`}>
             {idx > 0 && <BreadcrumbSeparator />}
             <BreadcrumbItem>

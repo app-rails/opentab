@@ -14,6 +14,7 @@ export default async function handleRequest(
   routerContext: EntryContext,
 ) {
   let shellRendered = false;
+  let statusCode = responseStatusCode;
   const userAgent = request.headers.get("user-agent");
   const nonce = crypto.randomBytes(16).toString("hex");
   const contentSecurityPolicy = buildContentSecurityPolicy({
@@ -35,7 +36,7 @@ export default async function handleRequest(
     </NonceProvider>,
     {
       onError(error: unknown) {
-        responseStatusCode = 500;
+        statusCode = 500;
         // Log streaming rendering errors from inside the shell.  Don't log
         // errors encountered during initial shell rendering since they'll
         // reject and get logged in handleDocumentRequest.
@@ -60,7 +61,7 @@ export default async function handleRequest(
 
   return new Response(body, {
     headers: responseHeaders,
-    status: responseStatusCode,
+    status: statusCode,
   });
 }
 

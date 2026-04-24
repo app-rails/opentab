@@ -110,6 +110,7 @@ function Slider({
         />
       </SliderPrimitive.Track>
       {Array.from({ length: internalValues.length }, (_, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: thumbs are positional; index is the natural stable identity
         <React.Fragment key={index}>{renderThumb(internalValues[index] ?? 0)}</React.Fragment>
       ))}
     </SliderPrimitive.Root>

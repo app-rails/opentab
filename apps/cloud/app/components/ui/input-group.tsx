@@ -7,6 +7,7 @@ import { cn } from "~/lib/utils";
 
 function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: shadcn InputGroup uses <div role="group"> to avoid <fieldset> default styling
     <div
       data-slot="input-group"
       role="group"
@@ -44,6 +45,8 @@ function InputGroupAddon({
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: shadcn InputGroupAddon uses <div role="group"> to avoid <fieldset> default styling
+    // biome-ignore lint/a11y/useKeyWithClickEvents: click forwards focus to sibling <input>; keyboard users reach the input directly via Tab
     <div
       role="group"
       data-slot="input-group-addon"

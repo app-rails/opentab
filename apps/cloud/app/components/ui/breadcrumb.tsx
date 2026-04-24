@@ -52,6 +52,7 @@ function BreadcrumbLink({
 function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
   return (
     // biome-ignore lint/a11y/useFocusableInteractive: false positive
+    // biome-ignore lint/a11y/useSemanticElements: non-navigable current-page indicator; an <a> without href would be worse
     <span
       data-slot="breadcrumb-page"
       role="link"
