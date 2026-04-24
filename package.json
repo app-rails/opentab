@@ -14,7 +14,6 @@
     "cloud:build": "pnpm --filter @opentab/cloud build",
     "cloud:deploy": "pnpm --filter @opentab/cloud deploy",
     "cloud:db:generate": "pnpm --filter @opentab/cloud db:generate",
-    "cloud:db:migrate:local": "pnpm --filter @opentab/cloud db:migrate:local",
     "cloud:db:seed:local": "pnpm --filter @opentab/cloud db:seed:local"
   },
   "devDependencies": {
