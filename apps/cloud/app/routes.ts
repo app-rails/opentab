@@ -25,6 +25,14 @@ export default [
     route("reset-password", "routes/auth/reset-password.tsx"),
   ]),
 
+  // Devices routes (per-user device management)
+  ...prefix("devices", [
+    layout("routes/devices/layout.tsx", [
+      index("routes/devices/index.tsx"),
+      route(":deviceId", "routes/devices/$deviceId.tsx"),
+    ]),
+  ]),
+
   // Admin routes
   ...prefix("admin", [
     layout("routes/admin/layout.tsx", [
