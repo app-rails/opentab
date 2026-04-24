@@ -40,6 +40,9 @@ apps/server/data/*.db-shm
 .wrangler
 .dev.vars*
 
+# Alchemy
+.alchemy/
+
 # Worktrees
 .worktrees/
 

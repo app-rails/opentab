@@ -12,3 +12,6 @@
 .mf
 .wrangler
 .dev.vars*
+
+# Alchemy
+.alchemy/
