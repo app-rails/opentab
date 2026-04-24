@@ -86,6 +86,7 @@ crosses the wire.
 | 30 | Callback bridge | `chrome.storage.local` (durable) + `chrome.runtime.sendMessage` (fast path). Wizard React component listens to both. Background is not involved until setup completes |
 | 31 | Callback page | A dedicated WXT HTML entrypoint under `src/entrypoints/setup-callback/` — MV3 CSP forbids inline scripts, so no "inline" variant is permitted |
 | 32 | Callback tab close | Prefer `chrome.tabs.getCurrent()` + `chrome.tabs.remove()`. `window.close()` is only a last-ditch fallback |
+| 33 | Deployment toolchain | Alchemy IaC; `apps/cloud/alchemy.run.ts` is the single source of truth for CF resources. See `2026-04-24-apps-cloud-deployment-alchemy-design.md` |
 
 ---
 
