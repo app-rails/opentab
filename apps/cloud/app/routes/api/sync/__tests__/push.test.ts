@@ -59,7 +59,6 @@ function makeRequest(body: unknown, headers: Record<string, string> = {}): Reque
     headers: {
       authorization: "Bearer test-token",
       "x-opentab-protocol-version": "1.0.0",
-      "x-opentab-extension-version": "0.2.0",
       "content-type": "application/json",
       ...headers,
     },
@@ -121,7 +120,6 @@ describe("POST /api/sync/push", () => {
       headers: {
         authorization: "Bearer test-token",
         "x-opentab-protocol-version": "1.0.0",
-        "x-opentab-extension-version": "0.2.0",
         "content-type": "application/json",
       },
       body: "not-json",

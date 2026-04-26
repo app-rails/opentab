@@ -21,7 +21,6 @@ const ALLOWED_HEADERS = [
   "authorization",
   "content-type",
   "x-opentab-protocol-version",
-  "x-opentab-extension-version",
 ].join(", ");
 
 const ALLOWED_METHODS = "GET, POST, OPTIONS";

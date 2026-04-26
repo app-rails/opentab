@@ -14,10 +14,7 @@ import type { ExchangeConsumeResponse, HealthResponse } from "@opentab/protocol"
 
 export type HealthCheckResult =
   | { kind: "ok"; response: HealthResponse }
-  | { kind: "extension_too_old"; minRequired: string }
-  | { kind: "protocol_too_old"; minRequired: string }
   | { kind: "server_too_old"; serverProtocol: string }
-  | { kind: "upgrade_recommended"; recommended: string; response: HealthResponse }
   | { kind: "unreachable"; error: string };
 
 // ---------------------------------------------------------------------------
@@ -72,7 +69,6 @@ export type WizardEvent =
   | { type: "PERMISSION_DENIED" }
   | { type: "HEALTH_OK"; response: HealthResponse }
   | { type: "HEALTH_FAIL"; result: HealthCheckResult }
-  | { type: "HEALTH_UPGRADE_RECOMMENDED"; result: HealthCheckResult }
   | { type: "AUTHORIZATION_CALLBACK"; exchangeCode: string; nonce: string }
   | { type: "AUTHORIZATION_TIMEOUT" }
   | { type: "AUTHORIZATION_DENIED"; error?: string }
@@ -100,7 +96,6 @@ export type WizardStateValue =
   | "permission_requesting"
   | "health_checking"
   | "health_failed"
-  | "health_recommended_upgrade"
   | "awaiting_authorization"
   | "authorization_timeout"
   | "authorization_denied"

@@ -49,7 +49,6 @@ function makeRequest(): Request {
     headers: {
       authorization: "Bearer test-token",
       "x-opentab-protocol-version": "1.0.0",
-      "x-opentab-extension-version": "0.2.0",
     },
   });
 }

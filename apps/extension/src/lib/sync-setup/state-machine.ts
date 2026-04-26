@@ -224,13 +224,6 @@ export function createSetupMachine(opts: CreateSetupMachineOptions) {
               }),
             },
             {
-              target: "health_recommended_upgrade",
-              guard: ({ event }) => event.output.kind === "upgrade_recommended",
-              actions: assign({
-                healthResult: ({ event }) => event.output,
-              }),
-            },
-            {
               target: "health_failed",
               actions: assign({
                 healthResult: ({ event }) => event.output,
@@ -253,10 +246,6 @@ export function createSetupMachine(opts: CreateSetupMachineOptions) {
                 ({ kind: "ok", response: event.response }) satisfies HealthCheckResult,
             }),
           },
-          HEALTH_UPGRADE_RECOMMENDED: {
-            target: "health_recommended_upgrade",
-            actions: assign({ healthResult: ({ event }) => event.result }),
-          },
           HEALTH_FAIL: {
             target: "health_failed",
             actions: assign({ healthResult: ({ event }) => event.result }),
@@ -271,13 +260,6 @@ export function createSetupMachine(opts: CreateSetupMachineOptions) {
             target: "permission_requesting",
             actions: assign({ host: ({ event }) => normalizeHost(event.host) }),
           },
-        },
-      },
-
-      health_recommended_upgrade: {
-        on: {
-          START: { target: "awaiting_authorization" },
-          RETRY: { target: "health_checking" },
         },
       },
 
@@ -453,15 +435,7 @@ export function createNoopActors(): SetupMachineActors {
     requestPermission: fromPromise(async () => true),
     checkHealth: fromPromise<HealthCheckResult, CheckHealthInput>(async () => ({
       kind: "ok",
-      response: {
-        serverVersion: "1.0.0",
-        protocolVersion: "1.0.0",
-        minSupportedProtocolVersion: "1.0.0",
-        minSupportedExtensionVersion: "0.0.1",
-        recommendedExtensionVersion: null,
-        serverTime: Date.now(),
-        timezone: "UTC",
-      },
+      response: { serverVersion: "1.0.0", protocolVersion: "1.0.0" },
     })),
     openAuthorization: fromPromise(async () => 1),
     consumeExchange: fromPromise<ExchangeConsumeResponse, ConsumeExchangeInput>(async () => ({

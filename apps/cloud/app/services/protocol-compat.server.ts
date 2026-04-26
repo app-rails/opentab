@@ -11,13 +11,6 @@ export const PROTOCOL_VERSION = PKG_PROTOCOL_VERSION;
 // compat window as old clients become obsolete.
 export const MIN_SUPPORTED_PROTOCOL_VERSION = "1.0.0";
 
-// Oldest extension build this server accepts on sync endpoints.
-export const MIN_SUPPORTED_EXTENSION_VERSION = "0.1.0";
-
-// When set, clients below this are nudged to upgrade (but still allowed).
-// Null until we start shipping versioned recommendations.
-export const RECOMMENDED_EXTENSION_VERSION: string | null = null;
-
 export const SERVER_VERSION = pkg.version;
 
 /**

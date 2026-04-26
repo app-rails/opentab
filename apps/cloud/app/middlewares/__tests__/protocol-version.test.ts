@@ -22,46 +22,24 @@ async function expectRejectWith(req: Request, status: number, code: string): Pro
 
 describe("requireProtocolVersion", () => {
   it("throws 426 when protocol header is missing", async () => {
-    const req = makeRequest({ "x-opentab-extension-version": "0.2.0" });
-    await expectRejectWith(req, 426, SyncErrorCode.API_VERSION_MISMATCH);
-  });
-
-  it("throws 426 when extension header is missing", async () => {
-    const req = makeRequest({ "x-opentab-protocol-version": "1.0.0" });
+    const req = makeRequest({});
     await expectRejectWith(req, 426, SyncErrorCode.API_VERSION_MISMATCH);
   });
 
   it("throws 426 when client protocol is below minimum", async () => {
-    const req = makeRequest({
-      "x-opentab-protocol-version": "0.9.0",
-      "x-opentab-extension-version": "0.2.0",
-    });
-    await expectRejectWith(req, 426, SyncErrorCode.API_VERSION_MISMATCH);
-  });
-
-  it("throws 426 when extension version is below minimum", async () => {
-    const req = makeRequest({
-      "x-opentab-protocol-version": "1.0.0",
-      "x-opentab-extension-version": "0.0.1",
-    });
+    const req = makeRequest({ "x-opentab-protocol-version": "0.9.0" });
     await expectRejectWith(req, 426, SyncErrorCode.API_VERSION_MISMATCH);
   });
 
   it("throws 426 when client major exceeds server major", async () => {
     const serverMajor = Number.parseInt(PROTOCOL_VERSION.split(".")[0] ?? "0", 10);
     const futureMajor = `${serverMajor + 1}.0.0`;
-    const req = makeRequest({
-      "x-opentab-protocol-version": futureMajor,
-      "x-opentab-extension-version": "0.2.0",
-    });
+    const req = makeRequest({ "x-opentab-protocol-version": futureMajor });
     await expectRejectWith(req, 426, SyncErrorCode.API_VERSION_MISMATCH);
   });
 
-  it("passes silently when versions are in range", () => {
-    const req = makeRequest({
-      "x-opentab-protocol-version": PROTOCOL_VERSION,
-      "x-opentab-extension-version": "0.2.0",
-    });
+  it("passes silently when protocol is in range", () => {
+    const req = makeRequest({ "x-opentab-protocol-version": PROTOCOL_VERSION });
     expect(() => requireProtocolVersion(req)).not.toThrow();
   });
 });

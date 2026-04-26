@@ -20,38 +20,20 @@ describe("healthResponseSchema", () => {
     const result = healthResponseSchema.safeParse({
       serverVersion: "1.2.3",
       protocolVersion: "1.0.0",
-      minSupportedProtocolVersion: "1.0.0",
-      minSupportedExtensionVersion: "0.5.0",
-      recommendedExtensionVersion: "1.0.0",
-      serverTime: 1_700_000_000_000,
-      timezone: "UTC",
     });
     expect(result.success).toBe(true);
   });
 
-  it("accepts null recommendedExtensionVersion", () => {
+  it("rejects empty serverVersion", () => {
     const result = healthResponseSchema.safeParse({
-      serverVersion: "1.2.3",
+      serverVersion: "",
       protocolVersion: "1.0.0",
-      minSupportedProtocolVersion: "1.0.0",
-      minSupportedExtensionVersion: "0.5.0",
-      recommendedExtensionVersion: null,
-      serverTime: 1_700_000_000_000,
-      timezone: "America/Los_Angeles",
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
-  it("rejects non-int serverTime", () => {
-    const result = healthResponseSchema.safeParse({
-      serverVersion: "1.2.3",
-      protocolVersion: "1.0.0",
-      minSupportedProtocolVersion: "1.0.0",
-      minSupportedExtensionVersion: "0.5.0",
-      recommendedExtensionVersion: null,
-      serverTime: 1.5,
-      timezone: "UTC",
-    });
+  it("rejects when protocolVersion is missing", () => {
+    const result = healthResponseSchema.safeParse({ serverVersion: "1.2.3" });
     expect(result.success).toBe(false);
   });
 });

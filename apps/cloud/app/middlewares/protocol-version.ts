@@ -2,7 +2,6 @@ import { SyncErrorCode } from "@opentab/protocol";
 import { syncError } from "~/lib/sync-errors";
 import {
   compareDotted,
-  MIN_SUPPORTED_EXTENSION_VERSION,
   MIN_SUPPORTED_PROTOCOL_VERSION,
   PROTOCOL_VERSION,
 } from "~/services/protocol-compat.server";
@@ -10,21 +9,20 @@ import {
 /**
  * Enforce the compat-window constraints on sync endpoints (spec §2.3.3):
  *
- * - Both `x-opentab-protocol-version` and `x-opentab-extension-version`
- *   headers must be present (else 426).
+ * - `x-opentab-protocol-version` header must be present (else 426).
  * - The client's protocol version must be >= `MIN_SUPPORTED_PROTOCOL_VERSION`.
- * - The client's extension version must be >= `MIN_SUPPORTED_EXTENSION_VERSION`.
  * - The client's protocol major must not exceed the server's (server too old).
+ *
+ * Extension binary version is intentionally NOT checked here — Chrome Web
+ * Store auto-update is the binary update channel, not this middleware.
  *
  * All rejections use SyncErrorCode.API_VERSION_MISMATCH so the client-side
  * sync loop has a single, unambiguous signal to surface an upgrade UX.
  */
 export function requireProtocolVersion(request: Request): void {
   const proto = request.headers.get("x-opentab-protocol-version");
-  const ext = request.headers.get("x-opentab-extension-version");
-
-  if (!proto || !ext) {
-    throw syncError(SyncErrorCode.API_VERSION_MISMATCH, 426, "missing version headers");
+  if (!proto) {
+    throw syncError(SyncErrorCode.API_VERSION_MISMATCH, 426, "missing protocol version header");
   }
 
   if (compareDotted(proto, MIN_SUPPORTED_PROTOCOL_VERSION) < 0) {
@@ -32,14 +30,6 @@ export function requireProtocolVersion(request: Request): void {
       SyncErrorCode.API_VERSION_MISMATCH,
       426,
       `client protocol ${proto} below min ${MIN_SUPPORTED_PROTOCOL_VERSION}`,
-    );
-  }
-
-  if (compareDotted(ext, MIN_SUPPORTED_EXTENSION_VERSION) < 0) {
-    throw syncError(
-      SyncErrorCode.API_VERSION_MISMATCH,
-      426,
-      `client extension ${ext} below min ${MIN_SUPPORTED_EXTENSION_VERSION}`,
     );
   }
 

@@ -65,20 +65,18 @@ function broadcast(type: string): void {
 /**
  * HTTP client for the sync protocol (spec §2.4.4).
  *
- * Every request carries protocol + extension version headers so the server's
- * protocol-version middleware (Task 24) can gate on them. 401 responses clear
- * local auth and broadcast SYNC_AUTH_REQUIRED; 426 broadcasts
+ * Every request carries the protocol-version header so the server's
+ * protocol-version middleware can gate on it. Extension binary version is
+ * intentionally NOT sent — Chrome Web Store auto-update is the binary
+ * update channel; the server doesn't gate on it. 401 responses clear local
+ * auth and broadcast SYNC_AUTH_REQUIRED; 426 broadcasts
  * SYNC_PROTOCOL_MISMATCH; other non-2xx codes surface as `SyncClientError`.
  */
 export class SyncClient {
-  private readonly extensionVersion: string;
-
   constructor(
     private readonly host: string,
     private readonly token: string,
-  ) {
-    this.extensionVersion = chrome.runtime.getManifest().version;
-  }
+  ) {}
 
   async health(): Promise<HealthResponse> {
     return this.request({
@@ -132,7 +130,6 @@ export class SyncClient {
   private buildHeaders(hasBody: boolean, publicEndpoint: boolean): Record<string, string> {
     const headers: Record<string, string> = {
       "x-opentab-protocol-version": PROTOCOL_VERSION,
-      "x-opentab-extension-version": this.extensionVersion,
     };
     if (hasBody) headers["content-type"] = "application/json";
     if (!publicEndpoint) headers.authorization = `Bearer ${this.token}`;

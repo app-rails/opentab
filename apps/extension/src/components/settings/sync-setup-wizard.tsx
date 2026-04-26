@@ -420,23 +420,6 @@ function SyncSetupWizardInner(props: WizardInnerProps) {
         </div>
       )}
 
-      {value === "health_recommended_upgrade" && (
-        <div className="space-y-3">
-          <h4 className="font-medium text-sm">Upgrade recommended</h4>
-          <p className="text-muted-foreground text-sm">
-            A newer extension is available but you can continue.
-          </p>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => send({ type: "START" })}>
-              Continue anyway
-            </Button>
-            <Button size="sm" variant="ghost" onClick={handleCancel}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
-
       {value === "awaiting_authorization" && (
         <div className="space-y-3">
           <h4 className="font-medium text-sm">Waiting for approval</h4>
@@ -623,18 +606,6 @@ function HealthFailureMessage({ result }: { result: HealthCheckResult | null }) 
   switch (result.kind) {
     case "unreachable":
       return <p className="text-muted-foreground text-sm">Unreachable: {result.error}</p>;
-    case "extension_too_old":
-      return (
-        <p className="text-muted-foreground text-sm">
-          Extension too old (min {result.minRequired}). Please update.
-        </p>
-      );
-    case "protocol_too_old":
-      return (
-        <p className="text-muted-foreground text-sm">
-          Protocol too old (min {result.minRequired}). Please update the extension.
-        </p>
-      );
     case "server_too_old":
       return (
         <p className="text-muted-foreground text-sm">

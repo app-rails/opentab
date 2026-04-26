@@ -105,7 +105,7 @@ describe("setup machine — happy path", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. RETRY from health_failed(extension_too_old) → health_checking
+// 2. RETRY from health_failed(unreachable) → health_checking
 // ---------------------------------------------------------------------------
 
 describe("setup machine — RETRY recovers from health_failed", () => {
@@ -116,19 +116,11 @@ describe("setup machine — RETRY recovers from health_failed", () => {
       checkHealth: fromPromise<HealthCheckResult, CheckHealthInput>(async () => {
         callCount++;
         if (callCount === 1) {
-          return { kind: "extension_too_old", minRequired: "1.0.0" };
+          return { kind: "unreachable", error: "ECONNREFUSED" };
         }
         return {
           kind: "ok",
-          response: {
-            serverVersion: "1.0.0",
-            protocolVersion: "1.0.0",
-            minSupportedProtocolVersion: "1.0.0",
-            minSupportedExtensionVersion: "0.0.1",
-            recommendedExtensionVersion: null,
-            serverTime: 1,
-            timezone: "UTC",
-          },
+          response: { serverVersion: "1.0.0", protocolVersion: "1.0.0" },
         };
       }),
     };
@@ -322,41 +314,5 @@ describe("setup machine — backup failure", () => {
     actor.send({ type: "START" });
     await waitFor(actor, (v) => v === "idle");
     expect(actor.getSnapshot().context.error).toContain("disk full");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 8. Health upgrade_recommended → health_recommended_upgrade → START → awaiting_authorization
-// ---------------------------------------------------------------------------
-
-describe("setup machine — upgrade_recommended soft gate", () => {
-  it("lands on health_recommended_upgrade and START continues the flow", async () => {
-    const actors: SetupMachineActors = {
-      ...createNoopActors(),
-      checkHealth: fromPromise<HealthCheckResult, CheckHealthInput>(async () => ({
-        kind: "upgrade_recommended",
-        recommended: "0.5.0",
-        response: {
-          serverVersion: "1.0.0",
-          protocolVersion: "1.0.0",
-          minSupportedProtocolVersion: "1.0.0",
-          minSupportedExtensionVersion: "0.0.1",
-          recommendedExtensionVersion: "0.5.0",
-          serverTime: 1,
-          timezone: "UTC",
-        },
-      })),
-    };
-    const machine = createSetupMachine({ actors });
-    const actor = createActor(machine, baseInput());
-    actor.start();
-
-    actor.send({ type: "START" });
-    await waitFor(actor, (v) => v === "backup_done");
-    actor.send({ type: "HOST_SUBMITTED", host: "https://x.example.com" });
-    await waitFor(actor, (v) => v === "health_recommended_upgrade");
-
-    actor.send({ type: "START" });
-    await waitFor(actor, (v) => v === "awaiting_authorization");
   });
 });

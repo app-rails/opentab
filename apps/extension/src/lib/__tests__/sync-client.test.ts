@@ -14,18 +14,12 @@ import { clearSyncAuth, getSyncAuth } from "@/lib/sync-auth-storage";
 
 const HOST = "https://sync.example.com";
 const TOKEN = "dev-token-123";
-const EXT_VERSION = "9.9.9";
 
 type FetchMock = ReturnType<typeof vi.fn>;
 
 function installChromeMock(): { sendMessage: ReturnType<typeof vi.fn> } {
   const sendMessage = vi.fn().mockResolvedValue(undefined);
-  vi.stubGlobal("chrome", {
-    runtime: {
-      sendMessage,
-      getManifest: () => ({ version: EXT_VERSION }),
-    },
-  });
+  vi.stubGlobal("chrome", { runtime: { sendMessage } });
   return { sendMessage };
 }
 
@@ -53,11 +47,6 @@ function installFetchMock(response: MockResponseSpec): FetchMock {
 const HEALTHY_RESPONSE = {
   serverVersion: "1.0.0",
   protocolVersion: PROTOCOL_VERSION,
-  minSupportedProtocolVersion: "1.0.0",
-  minSupportedExtensionVersion: "0.0.1",
-  recommendedExtensionVersion: null,
-  serverTime: 1_700_000_000_000,
-  timezone: "UTC",
 };
 
 const PUSH_RESPONSE = {
@@ -76,7 +65,7 @@ afterEach(() => {
 });
 
 describe("SyncClient headers", () => {
-  it("sends protocol + extension version headers on every request", async () => {
+  it("sends the protocol version header on every request", async () => {
     installChromeMock();
     const fetchMock = installFetchMock({ status: 200, jsonBody: HEALTHY_RESPONSE });
 
@@ -87,7 +76,9 @@ describe("SyncClient headers", () => {
     const [, init] = fetchMock.mock.calls[0];
     const headers = init.headers as Record<string, string>;
     expect(headers["x-opentab-protocol-version"]).toBe(PROTOCOL_VERSION);
-    expect(headers["x-opentab-extension-version"]).toBe(EXT_VERSION);
+    // Extension binary version is intentionally not sent — Chrome Web Store
+    // is the binary update channel, not this header.
+    expect(headers["x-opentab-extension-version"]).toBeUndefined();
   });
 
   it("omits the Authorization header on public endpoints (health)", async () => {
