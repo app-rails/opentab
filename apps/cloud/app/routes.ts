@@ -16,6 +16,14 @@ export default [
     ]),
   ]),
 
+  // Public legal pages (Privacy, Terms)
+  ...prefix("legal", [
+    layout("routes/legal/layout.tsx", [
+      route("privacy", "routes/legal/privacy.tsx"),
+      route("terms", "routes/legal/terms.tsx"),
+    ]),
+  ]),
+
   // Better Auth routes
   ...prefix("auth", [
     route("sign-in", "routes/auth/sign-in.tsx"),
