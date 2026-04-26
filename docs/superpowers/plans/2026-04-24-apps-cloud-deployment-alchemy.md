@@ -1861,3 +1861,22 @@ git commit -m "docs(plan): postscript with first-deploy notes"
 - [ ] `git grep -nE 'wrangler|@cloudflare/vite-plugin' apps/cloud/workers apps/cloud/app apps/cloud/drizzle apps/cloud/vite.config.ts apps/cloud/alchemy.run.ts packages/config/src` returns zero hits — both packages stay in `apps/cloud/package.json` intentionally (alchemy peer / runtime import) but no source file calls them directly.
 - [ ] CI workflows present at `.github/workflows/{ci,deploy}.yml`.
 - [ ] Operator has performed Task 22 (first deploy succeeded; dev URL responds).
+
+---
+
+## Post-execution refinements (2026-04-26)
+
+After Tasks 1–21 landed and the first round of local validation surfaced friction with the `https://opentab-dev.apprails.io`-only schema, a follow-up sweep relaxed the dev-stage URL contract so `alchemy dev` can run against a real localhost URL without breaking BetterAuth callbacks.
+
+What changed and why:
+
+- **`packages/config/src/env/schemas.ts`** — Introduced `DEV_APP_URL_LIST = ["opentab-dev.apprails.io", "opentab-stage.apprails.io", "localhost:5173"]`. `WorkerEnvSchema.APP_URL` relaxed to `z.url()` (scheme check moved to `superRefine` per stage). `superRefine` now validates `URL.host ∈ DEV_APP_URL_LIST` and adds a scheme check: localhost may use http; everything else must use https. `BETTER_AUTH_ADMIN_USER_ID` is now optional with `""` default (app code at `app/services/auth/auth.server.ts:102` already gracefully handles empty).
+- **`apps/cloud/alchemy.run.ts`** — `hostname` is now derived via `new URL(env.APP_URL).hostname`. Two new guards: hard-fail in CI if `hostname === "localhost"` (prevents orphan resources from a misconfigured CI env), and skip `CustomDomain` creation entirely when on localhost (defense in depth alongside Alchemy's `Scope.local` auto-skip).
+- **`.github/workflows/deploy.yml`** — `workflow_dispatch.inputs.app_url` is now a `choice` between `https://opentab-dev.apprails.io` and `https://opentab-stage.apprails.io`. Localhost is intentionally excluded — CI never deploys to localhost.
+- **`apps/cloud/.env.example`** — `APP_URL` default flipped to `http://localhost:5173`. Comment block lists all three accepted dev hosts.
+- **`apps/cloud/README.md`** — Quick start clarifies that localhost works out of the box. Runbook gained two rows: "GitHub OAuth callback fails locally" (add localhost callback URL on the dev OAuth app) and "`pnpm dev` not on port 5173" (free the port; the schema is locked to 5173).
+- **Spec doc (this plan's parent)** — §0.4 #8, §1.2, §3.2 updated for the new design. Schema bullet list mentions the scheme-check addition.
+
+Operator action remaining for OAuth on localhost: add `http://localhost:5173/api/auth/callback/github` as an additional Authorization callback URL to the **dev** GitHub OAuth app. Without this, GitHub OAuth flow returns "callback URL mismatch"; email/password auth still works.
+
+Commits: `9f9599d`, `051ea45`, `f0ce699`, `5b5099f`, this commit.
