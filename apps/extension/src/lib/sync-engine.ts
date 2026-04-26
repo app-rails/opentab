@@ -222,10 +222,22 @@ export class SyncEngine {
     }
   }
 
-  /** Initial bootstrap: push all existing local data if not done yet. */
-  async initialBootstrap(): Promise<void> {
-    const flag = await db.syncMeta.get("initialPushCompleted");
-    if (flag?.value === true) return;
+  /**
+   * Initial bootstrap: enqueue create ops for every local entity, then sync.
+   *
+   * Idempotent by default via the `initialPushCompleted` marker so a future
+   * poll-driven caller can't accidentally redo the bulk push. The wizard's
+   * `Upload local data` button MUST pass `{ force: true }` because the
+   * marker is sticky in IndexedDB across sessions — a previous wizard run
+   * that ran the actor but had its trailing sync silently dropped (e.g. the
+   * old server_enabled gate, since removed) leaves the marker set, and the
+   * next user-driven Upload would no-op without ever hitting the network.
+   */
+  async initialBootstrap(opts: { force?: boolean } = {}): Promise<void> {
+    if (!opts.force) {
+      const flag = await db.syncMeta.get("initialPushCompleted");
+      if (flag?.value === true) return;
+    }
 
     const accountId = await resolveAccountId();
 

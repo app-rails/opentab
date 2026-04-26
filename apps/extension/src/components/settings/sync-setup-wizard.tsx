@@ -299,7 +299,11 @@ export function SyncSetupWizard({ onClose, onCancel }: SyncSetupWizardProps) {
         if (cred) {
           await setSyncAuth({ kind: "authenticated", ...cred });
         }
-        await engine.initialBootstrap();
+        // `force: true` is required: a previous (failed) wizard run leaves
+        // syncMeta.initialPushCompleted=true. Without force, the second
+        // user-driven Upload short-circuits at the first line of
+        // initialBootstrap and produces zero network requests.
+        await engine.initialBootstrap({ force: true });
         return undefined;
       }),
       downloadSnapshot: fromPromise<undefined, DownloadSnapshotInput>(async () => {

@@ -153,6 +153,18 @@ vi.mock("@/lib/resolve-account-id", () => ({
   resolveAccountId: vi.fn(async () => "account-1"),
 }));
 
+// initialBootstrap walks the active-entity tree via these helpers; the unit
+// tests only care about the flag-gated short-circuit behaviour, so a flat
+// "no entities exist" stub is enough to let the function reach its tail.
+vi.mock("@/lib/db-queries", () => ({
+  activeWorkspaces: vi.fn(() => ({
+    toArray: async () => [],
+    count: async () => 0,
+  })),
+  activeCollections: vi.fn(() => ({ toArray: async () => [] })),
+  activeTabs: vi.fn(() => ({ toArray: async () => [] })),
+}));
+
 // Chrome runtime mock for broadcastSyncApplied()
 vi.stubGlobal("chrome", {
   runtime: {
@@ -355,5 +367,45 @@ describe("SyncEngine.push result bucketing", () => {
     expect(stored1.attemptCount).toBe(1);
     expect(stored1.lastError).toContain("fetch failed");
     expect(stored1.nextRetryAt).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// initialBootstrap: idempotency vs. wizard-driven force re-run
+// ---------------------------------------------------------------------------
+
+describe("SyncEngine.initialBootstrap idempotency", () => {
+  it("bails when initialPushCompleted=true so a polling-style sync doesn't redo the bulk push", async () => {
+    // Pre-set the marker as if a previous wizard run finished.
+    getState().meta.set("initialPushCompleted", true);
+    const client = mockSyncClient();
+    const engine = new SyncEngine(client);
+    const syncSpy = vi.spyOn(engine, "sync");
+
+    await engine.initialBootstrap();
+
+    // Early-return path: never reaches the trailing this.sync() call,
+    // and the outbox stays untouched.
+    expect(syncSpy).not.toHaveBeenCalled();
+    expect(getState().outbox).toHaveLength(0);
+  });
+
+  it("bypasses initialPushCompleted when force=true (wizard-driven Upload re-run)", async () => {
+    // Reproduces the user-reported regression: a previous wizard run
+    // (silenced by the now-removed server_enabled gate) wrote
+    // initialPushCompleted=true. Without `force`, the next user-driven
+    // `Upload local data` would silently no-op, producing zero requests.
+    getState().meta.set("initialPushCompleted", true);
+    const client = mockSyncClient();
+    const engine = new SyncEngine(client);
+    const syncSpy = vi.spyOn(engine, "sync");
+
+    await engine.initialBootstrap({ force: true });
+
+    expect(syncSpy).toHaveBeenCalledTimes(1);
+    // Marker is re-set after a forced run, so subsequent non-force calls
+    // continue to short-circuit (preserves idempotency for any future
+    // poll-driven caller).
+    expect(getState().meta.get("initialPushCompleted")).toBe(true);
   });
 });
