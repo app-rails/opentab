@@ -2,6 +2,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MSG } from "@/lib/constants";
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
+
 const clearSyncAuth = vi.fn(async () => {});
 vi.mock("@/lib/sync-auth-storage", () => ({
   clearSyncAuth: () => clearSyncAuth(),
@@ -45,7 +49,7 @@ describe("SyncDisconnectDialog", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.sync.disconnect.cancel" }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(clearSyncAuth).not.toHaveBeenCalled();
     expect(sendMessage).not.toHaveBeenCalled();
@@ -65,7 +69,7 @@ describe("SyncDisconnectDialog", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /disconnect/i }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.sync.disconnect.confirm" }));
 
     await waitFor(() => expect(clearSyncAuth).toHaveBeenCalledTimes(1));
     expect(sendMessage).toHaveBeenCalledWith({ type: MSG.SYNC_DISCONNECTED });

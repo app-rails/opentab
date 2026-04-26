@@ -201,18 +201,102 @@
       "lang_zh_native": "中文"
     },
     "server": {
-      "title": "服务器同步",
-      "enable": "启用服务器同步",
-      "enable_disabled_tooltip": "同步功能将在后续版本中回归",
-      "url_label": "服务器地址",
-      "url_placeholder": "http://localhost:3001",
-      "test": "测试连接",
-      "testing": "测试中...",
+      "title": "服务器同步"
+    },
+    "sync": {
+      "panel": {
+        "description": "通过 OpenTab 同步服务器在多设备间同步你的工作空间。",
+        "enable": "启用同步"
+      },
+      "setup": {
+        "loading": "加载设置向导...",
+        "title": "设置同步",
+        "progress": "{{done}} / {{total}} 已完成",
+        "steps": {
+          "backup": "备份本地数据",
+          "connect": "连接同步服务器",
+          "authorize": "授权此设备",
+          "transfer": "初次同步"
+        },
+        "status_tag": {
+          "done": "已完成",
+          "working": "进行中...",
+          "error": "需要关注",
+          "active": "正在进行",
+          "pending": "等待中"
+        },
+        "backup": {
+          "running": "正在将工作空间快照保存到下载文件夹...",
+          "saved": "备份已保存为 {{filename}}。",
+          "last_backup": "上次备份：{{filename}}",
+          "get_started": "启用同步以在多设备间共享工作空间。开始前会先在本地备份。",
+          "enable": "启用同步",
+          "continue": "继续",
+          "cancel": "取消"
+        },
+        "connect": {
+          "requesting_permission": "需要权限——请在浏览器提示中点确认。",
+          "checking_health": "正在连接同步服务器...",
+          "retry": "重试",
+          "change_host": "更换地址",
+          "cancel": "取消",
+          "save": "保存",
+          "connected": "已连接到 {{host}}。",
+          "host_help": "输入 OpenTab 同步服务器地址。默认 {{default}}。",
+          "host_aria": "服务器地址",
+          "health": {
+            "unknown": "未知错误。",
+            "unreachable": "无法连接：{{error}}",
+            "server_too_old": "服务器协议版本过低（{{version}}）。",
+            "not_ready": "服务器未就绪。"
+          }
+        },
+        "authorize": {
+          "waiting": "等待你在新标签页中确认授权...",
+          "cancel": "取消",
+          "timeout": "授权标签页在规定时间内未响应。",
+          "retry": "重试",
+          "denied_default": "授权已被拒绝。",
+          "consuming": "正在与服务器完成授权交换...",
+          "exchange_invalid_default": "授权码无效。",
+          "done": "设备已授权。"
+        },
+        "transfer": {
+          "uploading": "正在将工作空间上传至服务器...",
+          "downloading": "正在用服务器数据覆盖本地...",
+          "complete_body": "扩展已开始与服务器同步。",
+          "close": "关闭",
+          "direction_help": "选择是把本地工作空间上传到服务器，还是用服务器的数据覆盖本地。",
+          "upload": "上传本地数据",
+          "upload_aria": "上传本地数据到服务器",
+          "download": "下载服务器数据",
+          "download_aria": "用服务器数据覆盖本地",
+          "cancel": "取消",
+          "no_data": "两端都没有数据。选任一方向完成设置——都是空操作。",
+          "download_warning": "这将用服务器数据替换本地工作空间。开始前向导已自动备份了本地。",
+          "confirm_download": "确认下载",
+          "back": "返回",
+          "waiting_previous": "等待前置步骤完成。"
+        }
+      },
       "status": {
-        "not_enabled": "未启用",
-        "testing": "测试中...",
-        "connected": "已连接",
-        "disconnected": "未连接"
+        "title": "同步已连接",
+        "host": "服务器",
+        "device": "设备",
+        "last_sync": "上次同步",
+        "not_yet_synced": "尚未同步",
+        "pending_changes": "待同步变更",
+        "sync_now": "立即同步",
+        "syncing": "同步中…",
+        "disconnect": "断开连接",
+        "skipped_other": "{{count}} 项未同步（chrome:// / file:// URL 仅在本地保留）。"
+      },
+      "disconnect": {
+        "title": "断开同步？",
+        "description": "本地工作空间会保留在此设备上。服务器的设备列表仍会显示此设备，直到你从 Web 管理面板中撤销。",
+        "cancel": "取消",
+        "confirm": "断开连接",
+        "confirming": "正在断开..."
       }
     },
     "export": {

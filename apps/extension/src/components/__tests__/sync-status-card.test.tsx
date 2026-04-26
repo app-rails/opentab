@@ -2,6 +2,20 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MSG } from "@/lib/constants";
 
+// Stub useTranslation: t(key, vars) → key with interpolation echoed back so
+// "{{count}}" appears in the rendered output. Lets the assertions match
+// against the i18n key (which is stable across English/Chinese) instead of
+// a literal English string.
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, vars?: Record<string, unknown>) => {
+      if (!vars) return key;
+      const parts = Object.entries(vars).map(([k, v]) => `${k}=${String(v)}`);
+      return `${key}(${parts.join(",")})`;
+    },
+  }),
+}));
+
 // The card reads two things: lastSyncAt (from db.syncMeta) and pending op
 // count (from db.syncOutbox). The earlier version pulled lastSync from
 // chrome.storage.local under a key the engine never writes — so it would
@@ -72,19 +86,24 @@ describe("SyncStatusCard", () => {
 
     // Pending count proves db.syncOutbox is the source.
     await waitFor(() => expect(screen.getByText("7")).toBeTruthy());
-    // "Last sync" must NOT show the placeholder; it should render a date string.
-    await waitFor(() => expect(screen.queryByText("Not yet synced")).toBeNull());
+    // The "Not yet synced" placeholder key must NOT render when we have a
+    // real timestamp; only the formatted Date string should.
+    await waitFor(() =>
+      expect(screen.queryByText("settings.sync.status.not_yet_synced")).toBeNull(),
+    );
     expect(syncMetaGet).toHaveBeenCalledWith("lastSyncAt");
   });
 
-  it("renders 'Not yet synced' only when db.syncMeta has no lastSyncAt", async () => {
+  it("renders the not-yet-synced placeholder only when db.syncMeta has no lastSyncAt", async () => {
     syncMetaGet.mockResolvedValueOnce(undefined);
     syncOutboxCount.mockResolvedValueOnce(0);
 
     const SyncStatusCard = await loadComponent();
     render(<SyncStatusCard auth={AUTH} />);
 
-    await waitFor(() => expect(screen.getByText("Not yet synced")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText("settings.sync.status.not_yet_synced")).toBeTruthy(),
+    );
   });
 
   it("Sync now button dispatches SYNC_REQUEST so bg engine drains the outbox on demand", async () => {
@@ -92,9 +111,11 @@ describe("SyncStatusCard", () => {
     render(<SyncStatusCard auth={AUTH} />);
 
     // Wait for initial refresh so the button is mounted in the post-load tree.
-    await waitFor(() => expect(screen.getByRole("button", { name: /sync now/i })).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "settings.sync.status.sync_now" })).toBeTruthy(),
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.sync.status.sync_now" }));
 
     await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: MSG.SYNC_REQUEST }));
   });
@@ -108,7 +129,12 @@ describe("SyncStatusCard", () => {
     const SyncStatusCard = await loadComponent();
     render(<SyncStatusCard auth={AUTH} />);
 
-    await waitFor(() => expect(screen.getByText(/12.*not synced/i)).toBeTruthy());
+    // The mocked t() echoes vars as `key(count=12)`. We assert the count
+    // got threaded through interpolation, regardless of which i18n string
+    // ultimately renders.
+    await waitFor(() =>
+      expect(screen.getByText(/settings\.sync\.status\.skipped\(count=12\)/)).toBeTruthy(),
+    );
   });
 
   it("does NOT render the skipped-count line when the count is 0", async () => {
@@ -120,7 +146,7 @@ describe("SyncStatusCard", () => {
     const SyncStatusCard = await loadComponent();
     render(<SyncStatusCard auth={AUTH} />);
 
-    await waitFor(() => expect(screen.getByText("Disconnect")).toBeTruthy());
-    expect(screen.queryByText(/not synced/i)).toBeNull();
+    await waitFor(() => expect(screen.getByText("settings.sync.status.disconnect")).toBeTruthy());
+    expect(screen.queryByText(/skipped/)).toBeNull();
   });
 });

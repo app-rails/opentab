@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@opentab/ui/components/dialog";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { MSG } from "@/lib/constants";
 import { clearSyncAuth } from "@/lib/sync-auth-storage";
 import { clearProgress as clearSyncSetupProgress } from "@/lib/sync-setup/wizard-progress";
@@ -35,6 +36,7 @@ export function SyncDisconnectDialog({
   onDisconnected,
 }: SyncDisconnectDialogProps) {
   const [busy, setBusy] = useState(false);
+  const { t } = useTranslation();
 
   const handleConfirm = useCallback(async () => {
     setBusy(true);
@@ -60,18 +62,17 @@ export function SyncDisconnectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Disconnect sync?</DialogTitle>
-          <DialogDescription>
-            Your local workspaces stay on this device. The server still shows this device in its
-            list until you revoke it from the Web management panel.
-          </DialogDescription>
+          <DialogTitle>{t("settings.sync.disconnect.title")}</DialogTitle>
+          <DialogDescription>{t("settings.sync.disconnect.description")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
-            Cancel
+            {t("settings.sync.disconnect.cancel")}
           </Button>
           <Button variant="destructive" onClick={handleConfirm} disabled={busy}>
-            {busy ? "Disconnecting..." : "Disconnect"}
+            {busy
+              ? t("settings.sync.disconnect.confirming")
+              : t("settings.sync.disconnect.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

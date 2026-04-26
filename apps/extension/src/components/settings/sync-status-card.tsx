@@ -1,5 +1,6 @@
 import { Button } from "@opentab/ui/components/button";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { MSG } from "@/lib/constants";
 import { db } from "@/lib/db";
 import type { SyncAuthState } from "@/lib/sync-auth-storage";
@@ -12,6 +13,7 @@ interface SyncStatusCardProps {
 }
 
 export function SyncStatusCard({ auth, onDisconnected }: SyncStatusCardProps) {
+  const { t } = useTranslation();
   const [lastSync, setLastSync] = useState<number | null>(null);
   const [pending, setPending] = useState<number>(0);
   const [skipped, setSkipped] = useState<number>(0);
@@ -77,37 +79,40 @@ export function SyncStatusCard({ auth, onDisconnected }: SyncStatusCardProps) {
 
   return (
     <div className="space-y-3 rounded-lg border border-border p-4">
-      <h4 className="font-medium text-sm">Sync connected</h4>
+      <h4 className="font-medium text-sm">{t("settings.sync.status.title")}</h4>
       <dl className="space-y-1.5 text-sm">
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Host</dt>
+          <dt className="text-muted-foreground">{t("settings.sync.status.host")}</dt>
           <dd className="truncate font-mono text-xs">{auth.host}</dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Device</dt>
+          <dt className="text-muted-foreground">{t("settings.sync.status.device")}</dt>
           <dd>{auth.deviceName}</dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Last sync</dt>
-          <dd>{lastSync ? new Date(lastSync).toLocaleString() : "Not yet synced"}</dd>
+          <dt className="text-muted-foreground">{t("settings.sync.status.last_sync")}</dt>
+          <dd>
+            {lastSync
+              ? new Date(lastSync).toLocaleString()
+              : t("settings.sync.status.not_yet_synced")}
+          </dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Pending changes</dt>
+          <dt className="text-muted-foreground">{t("settings.sync.status.pending_changes")}</dt>
           <dd>{pending}</dd>
         </div>
       </dl>
       {skipped > 0 && (
         <p className="text-muted-foreground text-xs">
-          {skipped} item{skipped === 1 ? "" : "s"} not synced (chrome:// / file:// URLs are
-          local-only).
+          {t("settings.sync.status.skipped", { count: skipped })}
         </p>
       )}
       <div className="flex gap-2 pt-2">
         <Button size="sm" onClick={handleSyncNow} disabled={syncing}>
-          {syncing ? "Syncing…" : "Sync now"}
+          {syncing ? t("settings.sync.status.syncing") : t("settings.sync.status.sync_now")}
         </Button>
         <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-          Disconnect
+          {t("settings.sync.status.disconnect")}
         </Button>
       </div>
       <SyncDisconnectDialog open={open} onOpenChange={setOpen} onDisconnected={onDisconnected} />

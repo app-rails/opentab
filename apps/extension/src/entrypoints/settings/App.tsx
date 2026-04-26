@@ -209,10 +209,10 @@ export default function App() {
               ) : (
                 <div className="space-y-2">
                   <p className="text-muted-foreground text-sm">
-                    Sync your workspaces across devices via the OpenTab sync server.
+                    {t("settings.sync.panel.description")}
                   </p>
                   <Button size="sm" onClick={() => setWizardOpen(true)}>
-                    Enable Sync
+                    {t("settings.sync.panel.enable")}
                   </Button>
                 </div>
               )}

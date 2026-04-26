@@ -8,8 +8,10 @@ import { Button } from "@opentab/ui/components/button";
 import { Input } from "@opentab/ui/components/input";
 import { cn } from "@opentab/ui/lib/utils";
 import { useMachine } from "@xstate/react";
+import type { TFunction } from "i18next";
 import { CircleAlertIcon, CircleCheckIcon, CircleDashedIcon, LoaderIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { fromPromise } from "xstate";
 import { MSG } from "@/lib/constants";
 import { db } from "@/lib/db";
@@ -119,12 +121,13 @@ const STEP_OF_STATE: Record<string, SetupStepId> = {
   complete: "transfer",
 };
 
-const STEP_LABELS: Record<SetupStepId, string> = {
-  backup: "Back up local data",
-  connect: "Connect to sync server",
-  authorize: "Authorize this device",
-  transfer: "Initial sync",
-};
+// Literal types matter — i18next's typed t() refuses string-typed lookups.
+const STEP_LABEL_KEYS = {
+  backup: "settings.sync.setup.steps.backup",
+  connect: "settings.sync.setup.steps.connect",
+  authorize: "settings.sync.setup.steps.authorize",
+  transfer: "settings.sync.setup.steps.transfer",
+} as const satisfies Record<SetupStepId, string>;
 
 const ERROR_STATES: ReadonlySet<string> = new Set([
   "health_failed",
@@ -340,7 +343,7 @@ export function SyncSetupWizard({ onClose, onCancel }: SyncSetupWizardProps) {
   }, [ready, initialDeviceId, actors]);
 
   if (!machine || !initialDeviceId) {
-    return <div className="text-muted-foreground text-sm">Loading setup wizard...</div>;
+    return <LoadingShell />;
   }
 
   return (
@@ -370,6 +373,11 @@ interface WizardInnerProps {
   onCancel?: () => void;
 }
 
+function LoadingShell() {
+  const { t } = useTranslation();
+  return <div className="text-muted-foreground text-sm">{t("settings.sync.setup.loading")}</div>;
+}
+
 function SyncSetupWizardInner(props: WizardInnerProps) {
   const {
     machine,
@@ -382,6 +390,7 @@ function SyncSetupWizardInner(props: WizardInnerProps) {
     onClose,
     onCancel,
   } = props;
+  const { t } = useTranslation();
 
   // --- Persisted progress (load once) -------------------------------------
   const [progress, setProgress] = useState<WizardProgress>(
@@ -510,9 +519,9 @@ function SyncSetupWizardInner(props: WizardInnerProps) {
   return (
     <div className="space-y-4 rounded-lg border border-border p-4">
       <div className="flex items-center justify-between">
-        <p className="font-medium text-sm">Set up sync</p>
+        <p className="font-medium text-sm">{t("settings.sync.setup.title")}</p>
         <span className="text-muted-foreground text-xs">
-          {completedCount} / {STEP_ORDER.length} done
+          {t("settings.sync.setup.progress", { done: completedCount, total: STEP_ORDER.length })}
         </span>
       </div>
 
@@ -534,8 +543,8 @@ function SyncSetupWizardInner(props: WizardInnerProps) {
               <AccordionTrigger className="px-4">
                 <span className="flex items-center gap-2">
                   <StepStatusIcon status={status} />
-                  <span>{STEP_LABELS[stepId]}</span>
-                  <StepStatusTag status={status} />
+                  <span>{t(STEP_LABEL_KEYS[stepId])}</span>
+                  <StepStatusTag status={status} t={t} />
                 </span>
               </AccordionTrigger>
               <AccordionContent className="space-y-3 px-4">
@@ -608,22 +617,21 @@ interface BackupBodyProps {
 }
 
 function BackupBody({ value, backupFilename, onStart, onCancel }: BackupBodyProps) {
+  const { t } = useTranslation();
   if (value === "backup_running") {
     return (
-      <p className="text-muted-foreground text-sm">
-        Saving a JSON snapshot of your workspaces to your Downloads folder...
-      </p>
+      <p className="text-muted-foreground text-sm">{t("settings.sync.setup.backup.running")}</p>
     );
   }
   if (backupFilename && (value === "backup_done" || STEP_OF_STATE[value] !== "backup")) {
     return (
       <div className="space-y-2">
         <p className="text-muted-foreground text-sm">
-          Backup saved as <code className="rounded bg-muted px-1 text-xs">{backupFilename}</code>.
+          {t("settings.sync.setup.backup.saved", { filename: backupFilename })}
         </p>
         {value === "backup_done" && (
           <Button size="sm" onClick={onStart}>
-            Continue
+            {t("settings.sync.setup.backup.continue")}
           </Button>
         )}
       </div>
@@ -631,25 +639,25 @@ function BackupBody({ value, backupFilename, onStart, onCancel }: BackupBodyProp
   }
   return (
     <div className="space-y-2">
-      <p className="text-muted-foreground text-sm">
-        Enable sync to share your workspaces across devices. We'll back up locally first.
-      </p>
+      <p className="text-muted-foreground text-sm">{t("settings.sync.setup.backup.get_started")}</p>
       {/* If a previous wizard run already wrote a backup, surface it so the
           user knows the file isn't lost — the local-first invariant is the
           point of this whole step. The wizard still re-runs backup on
           Enable Sync because each session writes a fresh timestamped file. */}
       {backupFilename && value === "idle" && (
         <p className="text-muted-foreground text-xs">
-          Last backup: <code className="rounded bg-muted px-1">{backupFilename}</code>
+          {t("settings.sync.setup.backup.last_backup", { filename: backupFilename })}
         </p>
       )}
       <div className="flex gap-2">
         <Button size="sm" onClick={onStart}>
-          {value === "backup_done" ? "Continue" : "Enable Sync"}
+          {value === "backup_done"
+            ? t("settings.sync.setup.backup.continue")
+            : t("settings.sync.setup.backup.enable")}
         </Button>
         {value !== "idle" && (
           <Button size="sm" variant="ghost" onClick={onCancel}>
-            Cancel
+            {t("settings.sync.setup.backup.cancel")}
           </Button>
         )}
       </div>
@@ -682,29 +690,34 @@ function ConnectBody({
   onRetry,
   onCancel,
 }: ConnectBodyProps) {
+  const { t } = useTranslation();
   if (value === "permission_requesting") {
     return (
       <p className="text-muted-foreground text-sm">
-        Permission required — please approve the browser prompt.
+        {t("settings.sync.setup.connect.requesting_permission")}
       </p>
     );
   }
   if (value === "health_checking") {
-    return <p className="text-muted-foreground text-sm">Contacting the sync server...</p>;
+    return (
+      <p className="text-muted-foreground text-sm">
+        {t("settings.sync.setup.connect.checking_health")}
+      </p>
+    );
   }
   if (value === "health_failed") {
     return (
       <div className="space-y-3">
-        <HealthFailureMessage result={healthResult} />
+        <HealthFailureMessage result={healthResult} t={t} />
         <div className="flex gap-2">
           <Button size="sm" onClick={onRetry}>
-            Retry
+            {t("settings.sync.setup.connect.retry")}
           </Button>
           <Button size="sm" variant="outline" onClick={onSubmitHost}>
-            Change host
+            {t("settings.sync.setup.connect.change_host")}
           </Button>
           <Button size="sm" variant="ghost" onClick={onCancel}>
-            Cancel
+            {t("settings.sync.setup.connect.cancel")}
           </Button>
         </div>
       </div>
@@ -714,28 +727,27 @@ function ConnectBody({
   if (STEP_OF_STATE[value] !== "connect") {
     return (
       <p className="text-muted-foreground text-sm">
-        Connected to <code className="rounded bg-muted px-1 text-xs">{host}</code>.
+        {t("settings.sync.setup.connect.connected", { host })}
       </p>
     );
   }
   return (
     <div className="space-y-2">
       <p className="text-muted-foreground text-sm">
-        Enter the OpenTab sync server URL. Defaults to{" "}
-        <code className="rounded bg-muted px-1">{DEFAULT_SYNC_HOST}</code>.
+        {t("settings.sync.setup.connect.host_help", { default: DEFAULT_SYNC_HOST })}
       </p>
       <Input
         value={hostDraft}
         onChange={(e) => setHostDraft(e.target.value)}
         placeholder={DEFAULT_SYNC_HOST}
-        aria-label="Server host"
+        aria-label={t("settings.sync.setup.connect.host_aria")}
       />
       <div className="flex gap-2">
         <Button size="sm" onClick={onSubmitHost} disabled={!hostDraft.trim() || !canSubmit}>
-          Save
+          {t("settings.sync.setup.connect.save")}
         </Button>
         <Button size="sm" variant="ghost" onClick={onCancel}>
-          Cancel
+          {t("settings.sync.setup.connect.cancel")}
         </Button>
       </div>
       {error && <p className="text-destructive text-sm">{error}</p>}
@@ -751,15 +763,16 @@ interface AuthorizeBodyProps {
 }
 
 function AuthorizeBody({ value, error, onRetry, onCancel }: AuthorizeBodyProps) {
+  const { t } = useTranslation();
   switch (value) {
     case "awaiting_authorization":
       return (
         <div className="space-y-2">
           <p className="text-muted-foreground text-sm">
-            Waiting for you to approve in the new tab...
+            {t("settings.sync.setup.authorize.waiting")}
           </p>
           <Button size="sm" variant="outline" onClick={onCancel}>
-            Cancel
+            {t("settings.sync.setup.authorize.cancel")}
           </Button>
         </div>
       );
@@ -767,14 +780,14 @@ function AuthorizeBody({ value, error, onRetry, onCancel }: AuthorizeBodyProps) 
       return (
         <div className="space-y-2">
           <p className="text-muted-foreground text-sm">
-            The authorization tab didn't respond in time.
+            {t("settings.sync.setup.authorize.timeout")}
           </p>
           <div className="flex gap-2">
             <Button size="sm" onClick={onRetry}>
-              Retry
+              {t("settings.sync.setup.authorize.retry")}
             </Button>
             <Button size="sm" variant="ghost" onClick={onCancel}>
-              Cancel
+              {t("settings.sync.setup.authorize.cancel")}
             </Button>
           </div>
         </div>
@@ -782,38 +795,46 @@ function AuthorizeBody({ value, error, onRetry, onCancel }: AuthorizeBodyProps) 
     case "authorization_denied":
       return (
         <div className="space-y-2">
-          <p className="text-destructive text-sm">{error ?? "Access was declined."}</p>
+          <p className="text-destructive text-sm">
+            {error ?? t("settings.sync.setup.authorize.denied_default")}
+          </p>
           <div className="flex gap-2">
             <Button size="sm" onClick={onRetry}>
-              Retry
+              {t("settings.sync.setup.authorize.retry")}
             </Button>
             <Button size="sm" variant="ghost" onClick={onCancel}>
-              Cancel
+              {t("settings.sync.setup.authorize.cancel")}
             </Button>
           </div>
         </div>
       );
     case "consuming_exchange":
       return (
-        <p className="text-muted-foreground text-sm">Exchanging authorization with the server...</p>
+        <p className="text-muted-foreground text-sm">
+          {t("settings.sync.setup.authorize.consuming")}
+        </p>
       );
     case "exchange_invalid":
       return (
         <div className="space-y-2">
-          <p className="text-destructive text-sm">{error ?? "Exchange invalid."}</p>
+          <p className="text-destructive text-sm">
+            {error ?? t("settings.sync.setup.authorize.exchange_invalid_default")}
+          </p>
           <div className="flex gap-2">
             <Button size="sm" onClick={onRetry}>
-              Retry
+              {t("settings.sync.setup.authorize.retry")}
             </Button>
             <Button size="sm" variant="ghost" onClick={onCancel}>
-              Cancel
+              {t("settings.sync.setup.authorize.cancel")}
             </Button>
           </div>
         </div>
       );
     default:
       // STEP_OF_STATE[value] !== "authorize" — past this step
-      return <p className="text-muted-foreground text-sm">Device authorized.</p>;
+      return (
+        <p className="text-muted-foreground text-sm">{t("settings.sync.setup.authorize.done")}</p>
+      );
   }
 }
 
@@ -840,15 +861,16 @@ function TransferBody({
   onComplete,
   onCancel,
 }: TransferBodyProps) {
+  const { t } = useTranslation();
   if (value === "uploading") {
     return (
-      <p className="text-muted-foreground text-sm">Pushing your workspaces to the server...</p>
+      <p className="text-muted-foreground text-sm">{t("settings.sync.setup.transfer.uploading")}</p>
     );
   }
   if (value === "downloading") {
     return (
       <p className="text-muted-foreground text-sm">
-        Replacing local data with the server's copy...
+        {t("settings.sync.setup.transfer.downloading")}
       </p>
     );
   }
@@ -856,10 +878,10 @@ function TransferBody({
     return (
       <div className="space-y-2">
         <p className="text-muted-foreground text-sm">
-          Your extension is now syncing with the server.
+          {t("settings.sync.setup.transfer.complete_body")}
         </p>
         <Button size="sm" onClick={onComplete}>
-          Close
+          {t("settings.sync.setup.transfer.close")}
         </Button>
       </div>
     );
@@ -868,48 +890,44 @@ function TransferBody({
     return (
       <div className="space-y-3">
         <p className="text-muted-foreground text-sm">
-          Decide whether to upload the local workspaces to the server or replace them with the
-          server's copy.
+          {t("settings.sync.setup.transfer.direction_help")}
         </p>
         <div className="flex gap-2">
           <Button
             size="sm"
             onClick={onUpload}
             disabled={!canUpload}
-            aria-label="Upload local to server"
+            aria-label={t("settings.sync.setup.transfer.upload_aria")}
           >
-            Upload local data
+            {t("settings.sync.setup.transfer.upload")}
           </Button>
           <Button
             size="sm"
             variant="outline"
             onClick={() => setDownloadConfirmed(true)}
             disabled={!canDownload}
-            aria-label="Download server to local"
+            aria-label={t("settings.sync.setup.transfer.download_aria")}
           >
-            Download server data
+            {t("settings.sync.setup.transfer.download")}
           </Button>
           <Button size="sm" variant="ghost" onClick={onCancel}>
-            Cancel
+            {t("settings.sync.setup.transfer.cancel")}
           </Button>
         </div>
         {!canUpload && !canDownload && (
           <p className="text-muted-foreground text-xs">
-            Neither side has data. Pick either path to finish setup — both are no-ops.
+            {t("settings.sync.setup.transfer.no_data")}
           </p>
         )}
         {downloadConfirmed && (
           <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
-            <p className="text-sm">
-              This will replace your local workspaces with the server's copy. A backup was saved
-              before the wizard started.
-            </p>
+            <p className="text-sm">{t("settings.sync.setup.transfer.download_warning")}</p>
             <div className="mt-2 flex gap-2">
               <Button size="sm" onClick={onConfirmDownload}>
-                Confirm download
+                {t("settings.sync.setup.transfer.confirm_download")}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setDownloadConfirmed(false)}>
-                Back
+                {t("settings.sync.setup.transfer.back")}
               </Button>
             </div>
           </div>
@@ -917,7 +935,11 @@ function TransferBody({
       </div>
     );
   }
-  return <p className="text-muted-foreground text-sm">Waiting for previous steps to finish.</p>;
+  return (
+    <p className="text-muted-foreground text-sm">
+      {t("settings.sync.setup.transfer.waiting_previous")}
+    </p>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -964,17 +986,17 @@ function StepStatusIcon({ status }: { status: StepStatus }) {
   }
 }
 
-function StepStatusTag({ status }: { status: StepStatus }) {
-  const label =
+function StepStatusTag({ status, t }: { status: StepStatus; t: TFunction }) {
+  const labelKey =
     status === "done"
-      ? "Done"
+      ? "settings.sync.setup.status_tag.done"
       : status === "in_progress"
-        ? "Working..."
+        ? "settings.sync.setup.status_tag.working"
         : status === "error"
-          ? "Needs attention"
+          ? "settings.sync.setup.status_tag.error"
           : status === "active"
-            ? "In progress"
-            : "Pending";
+            ? "settings.sync.setup.status_tag.active"
+            : "settings.sync.setup.status_tag.pending";
   return (
     <span
       className={cn(
@@ -986,25 +1008,39 @@ function StepStatusTag({ status }: { status: StepStatus }) {
         status === "pending" && "bg-muted text-muted-foreground",
       )}
     >
-      {label}
+      {t(labelKey)}
     </span>
   );
 }
 
-function HealthFailureMessage({ result }: { result: HealthCheckResult | null }) {
+function HealthFailureMessage({ result, t }: { result: HealthCheckResult | null; t: TFunction }) {
   if (!result) {
-    return <p className="text-muted-foreground text-sm">Unknown failure.</p>;
+    return (
+      <p className="text-muted-foreground text-sm">
+        {t("settings.sync.setup.connect.health.unknown")}
+      </p>
+    );
   }
   switch (result.kind) {
     case "unreachable":
-      return <p className="text-muted-foreground text-sm">Unreachable: {result.error}</p>;
+      return (
+        <p className="text-muted-foreground text-sm">
+          {t("settings.sync.setup.connect.health.unreachable", { error: result.error })}
+        </p>
+      );
     case "server_too_old":
       return (
         <p className="text-muted-foreground text-sm">
-          Server protocol too old ({result.serverProtocol}).
+          {t("settings.sync.setup.connect.health.server_too_old", {
+            version: result.serverProtocol,
+          })}
         </p>
       );
     default:
-      return <p className="text-muted-foreground text-sm">Server is not ready.</p>;
+      return (
+        <p className="text-muted-foreground text-sm">
+          {t("settings.sync.setup.connect.health.not_ready")}
+        </p>
+      );
   }
 }

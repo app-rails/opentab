@@ -201,18 +201,103 @@
       "lang_zh_native": "中文"
     },
     "server": {
-      "title": "Server Sync",
-      "enable": "Enable Server Sync",
-      "enable_disabled_tooltip": "Syncing will return in a future release",
-      "url_label": "Server URL",
-      "url_placeholder": "http://localhost:3001",
-      "test": "Test Connection",
-      "testing": "Testing...",
+      "title": "Server Sync"
+    },
+    "sync": {
+      "panel": {
+        "description": "Sync your workspaces across devices via the OpenTab sync server.",
+        "enable": "Enable Sync"
+      },
+      "setup": {
+        "loading": "Loading setup wizard...",
+        "title": "Set up sync",
+        "progress": "{{done}} / {{total}} done",
+        "steps": {
+          "backup": "Back up local data",
+          "connect": "Connect to sync server",
+          "authorize": "Authorize this device",
+          "transfer": "Initial sync"
+        },
+        "status_tag": {
+          "done": "Done",
+          "working": "Working...",
+          "error": "Needs attention",
+          "active": "In progress",
+          "pending": "Pending"
+        },
+        "backup": {
+          "running": "Saving a JSON snapshot of your workspaces to your Downloads folder...",
+          "saved": "Backup saved as {{filename}}.",
+          "last_backup": "Last backup: {{filename}}",
+          "get_started": "Enable sync to share your workspaces across devices. We'll back up locally first.",
+          "enable": "Enable Sync",
+          "continue": "Continue",
+          "cancel": "Cancel"
+        },
+        "connect": {
+          "requesting_permission": "Permission required — please approve the browser prompt.",
+          "checking_health": "Contacting the sync server...",
+          "retry": "Retry",
+          "change_host": "Change host",
+          "cancel": "Cancel",
+          "save": "Save",
+          "connected": "Connected to {{host}}.",
+          "host_help": "Enter the OpenTab sync server URL. Defaults to {{default}}.",
+          "host_aria": "Server host",
+          "health": {
+            "unknown": "Unknown failure.",
+            "unreachable": "Unreachable: {{error}}",
+            "server_too_old": "Server protocol too old ({{version}}).",
+            "not_ready": "Server is not ready."
+          }
+        },
+        "authorize": {
+          "waiting": "Waiting for you to approve in the new tab...",
+          "cancel": "Cancel",
+          "timeout": "The authorization tab didn't respond in time.",
+          "retry": "Retry",
+          "denied_default": "Access was declined.",
+          "consuming": "Exchanging authorization with the server...",
+          "exchange_invalid_default": "Exchange invalid.",
+          "done": "Device authorized."
+        },
+        "transfer": {
+          "uploading": "Pushing your workspaces to the server...",
+          "downloading": "Replacing local data with the server's copy...",
+          "complete_body": "Your extension is now syncing with the server.",
+          "close": "Close",
+          "direction_help": "Decide whether to upload the local workspaces to the server or replace them with the server's copy.",
+          "upload": "Upload local data",
+          "upload_aria": "Upload local to server",
+          "download": "Download server data",
+          "download_aria": "Download server to local",
+          "cancel": "Cancel",
+          "no_data": "Neither side has data. Pick either path to finish setup — both are no-ops.",
+          "download_warning": "This will replace your local workspaces with the server's copy. A backup was saved before the wizard started.",
+          "confirm_download": "Confirm download",
+          "back": "Back",
+          "waiting_previous": "Waiting for previous steps to finish."
+        }
+      },
       "status": {
-        "not_enabled": "Not enabled",
-        "testing": "Testing...",
-        "connected": "Connected",
-        "disconnected": "Disconnected"
+        "title": "Sync connected",
+        "host": "Host",
+        "device": "Device",
+        "last_sync": "Last sync",
+        "not_yet_synced": "Not yet synced",
+        "pending_changes": "Pending changes",
+        "sync_now": "Sync now",
+        "syncing": "Syncing…",
+        "disconnect": "Disconnect",
+        "skipped_one": "1 item not synced (chrome:// / file:// URLs are local-only).",
+        "skipped_other": "{{count}} items not synced (chrome:// / file:// URLs are local-only)."
+      },
+      "disconnect": {
+        "title": "Disconnect sync?",
+        "description": "Your local workspaces stay on this device. The server still shows this device in its list until you revoke it from the Web management panel.",
+        "cancel": "Cancel",
+        "confirm": "Disconnect",
+        "confirming": "Disconnecting..."
       }
     },
     "export": {
