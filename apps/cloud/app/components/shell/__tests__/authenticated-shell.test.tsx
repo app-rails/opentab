@@ -38,7 +38,7 @@ describe("AuthenticatedShell", () => {
       { rootLoaderData },
     );
 
-    // Logo: AppLogo renders an <img alt="OpenTab"> + BetterAuth icon
+    // Logo: AppLogo renders an <img alt="OpenTab">
     const logoImg = await screen.findByAltText("OpenTab");
     expect(logoImg).toBeVisible();
 
