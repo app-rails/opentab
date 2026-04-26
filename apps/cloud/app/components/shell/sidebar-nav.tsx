@@ -1,5 +1,5 @@
 import { CircleGaugeIcon, LaptopIcon, LayoutDashboardIcon, SettingsIcon } from "lucide-react";
-import { href, NavLink } from "react-router";
+import { href, Link, useLocation } from "react-router";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "~/components/ui/sidebar";
 import { useAuthUser } from "~/hooks/use-auth-user";
 
@@ -7,6 +7,12 @@ type NavItem = {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  /**
+   * When true, only an exact path match activates this item; otherwise a
+   * `currentPath.startsWith(to + "/")` prefix match also counts so subroutes
+   * (e.g. `/settings/account`) keep their parent item highlighted.
+   */
+  exact?: boolean;
 };
 
 // `/dash` and `/devices` use plain string paths (matches `routes/layout.tsx`)
@@ -16,7 +22,7 @@ const DEVICES_PATH = "/devices";
 
 function buildNavItems(role: string | null | undefined): NavItem[] {
   const items: NavItem[] = [
-    { to: DASH_PATH, label: "Dashboard", icon: LayoutDashboardIcon },
+    { to: DASH_PATH, label: "Dashboard", icon: LayoutDashboardIcon, exact: true },
     { to: DEVICES_PATH, label: "Devices", icon: LaptopIcon },
     { to: href("/settings/account"), label: "Settings", icon: SettingsIcon },
   ];
@@ -26,31 +32,39 @@ function buildNavItems(role: string | null | undefined): NavItem[] {
   return items;
 }
 
+function isActiveLink(currentPath: string, targetUrl: string, exact = false): boolean {
+  if (currentPath === targetUrl) return true;
+  if (exact) return false;
+  return currentPath.startsWith(`${targetUrl}/`);
+}
+
 /**
  * Primary in-app navigation rendered inside the authenticated sidebar.
  *
- * Active state flows from React Router's `<NavLink>` render prop into
- * `SidebarMenuButton`'s `isActive` prop, which sets `data-active` on the
- * rendered element so shadcn's variant styles light up.
+ * Mirrors the admin `nav-group.tsx` convention: `useLocation()` drives a
+ * local `isActiveLink` helper, then `<SidebarMenuButton asChild>` wraps a
+ * plain `<Link>` so shadcn's `data-active` / `data-slot` attributes land on
+ * the anchor itself rather than on a synthetic span wrapper.
  */
 export function SidebarNav() {
   const user = useAuthUser();
   const items = buildNavItems(user.role);
+  const { pathname } = useLocation();
 
   return (
     <SidebarMenu>
       {items.map((item) => (
         <SidebarMenuItem key={item.to}>
-          <NavLink to={item.to} end={item.to === DASH_PATH}>
-            {({ isActive }) => (
-              <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                <span>
-                  <item.icon />
-                  <span>{item.label}</span>
-                </span>
-              </SidebarMenuButton>
-            )}
-          </NavLink>
+          <SidebarMenuButton
+            asChild
+            isActive={isActiveLink(pathname, item.to, item.exact)}
+            tooltip={item.label}
+          >
+            <Link to={item.to}>
+              <item.icon />
+              <span>{item.label}</span>
+            </Link>
+          </SidebarMenuButton>
         </SidebarMenuItem>
       ))}
     </SidebarMenu>

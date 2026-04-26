@@ -51,11 +51,9 @@ describe("SidebarNav", () => {
     renderNav({ role: "user", initialEntries: ["/dash"] });
 
     const dashboardLink = await screen.findByRole("link", { name: /Dashboard/ });
-    const activeButton = dashboardLink.querySelector('[data-slot="sidebar-menu-button"]');
-    expect(activeButton).toHaveAttribute("data-active", "true");
+    expect(dashboardLink).toHaveAttribute("data-active", "true");
 
     const devicesLink = screen.getByRole("link", { name: /Devices/ });
-    const inactiveButton = devicesLink.querySelector('[data-slot="sidebar-menu-button"]');
-    expect(inactiveButton).toHaveAttribute("data-active", "false");
+    expect(devicesLink).toHaveAttribute("data-active", "false");
   });
 });
