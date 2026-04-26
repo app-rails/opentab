@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { WorkspaceIcon } from "~/components/workspace-icon";
 import { collectionTabs, tabCollections, workspaces } from "~/drizzle/schema";
 import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { getPageTitle } from "~/lib/utils";
@@ -172,9 +173,7 @@ export default function WorkspaceListRoute({
                       to={`/dash/workspace/${ws.syncId}`}
                       className="inline-flex items-center gap-2 font-medium hover:underline"
                     >
-                      <span aria-hidden className="text-base">
-                        {ws.icon ?? "🗂️"}
-                      </span>
+                      <WorkspaceIcon value={ws.icon} className="text-muted-foreground" />
                       {ws.name}
                     </Link>
                   </TableCell>

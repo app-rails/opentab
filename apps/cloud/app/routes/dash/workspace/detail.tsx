@@ -15,6 +15,7 @@ import { DateTimeDisplay } from "~/components/datetime-display";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
+import { WorkspaceIcon } from "~/components/workspace-icon";
 import { collectionTabs, tabCollections, workspaces } from "~/drizzle/schema";
 import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { cn, getPageTitle } from "~/lib/utils";
@@ -226,9 +227,7 @@ export default function WorkspaceDetailRoute({
     <div className="space-y-6 p-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span aria-hidden className="text-3xl">
-            {workspace.icon ?? "🗂️"}
-          </span>
+          <WorkspaceIcon value={workspace.icon} className="size-7 text-muted-foreground" />
           <h1 className="font-semibold text-2xl">{workspace.name}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
