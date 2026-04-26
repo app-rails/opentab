@@ -1,6 +1,6 @@
 import type { ExchangeConsumeResponse, HealthResponse } from "@opentab/protocol";
 import { assign, fromPromise, setup } from "xstate";
-import { DEFAULT_SYNC_HOST } from "./config";
+import { DEFAULT_SYNC_HOST, normalizeHost } from "./config";
 import type {
   CheckHealthInput,
   ConsumeExchangeInput,
@@ -77,7 +77,7 @@ function buildInitialContext(input: CreateSetupMachineInput): WizardContext & {
     extensionVersion: input.extensionVersion,
     deviceId: input.deviceId,
     syncEngine: input.syncEngine ?? null,
-    host: input.initialHost ?? DEFAULT_SYNC_HOST,
+    host: normalizeHost(input.initialHost ?? DEFAULT_SYNC_HOST),
     hasLocalData: input.hasLocalData,
     hasServerData: false,
     nonce: null,
@@ -178,7 +178,7 @@ export function createSetupMachine(opts: CreateSetupMachineOptions) {
           START: { target: "host_input" },
           HOST_SUBMITTED: {
             target: "permission_requesting",
-            actions: assign({ host: ({ event }) => event.host }),
+            actions: assign({ host: ({ event }) => normalizeHost(event.host) }),
           },
         },
       },
@@ -187,7 +187,7 @@ export function createSetupMachine(opts: CreateSetupMachineOptions) {
         on: {
           HOST_SUBMITTED: {
             target: "permission_requesting",
-            actions: assign({ host: ({ event }) => event.host }),
+            actions: assign({ host: ({ event }) => normalizeHost(event.host) }),
           },
         },
       },
@@ -269,7 +269,7 @@ export function createSetupMachine(opts: CreateSetupMachineOptions) {
           RETRY: { target: "health_checking" },
           HOST_SUBMITTED: {
             target: "permission_requesting",
-            actions: assign({ host: ({ event }) => event.host }),
+            actions: assign({ host: ({ event }) => normalizeHost(event.host) }),
           },
         },
       },
@@ -368,7 +368,7 @@ export function createSetupMachine(opts: CreateSetupMachineOptions) {
           RETRY: { target: "awaiting_authorization" },
           HOST_SUBMITTED: {
             target: "permission_requesting",
-            actions: assign({ host: ({ event }) => event.host }),
+            actions: assign({ host: ({ event }) => normalizeHost(event.host) }),
           },
           START: { target: "host_input" },
         },

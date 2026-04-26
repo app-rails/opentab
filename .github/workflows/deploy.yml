@@ -6,6 +6,15 @@ concurrency:
 
 on:
   workflow_dispatch:
+    inputs:
+      app_url:
+        description: "Target dev APP_URL (ignored on tag push — prod is fixed)"
+        required: true
+        type: choice
+        default: https://opentab-dev.apprails.io
+        options:
+          - https://opentab-dev.apprails.io
+          - https://opentab-stage.apprails.io
   push:
     tags: ['v*.*.*']
 
@@ -36,7 +45,7 @@ jobs:
             fi
             echo "stage=dev"     >> "$GITHUB_OUTPUT"
             echo "env_name=dev"  >> "$GITHUB_OUTPUT"
-            echo "app_url=https://opentab-dev.apprails.io" >> "$GITHUB_OUTPUT"
+            echo "app_url=${{ inputs.app_url }}" >> "$GITHUB_OUTPUT"
           fi
 
   deploy:

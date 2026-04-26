@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
-import type { SetupCallbackPayload } from "@/entrypoints/setup-callback/main";
-import { PENDING_CALLBACK_STORAGE_KEY } from "@/entrypoints/setup-callback/main";
 import { MSG } from "@/lib/constants";
+import {
+  PENDING_CALLBACK_STORAGE_KEY,
+  type SetupCallbackPayload,
+} from "@/lib/sync-setup/setup-callback-shared";
 
 /**
  * Bridge between the `/setup-callback` page and the wizard UI (spec §2.4.5a).

@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { parseWorkerEnv } from "@opentab/config/env/worker";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
@@ -10,16 +11,28 @@ import {
 import { getExtensionOrigins } from "~/lib/allowlist-origins";
 import { appName, cookiePrefix } from "~/lib/config";
 import { db } from "../db.server";
-import { isDevelopment } from "../env.server";
 import { ac, admin, editor } from "./permissions";
 
-const baseURL = isDevelopment ? "http://localhost:5173" : env.APP_URL;
+// Schema-validated worker env. Module-level call runs once when the CF Worker
+// isolate boots, fail-fast on any missing/malformed binding. CF bindings that
+// are not strings (DB, APP_KV) stay on the raw `env` from cloudflare:workers.
+const workerEnv = parseWorkerEnv(env);
+const isDevEnv = workerEnv.APP_ENV === "development";
+
+// trustedOrigins single source of truth = workerEnv.APP_URL.
+//   - dev local: http://localhost:5173 (DEV_APP_URL_LIST locks this; vite
+//     strictPort enforces the port end-to-end so the browser Origin matches)
+//   - dev remote: https://opentab-dev.apprails.io (or staging variant)
+//   - prod: https://opentab.apprails.io
+// GitHub OAuth callback is registered at the dev local URL, so any localhost
+// port wildcard would diverge from the OAuth callback — keep this strict.
+const trustedOrigins = [workerEnv.APP_URL, ...getExtensionOrigins(workerEnv)];
 
 const options = {
   appName,
-  baseURL,
-  secret: env.BETTER_AUTH_SECRET,
-  trustedOrigins: [baseURL, "http://localhost:4173", ...getExtensionOrigins(env)],
+  baseURL: workerEnv.APP_URL,
+  secret: workerEnv.BETTER_AUTH_SECRET,
+  trustedOrigins,
 
   database: drizzleAdapter(db, {
     provider: "sqlite",
@@ -37,7 +50,7 @@ const options = {
     enabled: true,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url, token }) => {
-      if (env.APP_ENV === "development") {
+      if (isDevEnv) {
         console.log("Send email to reset password");
         console.log("User", user);
         console.log("URL", url);
@@ -52,7 +65,7 @@ const options = {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url, token }) => {
-      if (env.APP_ENV === "development") {
+      if (isDevEnv) {
         console.log("Send email to verify email address");
         console.log(user, url, token);
       } else {
@@ -63,8 +76,8 @@ const options = {
 
   socialProviders: {
     github: {
-      clientId: env.GITHUB_CLIENT_ID || "",
-      clientSecret: env.GITHUB_CLIENT_SECRET || "",
+      clientId: workerEnv.GITHUB_CLIENT_ID,
+      clientSecret: workerEnv.GITHUB_CLIENT_SECRET,
     },
   },
 
@@ -99,7 +112,9 @@ const options = {
       },
     }),
     adminPlugin({
-      adminUserIds: [env.BETTER_AUTH_ADMIN_USER_ID],
+      adminUserIds: workerEnv.BETTER_AUTH_ADMIN_USER_ID
+        ? [workerEnv.BETTER_AUTH_ADMIN_USER_ID]
+        : [],
       ac,
       roles: {
         admin,

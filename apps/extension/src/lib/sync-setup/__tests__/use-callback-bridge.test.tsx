@@ -1,8 +1,10 @@
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { SetupCallbackPayload } from "@/entrypoints/setup-callback/main";
-import { PENDING_CALLBACK_STORAGE_KEY } from "@/entrypoints/setup-callback/main";
 import { MSG } from "@/lib/constants";
+import {
+  PENDING_CALLBACK_STORAGE_KEY,
+  type SetupCallbackPayload,
+} from "@/lib/sync-setup/setup-callback-shared";
 import { useSetupCallbackBridge } from "@/lib/sync-setup/use-callback-bridge";
 
 /**

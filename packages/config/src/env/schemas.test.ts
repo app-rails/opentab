@@ -23,6 +23,7 @@ describe("BaseSchema", () => {
 
 const validWorkerEnv = {
   APP_URL: "https://opentab-dev.apprails.io",
+  APP_ENV: "development",
   BETTER_AUTH_SECRET: "x".repeat(32),
   BETTER_AUTH_ADMIN_USER_ID: "user_abc",
   GITHUB_CLIENT_ID: "client-id",
@@ -58,6 +59,18 @@ describe("WorkerEnvSchema", () => {
   it("treats missing BETTER_AUTH_ADMIN_USER_ID as empty string", () => {
     const { BETTER_AUTH_ADMIN_USER_ID: _omit, ...withoutAdmin } = validWorkerEnv;
     expect(WorkerEnvSchema.parse(withoutAdmin).BETTER_AUTH_ADMIN_USER_ID).toBe("");
+  });
+
+  it("rejects invalid APP_ENV", () => {
+    expect(() => WorkerEnvSchema.parse({ ...validWorkerEnv, APP_ENV: "prod" })).toThrow();
+  });
+
+  it("accepts APP_ENV=test for the vitest shim", () => {
+    expect(WorkerEnvSchema.parse({ ...validWorkerEnv, APP_ENV: "test" }).APP_ENV).toBe("test");
+  });
+
+  it("defaults CHROMIUM_EXTENSION_IDS to empty string", () => {
+    expect(WorkerEnvSchema.parse(validWorkerEnv).CHROMIUM_EXTENSION_IDS).toBe("");
   });
 });
 

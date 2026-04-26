@@ -1,4 +1,4 @@
-import { type WorkerEnv, WorkerEnvSchema } from "./schemas";
+import { type WorkerEnv, WorkerEnvSchema } from "./schemas.ts";
 
 export type { WorkerEnv };
 

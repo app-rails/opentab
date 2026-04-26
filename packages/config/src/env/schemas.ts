@@ -18,7 +18,10 @@ export const BaseSchema = z.object({
 
 export type BaseEnv = z.infer<typeof BaseSchema>;
 
-export const WorkerEnvSchema = z.object({
+// Fields shared by the alchemy IaC layer (read from process.env) and the
+// worker runtime (read from CF bindings). Defined once to keep both schemas
+// in lockstep — alchemy passes these through to the worker as bindings.
+const SharedSecretsSchema = z.object({
   // Scheme requirement is delegated to the per-stage check in
   // AlchemyEnvSchema.superRefine — dev allows http for localhost.
   APP_URL: z.url(),
@@ -36,9 +39,18 @@ export const WorkerEnvSchema = z.object({
     .min(32, "SESSION_SECRET must be ≥32 chars (use openssl rand -base64 32)"),
 });
 
+// Worker runtime env: shared secrets + alchemy-injected runtime bindings.
+// `APP_ENV` is derived in alchemy.run.ts (`prod ? "production" : "development"`)
+// — it does not exist at the IaC layer, so it is NOT in SharedSecrets.
+// `"test"` covers the vitest cloudflare-workers shim.
+export const WorkerEnvSchema = SharedSecretsSchema.extend({
+  APP_ENV: z.enum(["development", "production", "test"]),
+  CHROMIUM_EXTENSION_IDS: z.string().default(""),
+});
+
 export type WorkerEnv = z.infer<typeof WorkerEnvSchema>;
 
-export const AlchemyEnvSchema = BaseSchema.extend(WorkerEnvSchema.shape)
+export const AlchemyEnvSchema = BaseSchema.extend(SharedSecretsSchema.shape)
   .extend({
     ALCHEMY_STAGE: z.enum(STAGES),
     ALCHEMY_PASSWORD: z.string().min(8, "ALCHEMY_PASSWORD encrypts state secrets; use ≥8 chars"),

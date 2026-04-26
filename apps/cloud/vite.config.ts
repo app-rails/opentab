@@ -22,6 +22,14 @@ export default defineConfig({
   plugins: [...alchemyPlugins, tailwindcss(), reactRouter(), tsconfigPaths(), devtoolsJson()],
   server: {
     open: true,
+    // DEV_APP_URL_LIST locks dev local APP_URL host to localhost:5173 (the
+    // GitHub OAuth callback URL is registered there). If 5173 is occupied
+    // (e.g. multi-workspace runs), strictPort makes vite fail loudly instead
+    // of silently moving to 5174 — a moved port would mismatch the OAuth
+    // callback and BetterAuth trustedOrigins, surfacing as INVALID_ORIGIN
+    // far from the root cause.
+    port: 5173,
+    strictPort: true,
   },
   build: {
     minify: true,

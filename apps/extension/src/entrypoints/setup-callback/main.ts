@@ -1,4 +1,9 @@
 import { MSG } from "@/lib/constants";
+import {
+  PENDING_CALLBACK_STORAGE_KEY,
+  parseCallbackParams,
+  type SetupCallbackPayload,
+} from "@/lib/sync-setup/setup-callback-shared";
 
 /**
  * Setup-callback bridge (spec §2.4.5a).
@@ -7,26 +12,15 @@ import { MSG } from "@/lib/constants";
  * after the `/connect/extension` handoff finishes. Because the wizard tab may
  * be closed by the time the user lands here, we do a durable write first and a
  * best-effort runtime notification second, then auto-close the tab.
+ *
+ * NOTE: this file has top-level side effects (init() and DOMContentLoaded
+ * listener at the bottom). Anything that needs the storage key or payload
+ * shape MUST import from `~/lib/sync-setup/setup-callback-shared` instead —
+ * importing from this file pulls those side effects into the consumer chunk,
+ * which auto-closed the settings tab when the wizard module pulled it in.
  */
 
-export const PENDING_CALLBACK_STORAGE_KEY = "opentab_pending_setup_callback_v1";
 const AUTO_CLOSE_DELAY_MS = 1500;
-
-export interface SetupCallbackPayload {
-  exchangeCode: string | null;
-  nonce: string | null;
-  error: string | null;
-  receivedAt: number;
-}
-
-export function parseCallbackParams(search: string): Omit<SetupCallbackPayload, "receivedAt"> {
-  const params = new URLSearchParams(search);
-  return {
-    exchangeCode: params.get("exchange_code"),
-    nonce: params.get("nonce"),
-    error: params.get("error"),
-  };
-}
 
 export async function writePendingCallback(payload: SetupCallbackPayload): Promise<void> {
   try {

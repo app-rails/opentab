@@ -3,7 +3,6 @@ import { Input } from "@opentab/ui/components/input";
 import { useMachine } from "@xstate/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fromPromise } from "xstate";
-import type { SetupCallbackPayload } from "@/entrypoints/setup-callback/main";
 import { MSG } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { activeWorkspaces } from "@/lib/db-queries";
@@ -16,6 +15,7 @@ import { exportLocalBackupToDownloads } from "@/lib/sync-setup/backup";
 import { DEFAULT_SYNC_HOST } from "@/lib/sync-setup/config";
 import { getOrCreatePersistedDeviceId } from "@/lib/sync-setup/device-identity";
 import { consumeExchangeCode, openAuthorizationTab } from "@/lib/sync-setup/exchange";
+import type { SetupCallbackPayload } from "@/lib/sync-setup/setup-callback-shared";
 import { createSetupMachine, type SetupMachineActors } from "@/lib/sync-setup/state-machine";
 import type {
   CheckHealthInput,

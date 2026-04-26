@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { handleCallback } from "@/entrypoints/setup-callback/main";
+import { MSG } from "@/lib/constants";
 import {
-  handleCallback,
   PENDING_CALLBACK_STORAGE_KEY,
   parseCallbackParams,
-} from "@/entrypoints/setup-callback/main";
-import { MSG } from "@/lib/constants";
+} from "@/lib/sync-setup/setup-callback-shared";
 
 type StorageRecord = Record<string, unknown>;
 

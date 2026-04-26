@@ -123,7 +123,7 @@ CI calls only `deploy` (with stage-aware env injection); no human runs
 
 | Stage    | URL                            | CI workflow that targets it                | Notes |
 |----------|--------------------------------|--------------------------------------------|-------|
-| `dev`    | `https://opentab-dev.apprails.io` (default; `workflow_dispatch` chooses from `DEV_APP_URL_LIST`) | `deploy.yml` (workflow_dispatch, main only) | Day-to-day shared remote env |
+| `dev`    | `https://opentab-dev.apprails.io` (default; `workflow_dispatch` chooses from `DEV_APP_URL_LIST`. Local emulator: `http://localhost:5173` — port locked by GitHub OAuth callback registration; vite uses `strictPort: true`) | `deploy.yml` (workflow_dispatch, main only) | Day-to-day shared remote env |
 | `staging`| reserved (no URL)              | none                                       | Enum value retained for future expansion |
 | `prod`   | `https://opentab.apprails.io`  | `deploy.yml` (push tag `v*.*.*`)           | Requires `CI=true`; GH `production` environment can require reviewers |
 
@@ -287,14 +287,30 @@ Two-layer pattern (matches shiprails reference, simplified for opentab):
 - **`BaseSchema`** — minimal floor. Every node entry pays this:
   - `NODE_ENV: enum("development","production","test")` (default `development`)
   - `CI: string().optional()`
-- **`WorkerEnvSchema`** — what the Worker runtime sees from CF bindings:
+- **`SharedSecretsSchema`** (internal) — fields that flow through both the
+  IaC layer (read from `process.env`) and the worker runtime (read from CF
+  bindings). Defined once so both schemas stay in lockstep:
   - `APP_URL: url()` (scheme is enforced per stage, not at this layer — dev
     allows `http://localhost:5173` for the local emulator)
   - `BETTER_AUTH_SECRET: string().min(32)`
-  - `BETTER_AUTH_ADMIN_USER_ID: string().min(1)`
+  - `BETTER_AUTH_ADMIN_USER_ID: string().optional().transform(v => v ?? "")`
   - `GITHUB_CLIENT_ID: string().min(1)`
   - `GITHUB_CLIENT_SECRET: string().min(1)`
-- **`AlchemyEnvSchema`** — `BaseSchema.extend(WorkerEnvSchema.shape).extend({ ... })`,
+  - `SESSION_SECRET: string().min(32)`
+- **`WorkerEnvSchema`** — `SharedSecretsSchema.extend({ ... })`. What the
+  Worker runtime sees from CF bindings; adds runtime-only fields that don't
+  exist at the IaC layer:
+  - `APP_ENV: enum("development","production","test")` — derived in
+    `alchemy.run.ts` as `prod ? "production" : "development"`. The `"test"`
+    arm covers the vitest `cloudflare:workers` shim.
+  - `CHROMIUM_EXTENSION_IDS: string().default("")` — same name as the alchemy
+    field but parsed independently (alchemy reads from `.env`; worker reads
+    from binding).
+  - Worker business code MUST go through `parseWorkerEnv(env)` to read these
+    string bindings (see `apps/cloud/app/services/auth/auth.server.ts` for
+    the canonical pattern). Raw `cloudflare:workers` `env` access is reserved
+    for CF binding objects (`DB`, `APP_KV`) that aren't in zod's range.
+- **`AlchemyEnvSchema`** — `BaseSchema.extend(SharedSecretsSchema.shape).extend({ ... })`,
   adding the IaC-specific fields:
   - `ALCHEMY_STAGE: enum("dev","staging","prod")`
   - `ALCHEMY_PASSWORD: string().min(8)`
