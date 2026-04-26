@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AlchemyEnvSchema, BaseSchema, WorkerEnvSchema } from "./schemas";
+import { AlchemyEnvSchema, BaseSchema, WorkerEnvSchema } from "./schemas.ts";
 
 describe("BaseSchema", () => {
   it("defaults NODE_ENV to development", () => {
@@ -35,10 +35,8 @@ describe("WorkerEnvSchema", () => {
     expect(() => WorkerEnvSchema.parse(validWorkerEnv)).not.toThrow();
   });
 
-  it("rejects http:// APP_URL (must be https)", () => {
-    expect(() => WorkerEnvSchema.parse({ ...validWorkerEnv, APP_URL: "http://x.example" })).toThrow(
-      /https/i,
-    );
+  it("rejects malformed APP_URL", () => {
+    expect(() => WorkerEnvSchema.parse({ ...validWorkerEnv, APP_URL: "not a url" })).toThrow();
   });
 
   it("rejects BETTER_AUTH_SECRET shorter than 32 chars", () => {
@@ -55,6 +53,11 @@ describe("WorkerEnvSchema", () => {
 
   it("rejects empty GITHUB_CLIENT_ID", () => {
     expect(() => WorkerEnvSchema.parse({ ...validWorkerEnv, GITHUB_CLIENT_ID: "" })).toThrow();
+  });
+
+  it("treats missing BETTER_AUTH_ADMIN_USER_ID as empty string", () => {
+    const { BETTER_AUTH_ADMIN_USER_ID: _omit, ...withoutAdmin } = validWorkerEnv;
+    expect(WorkerEnvSchema.parse(withoutAdmin).BETTER_AUTH_ADMIN_USER_ID).toBe("");
   });
 });
 
@@ -105,13 +108,45 @@ describe("AlchemyEnvSchema", () => {
     ).toThrow(/APP_URL/);
   });
 
-  it("rejects dev stage when APP_URL points to prod hostname", () => {
+  it("rejects dev stage when APP_URL host is not in DEV_APP_URL_LIST", () => {
     expect(() =>
       AlchemyEnvSchema.parse({
         ...validAlchemyEnv,
         APP_URL: "https://opentab.apprails.io",
       }),
     ).toThrow(/APP_URL/);
+    expect(() =>
+      AlchemyEnvSchema.parse({
+        ...validAlchemyEnv,
+        APP_URL: "https://random.example.com",
+      }),
+    ).toThrow(/not allowed/i);
+  });
+
+  it.each([
+    "https://opentab-dev.apprails.io",
+    "https://opentab-stage.apprails.io",
+    "http://localhost:5173",
+  ])("accepts dev stage APP_URL %s", (appUrl) => {
+    expect(() => AlchemyEnvSchema.parse({ ...validAlchemyEnv, APP_URL: appUrl })).not.toThrow();
+  });
+
+  it("rejects dev stage when remote APP_URL uses http instead of https", () => {
+    expect(() =>
+      AlchemyEnvSchema.parse({
+        ...validAlchemyEnv,
+        APP_URL: "http://opentab-dev.apprails.io",
+      }),
+    ).toThrow(/scheme/i);
+  });
+
+  it("rejects dev stage when localhost APP_URL uses https", () => {
+    expect(() =>
+      AlchemyEnvSchema.parse({
+        ...validAlchemyEnv,
+        APP_URL: "https://localhost:5173",
+      }),
+    ).toThrow(/scheme/i);
   });
 
   it("rejects staging stage with a clear reserved-not-wired message", () => {

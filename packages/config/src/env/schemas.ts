@@ -2,8 +2,14 @@ import { z } from "zod";
 
 const STAGES = ["dev", "staging", "prod"] as const;
 
-const PROD_HOSTNAME = "https://opentab.apprails.io";
-const DEV_HOSTNAME = "https://opentab-dev.apprails.io";
+const PROD_APP_URL = "https://opentab.apprails.io";
+// Allowed `URL.host` values (hostname[:port]) for ALCHEMY_STAGE=dev.
+// Includes localhost for `alchemy dev` local emulator.
+export const DEV_APP_URL_LIST = [
+  "opentab-dev.apprails.io",
+  "opentab-stage.apprails.io",
+  "localhost:5173",
+] as const;
 
 export const BaseSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -13,13 +19,16 @@ export const BaseSchema = z.object({
 export type BaseEnv = z.infer<typeof BaseSchema>;
 
 export const WorkerEnvSchema = z.object({
-  APP_URL: z.url().refine((s) => s.startsWith("https://"), {
-    message: "APP_URL must use https://",
-  }),
+  // Scheme requirement is delegated to the per-stage check in
+  // AlchemyEnvSchema.superRefine — dev allows http for localhost.
+  APP_URL: z.url(),
   BETTER_AUTH_SECRET: z
     .string()
     .min(32, "BETTER_AUTH_SECRET must be ≥32 chars (use `openssl rand -base64 32`)"),
-  BETTER_AUTH_ADMIN_USER_ID: z.string().min(1),
+  BETTER_AUTH_ADMIN_USER_ID: z
+    .string()
+    .optional()
+    .transform((v) => v ?? ""),
   GITHUB_CLIENT_ID: z.string().min(1),
   GITHUB_CLIENT_SECRET: z.string().min(1),
   SESSION_SECRET: z
@@ -57,20 +66,33 @@ export const AlchemyEnvSchema = BaseSchema.extend(WorkerEnvSchema.shape)
           message: "CI=true is required when ALCHEMY_STAGE=prod",
         });
       }
-      if (v.APP_URL !== PROD_HOSTNAME) {
+      if (v.APP_URL !== PROD_APP_URL) {
         ctx.addIssue({
           code: "custom",
           path: ["APP_URL"],
-          message: `APP_URL must be ${PROD_HOSTNAME} when ALCHEMY_STAGE=prod`,
+          message: `APP_URL must be ${PROD_APP_URL} when ALCHEMY_STAGE=prod`,
         });
       }
     }
-    if (v.ALCHEMY_STAGE === "dev" && v.APP_URL !== DEV_HOSTNAME) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["APP_URL"],
-        message: `APP_URL must be ${DEV_HOSTNAME} when ALCHEMY_STAGE=dev`,
-      });
+    if (v.ALCHEMY_STAGE === "dev") {
+      const url = new URL(v.APP_URL);
+      if (!(DEV_APP_URL_LIST as readonly string[]).includes(url.host)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["APP_URL"],
+          message: `APP_URL host "${url.host}" is not allowed when ALCHEMY_STAGE=dev (allowed: ${DEV_APP_URL_LIST.join(", ")})`,
+        });
+        return;
+      }
+      // localhost may use http (dev emulator); every other dev host must use https.
+      const expectedScheme = url.hostname === "localhost" ? "http:" : "https:";
+      if (url.protocol !== expectedScheme) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["APP_URL"],
+          message: `APP_URL scheme must be ${expectedScheme.replace(":", "")} for host "${url.host}"`,
+        });
+      }
     }
   });
 
