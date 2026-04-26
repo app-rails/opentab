@@ -75,7 +75,7 @@ CI calls only `deploy` (with stage-aware env injection); no human runs
 | 5 | env validation | zod schemas live in `packages/config/src/env/`. Four entrypoints exposed: `./env/schemas`, `./env/node`, `./env/worker`, `./env/browser` (browser is a placeholder) |
 | 6 | State store | `CloudflareStateStore` (self-provisioned on the CF account; no R2 bucket needed). `ALCHEMY_STATE_TOKEN` and `ALCHEMY_PASSWORD` are **never rotated** after first deploy |
 | 7 | CI triggers | One `ci.yml` (PR + push main → lint/typecheck/test/build); one `deploy.yml` (workflow_dispatch on `main` → dev; tag `v*.*.*` → prod). PRs do not deploy |
-| 8 | Custom domains | `dev` → `opentab-dev.apprails.io`; `prod` → `opentab.apprails.io`. Bound declaratively via Alchemy `CustomDomain`. Requires `apprails.io` zone hosted on Cloudflare |
+| 8 | Custom domains | `prod` is fixed to `opentab.apprails.io`. `dev` host is chosen from `DEV_APP_URL_LIST` (default `opentab-dev.apprails.io`; also `opentab-stage.apprails.io`, `localhost:5173`) and derived from `APP_URL`. Bound declaratively via Alchemy `CustomDomain`. Requires `apprails.io` zone hosted on Cloudflare |
 | 9 | OAuth isolation | One GitHub OAuth app per stage. env schema exposes a single `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` pair; CI selects the per-stage value via GitHub Actions environment-scoped secrets (same secret name, different values per environment) |
 | 10 | `alchemy destroy` | Manual only. Never wired to CI. Destroys all resources for the stage including D1 data |
 | 11 | Local dev DB path | Owned by `alchemy dev` via miniflare-style emulation (`.alchemy/local/`). `db:seed:local` and `db:studio` continue to work; the exact local D1 file path resolution is finalized in the implementation plan |
@@ -123,7 +123,7 @@ CI calls only `deploy` (with stage-aware env injection); no human runs
 
 | Stage    | URL                            | CI workflow that targets it                | Notes |
 |----------|--------------------------------|--------------------------------------------|-------|
-| `dev`    | `https://opentab-dev.apprails.io` | `deploy.yml` (workflow_dispatch, main only) | Day-to-day shared remote env |
+| `dev`    | `https://opentab-dev.apprails.io` (default; `workflow_dispatch` chooses from `DEV_APP_URL_LIST`) | `deploy.yml` (workflow_dispatch, main only) | Day-to-day shared remote env |
 | `staging`| reserved (no URL)              | none                                       | Enum value retained for future expansion |
 | `prod`   | `https://opentab.apprails.io`  | `deploy.yml` (push tag `v*.*.*`)           | Requires `CI=true`; GH `production` environment can require reviewers |
 
@@ -186,10 +186,9 @@ const app = await alchemy(appName, {
 });
 
 const prefix = `${appName}-${env.ALCHEMY_STAGE}`;
-const hostname =
-  env.ALCHEMY_STAGE === "prod"
-    ? "opentab.apprails.io"
-    : `opentab-${env.ALCHEMY_STAGE}.apprails.io`;
+// hostname is derived from APP_URL; the per-stage allowlist in
+// AlchemyEnvSchema is what restricts which hosts may appear.
+const hostname = new URL(env.APP_URL).hostname;
 
 const db = await D1Database("db", {
   name: `${prefix}-db`,
@@ -289,7 +288,8 @@ Two-layer pattern (matches shiprails reference, simplified for opentab):
   - `NODE_ENV: enum("development","production","test")` (default `development`)
   - `CI: string().optional()`
 - **`WorkerEnvSchema`** — what the Worker runtime sees from CF bindings:
-  - `APP_URL: url()` (must be `https://`)
+  - `APP_URL: url()` (scheme is enforced per stage, not at this layer — dev
+    allows `http://localhost:5173` for the local emulator)
   - `BETTER_AUTH_SECRET: string().min(32)`
   - `BETTER_AUTH_ADMIN_USER_ID: string().min(1)`
   - `GITHUB_CLIENT_ID: string().min(1)`
@@ -303,13 +303,19 @@ Two-layer pattern (matches shiprails reference, simplified for opentab):
   - `CLOUDFLARE_API_TOKEN: string().min(1)`
   - `CLOUDFLARE_ZONE_ID: string().min(1)` (for `apprails.io` zone)
   - `superRefine` cross-checks:
-    - For `dev` and `prod`, `APP_URL` must match the per-stage hostname
-      (`opentab.apprails.io` for prod, `opentab-dev.apprails.io` for dev) —
-      guards against mis-routed deploys.
+    - For `prod`, `APP_URL` must equal `https://opentab.apprails.io` exactly
+      — the production hostname is fixed, no overrides.
+    - For `dev`, `new URL(APP_URL).host` must be in `DEV_APP_URL_LIST`
+      (`opentab-dev.apprails.io`, `opentab-stage.apprails.io`,
+      `localhost:5173`). Lets us point dev deploys at a staging subdomain or
+      run the local emulator without code changes, while still keeping the
+      set of allowed hosts explicit.
     - For `staging`, the schema rejects with a clear "staging is reserved
       but not wired" message until a future change adds its hostname.
     - `prod` stage forces `CI === "true"` (defense in depth; the runtime
       check in `alchemy.run.ts` is the primary enforcer).
+    - Additionally, `localhost` must use `http://` and every other dev host
+      must use `https://` — guards against accidental scheme drift.
 
 ### 3.3 Entrypoints
 
@@ -541,6 +547,15 @@ concurrency:
 
 on:
   workflow_dispatch:
+    inputs:
+      app_url:
+        description: "Target dev APP_URL (ignored on tag push — prod is fixed)"
+        required: true
+        type: choice
+        default: https://opentab-dev.apprails.io
+        options:
+          - https://opentab-dev.apprails.io
+          - https://opentab-stage.apprails.io
   push:
     tags: ['v*.*.*']
 
@@ -558,6 +573,8 @@ jobs:
     steps:
       - id: flag
         shell: bash
+        env:
+          DEV_APP_URL_INPUT: ${{ inputs.app_url }}
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v*.*.* ]]; then
             echo "stage=prod"        >> "$GITHUB_OUTPUT"
@@ -570,7 +587,7 @@ jobs:
             fi
             echo "stage=dev"      >> "$GITHUB_OUTPUT"
             echo "env_name=dev"   >> "$GITHUB_OUTPUT"
-            echo "app_url=https://opentab-dev.apprails.io" >> "$GITHUB_OUTPUT"
+            echo "app_url=${DEV_APP_URL_INPUT}" >> "$GITHUB_OUTPUT"
           fi
 
   deploy:
@@ -717,7 +734,11 @@ CLOUDFLARE_ZONE_ID=
 # ============================================================================
 # Application config (per stage; values below are dev defaults)
 # ============================================================================
-# Public URL of this stage. Must match the Custom Domain in alchemy.run.ts.
+# Public URL of this stage. Drives the Custom Domain hostname in
+# alchemy.run.ts (derived via `new URL(APP_URL).hostname`).
+# - prod: must be `https://opentab.apprails.io`
+# - dev: host must be in DEV_APP_URL_LIST
+#   (opentab-dev.apprails.io, opentab-stage.apprails.io, localhost:5173)
 APP_URL=https://opentab-dev.apprails.io
 
 # BetterAuth signing secret.
