@@ -1,9 +1,8 @@
-import { env } from "cloudflare:workers";
+import { isProdEnv, workerEnv } from "@opentab/config/env/worker";
 import { createCookieSessionStorage, data, redirect } from "react-router";
 import { z } from "zod/v4";
 import { cookiePrefix } from "~/lib/config";
 import { combineHeaders } from "~/lib/utils";
-import { isProduction } from "./env.server";
 
 const toastKey = "flash-toast";
 
@@ -23,8 +22,8 @@ const toastSessionStorage = createCookieSessionStorage({
     sameSite: "lax",
     path: "/",
     httpOnly: true,
-    secrets: env.SESSION_SECRET.split(","),
-    secure: isProduction,
+    secrets: workerEnv.SESSION_SECRET.split(","),
+    secure: isProdEnv,
   },
 });
 

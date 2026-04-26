@@ -1,11 +1,11 @@
 import crypto from "node:crypto";
+import { isDevEnv } from "@opentab/config/env/worker";
 import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
 import type { EntryContext, HandleErrorFunction } from "react-router";
 import { isRouteErrorResponse, ServerRouter } from "react-router";
 import { NonceProvider } from "./hooks/use-nonce";
 import { buildContentSecurityPolicy } from "./lib/csp";
-import { isDevelopment } from "./services/env.server";
 
 export default async function handleRequest(
   request: Request,
@@ -20,9 +20,9 @@ export default async function handleRequest(
   const contentSecurityPolicy = buildContentSecurityPolicy({
     baseUri: ["'self'"],
     objectSrc: ["'none'"],
-    connectSrc: ["'self'", isDevelopment ? "ws:" : ""],
+    connectSrc: ["'self'", isDevEnv ? "ws:" : ""],
     scriptSrc: ["'self'", `'nonce-${nonce}'`],
-    workerSrc: ["'self'", isDevelopment ? "blob:" : ""],
+    workerSrc: ["'self'", isDevEnv ? "blob:" : ""],
     scriptSrcAttr: [`'nonce-${nonce}'`],
     imgSrc: ["'self'", "data:", "blob:", "https:"],
     fontSrc: ["'self'", "https://fonts.gstatic.com"],

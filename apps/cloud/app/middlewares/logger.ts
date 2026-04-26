@@ -1,5 +1,5 @@
+import { isProdEnv } from "@opentab/config/env/worker";
 import type { MiddlewareFunction } from "react-router";
-import { isProduction } from "~/services/env.server";
 
 enum LogPrefix {
   Outgoing = "-->",
@@ -67,7 +67,7 @@ function log(prefix: string, method: string, path: string, status = 0, elapsed?:
  * @returns A React Router middleware function.
  */
 export const logger: MiddlewareFunction = async ({ request }, next) => {
-  if (isProduction) {
+  if (isProdEnv) {
     return next();
   }
 

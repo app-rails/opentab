@@ -1,3 +1,4 @@
+import { isProdEnv } from "@opentab/config/env/worker";
 import { count } from "drizzle-orm";
 import { FileStackIcon, FoldersIcon, TagsIcon, UsersIcon } from "lucide-react";
 import { Suspense } from "react";
@@ -8,7 +9,6 @@ import { users } from "~/drizzle/schema";
 import { useAuthUser } from "~/hooks/use-auth-user";
 import { getPageTitle } from "~/lib/utils";
 import { db } from "~/services/db.server";
-import { isProduction } from "~/services/env.server";
 import type { Route } from "./+types/dashboard";
 
 export function meta() {
@@ -38,7 +38,7 @@ export async function loader(_: Route.LoaderArgs) {
     totalContentPromise,
     categoriesCountPromise,
     tagsCountPromise,
-    nodeEnv: isProduction ? "production" : "development",
+    nodeEnv: isProdEnv ? "production" : "development",
     metaEnv: import.meta.env,
   });
 }
