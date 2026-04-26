@@ -6,8 +6,8 @@ import { CloudflareStateStore } from "alchemy/state";
 // All env validation happens in @opentab/config — fail-fast on missing /
 // malformed values before any CF resource is touched. AlchemyEnvSchema also
 // enforces:
-//   - prod requires CI=true
-//   - APP_URL must match the per-stage hostname
+//   - prod requires CI=true and APP_URL === https://opentab.apprails.io
+//   - dev requires APP_URL host ∈ DEV_APP_URL_LIST
 //   - staging is rejected (reserved, no hostname mapped yet)
 const env = getAlchemyEnv();
 
@@ -34,7 +34,18 @@ const app = await alchemy(appName, {
 });
 
 const prefix = `${appName}-${env.ALCHEMY_STAGE}`;
-const hostname = env.ALCHEMY_STAGE === "prod" ? "opentab.apprails.io" : "opentab-dev.apprails.io";
+// hostname is derived from APP_URL — the schema already restricts which
+// values APP_URL may take per stage (prod: fixed; dev: DEV_APP_URL_LIST).
+const hostname = new URL(env.APP_URL).hostname;
+const isLocalHost = hostname === "localhost";
+
+// Hard-fail in CI: a localhost APP_URL would create a worker but fail
+// CustomDomain creation, leaving orphan resources in the CF account.
+if (isLocalHost && env.CI === "true") {
+  throw new Error(
+    "APP_URL=localhost is local-dev only. CI cannot deploy a worker bound to localhost.",
+  );
+}
 
 const db = await D1Database("db", {
   name: `${prefix}-db`,
@@ -69,11 +80,17 @@ export const worker = await ReactRouter("worker", {
 // Pass the worker's `name` so Alchemy binds the domain to the freshly
 // created/updated worker. Verified via alchemy/cloudflare/custom-domain.d.ts
 // in alchemy@^0.93.
-await CustomDomain("custom-domain", {
-  name: hostname,
-  workerName: worker.name,
-  zoneId: env.CLOUDFLARE_ZONE_ID,
-});
+// Skip CustomDomain when binding to localhost. `alchemy dev` (Scope.local)
+// already auto-skips it via the resource's default `dev: true`; this explicit
+// guard also covers the laptop-emergency-deploy footgun (`pnpm deploy` with
+// localhost APP_URL would otherwise create a worker then crash on CF API).
+if (!isLocalHost) {
+  await CustomDomain("custom-domain", {
+    name: hostname,
+    workerName: worker.name,
+    zoneId: env.CLOUDFLARE_ZONE_ID,
+  });
+}
 
 console.log({ url: `https://${hostname}` });
 
