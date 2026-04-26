@@ -140,8 +140,6 @@ vi.mock("@/lib/db", () => {
 
 vi.mock("@/lib/settings", () => ({
   getSettings: vi.fn(async () => ({
-    server_enabled: true,
-    server_url: "https://sync.example.com",
     theme: "system",
     locale: "en",
     welcome_dismissed: false,
@@ -357,29 +355,5 @@ describe("SyncEngine.push result bucketing", () => {
     expect(stored1.attemptCount).toBe(1);
     expect(stored1.lastError).toContain("fetch failed");
     expect(stored1.nextRetryAt).not.toBeNull();
-  });
-
-  it("short-circuits push when server_enabled is false", async () => {
-    const settingsModule = await import("@/lib/settings");
-    vi.mocked(settingsModule.getSettings).mockResolvedValueOnce({
-      server_enabled: false,
-      server_url: "",
-      theme: "system",
-      locale: "en",
-      welcome_dismissed: false,
-      sidebar_collapsed: false,
-      right_panel_collapsed: false,
-      sync_polling_interval: 60_000,
-    });
-
-    const row = seedPendingRow({ opId: "op-x" });
-    const push = vi.fn();
-    const client = mockSyncClient({ push });
-    const engine = new SyncEngine(client);
-
-    await engine.sync();
-
-    expect(push).not.toHaveBeenCalled();
-    expect(getState().outbox.find((r) => r.id === row.id)!.status).toBe("pending");
   });
 });

@@ -6,8 +6,6 @@ export type Locale = "en" | "zh";
 export type ThemeMode = "light" | "dark" | "system";
 
 export interface AppSettings {
-  server_enabled: boolean;
-  server_url: string;
   theme: ThemeMode;
   locale: Locale;
   welcome_dismissed: boolean;
@@ -17,8 +15,6 @@ export interface AppSettings {
 }
 
 const DEFAULTS: AppSettings = {
-  server_enabled: false,
-  server_url: "http://localhost:3001",
   theme: "system",
   locale: "en",
   welcome_dismissed: false,

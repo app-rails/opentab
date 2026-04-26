@@ -8,8 +8,6 @@ vi.mock("@/lib/settings", () => ({
 
 const defaultSettings = {
   locale: "en" as const,
-  server_enabled: false,
-  server_url: "",
   welcome_dismissed: false,
   sidebar_collapsed: false,
   right_panel_collapsed: false,

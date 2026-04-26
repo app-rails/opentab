@@ -102,8 +102,6 @@ export class SyncEngine {
   /** Check if a sync is needed based on polling interval, then sync. */
   async syncIfNeeded(): Promise<void> {
     const settings = await getSettings();
-    if (!settings.server_enabled) return;
-
     const meta = await db.syncMeta.get("lastSyncAt");
     const lastSyncAt = typeof meta?.value === "number" ? meta.value : 0;
     const now = Date.now();
@@ -127,9 +125,6 @@ export class SyncEngine {
     if (this.isSyncing) return;
     this.isSyncing = true;
     try {
-      const settings = await getSettings();
-      if (!settings.server_enabled) return;
-
       await this.push();
       const pullCount = await this.pull();
 
