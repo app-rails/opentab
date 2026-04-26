@@ -14,10 +14,18 @@ Chrome extension. Deployed on Cloudflare Workers (D1 + KV) via Alchemy IaC.
 
 ## Quick start (local)
 
-1. `cp .env.example .env` and fill values (see comments for each).
+1. `cp .env.example .env`. The default `APP_URL=http://localhost:5173`
+   works for `alchemy dev` immediately; fill in the secrets per the inline
+   comments.
 2. `pnpm install` at the repo root.
 3. `pnpm --filter @opentab/cloud dev` (= `alchemy dev`).
 4. Open http://localhost:5173.
+
+For GitHub OAuth to work locally, add
+`http://localhost:5173/api/auth/callback/github` as an **Authorization
+callback URL** on the dev GitHub OAuth app (one app per stage; see
+`docs/superpowers/specs/2026-04-24-apps-cloud-deployment-alchemy-design.md`
+§6.3).
 
 `alchemy dev` writes `.alchemy/local/wrangler.jsonc` (gitignored), starts
 local D1 + KV emulators, applies pending migrations from
@@ -67,6 +75,8 @@ Actions path.
 | `pnpm db:seed:local` errors with "Local D1 file not found" | Never ran `alchemy dev` | Run `pnpm dev` once to materialize the local emulator |
 | New developer cannot run `pnpm dev` | Missing or incomplete `.env` | `cp .env.example .env` and fill secrets; the parse error names the missing keys |
 | Build fails with `cloudflare:workers` not resolved | `.alchemy/local/wrangler.jsonc` missing AND vite SSR builtins fallback misconfigured | Run `alchemy dev` once, or check `vite.config.ts`'s fallback `environments.ssr.resolve.builtins` |
+| GitHub OAuth callback fails locally | Dev OAuth app missing the localhost callback URL | Add `http://localhost:5173/api/auth/callback/github` as an additional Authorization callback URL on the dev GitHub OAuth app |
+| `pnpm dev` not on port 5173 | Vite default overridden, or another process already on 5173 | The schema's `DEV_APP_URL_LIST` is locked to `localhost:5173`. Free the port (`lsof -i :5173`) rather than overriding — schema would reject any other localhost port |
 
 ## Destroy
 
