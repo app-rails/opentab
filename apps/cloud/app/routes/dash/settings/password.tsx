@@ -3,7 +3,12 @@ import { ChangePassword } from "~/components/settings/password-action";
 import { SettingRow } from "~/components/settings/setting-row";
 import { SettingsLayout } from "~/components/settings/settings-layout";
 import { buttonVariants } from "~/components/ui/button";
+import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { cn, getPageTitle } from "~/lib/utils";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: () => ({ label: "Password" }),
+};
 
 export function meta() {
   return [{ title: getPageTitle("Password") }];

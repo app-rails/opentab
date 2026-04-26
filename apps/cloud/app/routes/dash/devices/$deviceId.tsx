@@ -17,12 +17,20 @@ import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { devices, syncChangeLogs } from "~/drizzle/schema";
+import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { cn, getPageTitle } from "~/lib/utils";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import { revokeDevice } from "~/services/devices.server";
 import type { Db } from "~/services/sync-repo.server";
 import type { Route } from "./+types/$deviceId";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: (data) => {
+    const d = data as DeviceDetailLoaderData | undefined;
+    return [{ label: "Devices", href: "/dash/devices" }, { label: d?.device.name ?? "Device" }];
+  },
+};
 
 type DeviceDetailView = {
   id: string;

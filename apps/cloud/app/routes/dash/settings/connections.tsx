@@ -1,9 +1,14 @@
 import { GithubIcon } from "~/components/icons";
 import { SettingsLayout } from "~/components/settings/settings-layout";
 import { SocialConnection } from "~/components/settings/social-connection";
+import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { getPageTitle } from "~/lib/utils";
 import { auth } from "~/services/auth/auth.server";
 import type { Route } from "./+types/connections";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: () => ({ label: "Connections" }),
+};
 
 export function meta() {
   return [{ title: getPageTitle("Connections") }];

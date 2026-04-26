@@ -4,12 +4,17 @@ import { SettingRow } from "~/components/settings/setting-row";
 import { SettingsLayout } from "~/components/settings/settings-layout";
 import { UserAvatar } from "~/components/user/user-avatar";
 import { useAuthUser } from "~/hooks/use-auth-user";
+import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { getPageTitle } from "~/lib/utils";
 import { accountSchema } from "~/lib/validations/settings";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { auth } from "~/services/auth/auth.server";
 import { dataWithToast } from "~/services/toast.server";
 import type { Route } from "./+types/account";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: () => ({ label: "Account" }),
+};
 
 export function meta() {
   return [{ title: getPageTitle("Account") }];

@@ -7,11 +7,16 @@ import { SessionItem } from "~/components/settings/session-item";
 import { SettingsLayout } from "~/components/settings/settings-layout";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
+import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { getPageTitle } from "~/lib/utils";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { auth } from "~/services/auth/auth.server";
 import { authClient } from "~/services/auth/client";
 import type { Route } from "./+types/sessions";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: () => ({ label: "Sessions" }),
+};
 
 export function meta() {
   return [{ title: getPageTitle("Sessions") }];

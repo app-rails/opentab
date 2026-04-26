@@ -4,10 +4,15 @@ import { DateTimeDisplay } from "~/components/datetime-display";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Switch } from "~/components/ui/switch";
+import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { getPageTitle } from "~/lib/utils";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { type DeviceView, listDevices } from "~/services/devices.server";
 import type { Route } from "./+types/index";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: () => ({ label: "Devices", href: "/dash/devices" }),
+};
 
 export function meta() {
   return [{ title: getPageTitle("Devices") }];
