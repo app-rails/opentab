@@ -9,10 +9,17 @@ import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
  */
 export function AuthenticatedShell({ children }: { children: ReactNode }) {
   return (
-    // 200px per spec §3.7 desktop breakpoint.
-    <SidebarProvider style={{ "--sidebar-width": "200px" } as CSSProperties}>
+    // 16rem (--spacing * 64) leaves room for the longest top-level label
+    // ("Workspaces") at the inset variant's slightly tighter padding.
+    <SidebarProvider style={{ "--sidebar-width": "calc(var(--spacing) * 64)" } as CSSProperties}>
+      <a
+        href="#main-content"
+        className="fixed top-0 left-0 z-[100] -translate-y-full rounded-br-lg bg-primary px-4 py-2 font-medium text-primary-foreground text-sm transition-transform focus:translate-y-0"
+      >
+        Skip to content
+      </a>
       <AppSidebar />
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset id="main-content">{children}</SidebarInset>
     </SidebarProvider>
   );
 }

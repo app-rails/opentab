@@ -23,12 +23,13 @@ import {
  * control) above `SidebarUserCard` (user pill / dropdown). Sub-components
  * pull the authenticated user via `useAuthUser` so this shell takes no
  * `user` prop, matching the admin pattern.
+ *
+ * `variant="inset"` is hardcoded so the sidebar renders as a card inside a
+ * framed inset, paired with `SidebarInset` in `AuthenticatedShell`.
  */
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    // Intentionally NOT using variant="inset" (admin uses it). Spec §3.1's
-    // wireframe shows a plain sidebar+main layout, not a card-in-frame.
-    <Sidebar className="group-data-[side=left]:border-border/50" {...props}>
+    <Sidebar variant="inset" className="group-data-[side=left]:border-border/50" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

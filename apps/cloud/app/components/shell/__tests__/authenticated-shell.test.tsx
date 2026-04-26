@@ -30,6 +30,30 @@ describe("AuthenticatedShell", () => {
     expect(await screen.findByTestId("content")).toBeInTheDocument();
   });
 
+  it("exposes a skip-to-content link targeting the main content region", async () => {
+    renderWithRouter(
+      <AuthenticatedShell>
+        <div data-testid="content">page body</div>
+      </AuthenticatedShell>,
+      { rootLoaderData },
+    );
+
+    const skipLink = await screen.findByRole("link", { name: /Skip to content/i });
+    expect(skipLink).toHaveAttribute("href", "#main-content");
+  });
+
+  it("sets id=main-content on the inset region targeted by the skip link", async () => {
+    renderWithRouter(
+      <AuthenticatedShell>
+        <div data-testid="content">page body</div>
+      </AuthenticatedShell>,
+      { rootLoaderData },
+    );
+
+    const main = await screen.findByRole("main");
+    expect(main).toHaveAttribute("id", "main-content");
+  });
+
   it("renders sidebar logo, nav items, theme row and user card", async () => {
     renderWithRouter(
       <AuthenticatedShell>
