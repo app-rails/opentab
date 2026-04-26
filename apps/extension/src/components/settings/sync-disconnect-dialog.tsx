@@ -10,6 +10,7 @@ import {
 import { useCallback, useState } from "react";
 import { MSG } from "@/lib/constants";
 import { clearSyncAuth } from "@/lib/sync-auth-storage";
+import { clearProgress as clearSyncSetupProgress } from "@/lib/sync-setup/wizard-progress";
 
 /**
  * Disconnect confirmation (spec decision 20).
@@ -39,6 +40,10 @@ export function SyncDisconnectDialog({
     setBusy(true);
     try {
       await clearSyncAuth();
+      // Wipe the wizard's persisted progress so a future reconnect starts
+      // from a clean Backup → Connect → Authorize → Transfer chain instead
+      // of inheriting stale step ticks from the previous session.
+      clearSyncSetupProgress();
       try {
         await chrome.runtime.sendMessage({ type: MSG.SYNC_DISCONNECTED });
       } catch {

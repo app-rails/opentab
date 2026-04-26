@@ -185,7 +185,8 @@
     "loading": "加载中...",
     "nav": {
       "general": "通用",
-      "import_export": "导入 / 导出"
+      "import_export": "导入 / 导出",
+      "sync": "服务器同步"
     },
     "appearance": {
       "title": "外观",

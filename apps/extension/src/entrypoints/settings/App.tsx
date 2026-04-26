@@ -13,7 +13,22 @@ import { type AppSettings, getSettings, type Locale, type ThemeMode } from "@/li
 import { useTheme } from "@/lib/theme";
 import { useSyncAuthState } from "@/lib/use-sync-auth-state";
 
-type SettingsPanel = "general" | "import-export";
+type SettingsPanel = "general" | "import-export" | "sync";
+
+// Display order in the left nav. Centralised so the nav and panel-render
+// branches can't drift apart. Order is intentional: General → Import / Export
+// → Server Sync (sync owns the wizard + status card together; isolating it
+// from the appearance settings makes the multi-step UX legible).
+const PANEL_ORDER: readonly SettingsPanel[] = ["general", "import-export", "sync"];
+
+const PANEL_I18N_KEY: Record<
+  SettingsPanel,
+  "settings.nav.general" | "settings.nav.import_export" | "settings.nav.sync"
+> = {
+  general: "settings.nav.general",
+  "import-export": "settings.nav.import_export",
+  sync: "settings.nav.sync",
+};
 
 const THEME_OPTIONS = [
   { value: "light" as ThemeMode, labelKey: "settings.appearance.theme_light" as const },
@@ -94,28 +109,19 @@ export default function App() {
       <nav className="border-border border-r p-4">
         <h1 className="mb-4 font-semibold text-lg">{t("settings.title")}</h1>
         <div className="space-y-1">
-          <button
-            type="button"
-            className={cn(
-              "w-full rounded-md px-3 py-1.5 text-left font-medium text-sm transition-colors",
-              activePanel === "import-export"
-                ? "bg-accent"
-                : "text-muted-foreground hover:bg-accent/50",
-            )}
-            onClick={() => setActivePanel("import-export")}
-          >
-            {t("settings.nav.import_export")}
-          </button>
-          <button
-            type="button"
-            className={cn(
-              "w-full rounded-md px-3 py-1.5 text-left font-medium text-sm transition-colors",
-              activePanel === "general" ? "bg-accent" : "text-muted-foreground hover:bg-accent/50",
-            )}
-            onClick={() => setActivePanel("general")}
-          >
-            {t("settings.nav.general")}
-          </button>
+          {PANEL_ORDER.map((panel) => (
+            <button
+              key={panel}
+              type="button"
+              className={cn(
+                "w-full rounded-md px-3 py-1.5 text-left font-medium text-sm transition-colors",
+                activePanel === panel ? "bg-accent" : "text-muted-foreground hover:bg-accent/50",
+              )}
+              onClick={() => setActivePanel(panel)}
+            >
+              {t(PANEL_I18N_KEY[panel])}
+            </button>
+          ))}
         </div>
       </nav>
 
@@ -179,6 +185,18 @@ export default function App() {
               </div>
 
               <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
+                {t("settings.about.title")}
+              </h3>
+              <BuildInfo />
+            </section>
+          </>
+        )}
+
+        {activePanel === "sync" && (
+          <>
+            <h2 className="mb-6 font-semibold text-xl">{t("settings.nav.sync")}</h2>
+            <section className="max-w-md space-y-6">
+              <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
                 {t("settings.server.title")}
               </h3>
               {syncAuth.kind === "authenticated" ? (
@@ -198,11 +216,6 @@ export default function App() {
                   </Button>
                 </div>
               )}
-
-              <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
-                {t("settings.about.title")}
-              </h3>
-              <BuildInfo />
             </section>
           </>
         )}

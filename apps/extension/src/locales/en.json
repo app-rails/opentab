@@ -185,7 +185,8 @@
     "loading": "Loading...",
     "nav": {
       "general": "General",
-      "import_export": "Import / Export"
+      "import_export": "Import / Export",
+      "sync": "Server Sync"
     },
     "appearance": {
       "title": "Appearance",
