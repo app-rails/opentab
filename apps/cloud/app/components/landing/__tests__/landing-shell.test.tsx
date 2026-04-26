@@ -42,4 +42,14 @@ describe("LandingShell", () => {
     const child = screen.getByTestId("landing-child");
     expect(child.closest("main")).not.toBeNull();
   });
+
+  it("mounts the Footer with the current year", () => {
+    renderWithRouter(
+      <LandingShell>
+        <div>child</div>
+      </LandingShell>,
+    );
+    const year = new Date().getFullYear();
+    expect(screen.getByText(new RegExp(`©\\s*${year}\\s*OpenTab`))).toBeVisible();
+  });
 });
