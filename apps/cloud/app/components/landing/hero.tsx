@@ -49,8 +49,8 @@ export function Hero() {
       className="relative overflow-hidden"
       style={{
         backgroundImage: `
-          radial-gradient(800px 300px at 50% 0%, rgba(99, 102, 241, 0.15), transparent 60%),
-          radial-gradient(600px 200px at 30% 80%, rgba(236, 72, 153, 0.10), transparent 60%)
+          radial-gradient(800px 300px at 50% 0%, var(--landing-orb-indigo), transparent 60%),
+          radial-gradient(600px 200px at 30% 80%, var(--landing-orb-pink), transparent 60%)
         `,
       }}
     >

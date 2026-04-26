@@ -63,6 +63,13 @@
     0 1px 3px 0px rgb(from var(--shadow-color) r g b / 0.1),
     0 8px 10px -1px rgb(from var(--shadow-color) r g b / 0.1);
   --shadow-2xl: 0 1px 3px 0px rgb(from var(--shadow-color) r g b / 0.1);
+
+  /* Landing-page brand-orb gradients (Hero + CTA backgrounds). Same values
+     under .dark for now; revisit when dark-mode landing visuals are spec'd. */
+  --landing-orb-indigo: rgba(99 102 241 / 0.15);
+  --landing-orb-pink: rgba(236 72 153 / 0.1);
+  --landing-cta-from: rgba(99 102 241 / 0.1);
+  --landing-cta-mid: rgba(236 72 153 / 0.05);
 }
 
 .dark {

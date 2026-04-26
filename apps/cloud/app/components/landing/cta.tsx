@@ -17,7 +17,7 @@ export function CTA() {
         className="pointer-events-none absolute inset-0 -z-10"
         style={{
           backgroundImage:
-            "linear-gradient(135deg, rgba(99, 102, 241, 0.10) 0%, rgba(236, 72, 153, 0.05) 50%, transparent 100%)",
+            "linear-gradient(135deg, var(--landing-cta-from) 0%, var(--landing-cta-mid) 50%, transparent 100%)",
         }}
       />
       <div className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6">
