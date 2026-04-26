@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { collectionTabs } from "~/drizzle/schema";
+import type { BreadcrumbContext, BreadcrumbHandle } from "~/lib/breadcrumbs";
+import { loadBreadcrumbContext } from "~/lib/loaders/breadcrumb-context.server";
 import { getPageTitle } from "~/lib/utils";
 import { tabUpdateFormSchema } from "~/lib/validations/tab";
 import { requiredAuthContext } from "~/middlewares/auth";
@@ -16,6 +18,26 @@ import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
 import { runTabUpdateAction } from "../tab-actions.server";
 import type { Route } from "./+types/edit";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: (data) => {
+    const d = data as TabEditLoaderData | undefined;
+    if (!d) {
+      return [{ label: "Workspaces", href: "/dash/workspace" }];
+    }
+    const tabLabel = d.tab.title || d.tab.url;
+    return [
+      { label: "Workspaces", href: "/dash/workspace" },
+      {
+        label: d.breadcrumbCtx.workspaceName,
+        href: `/dash/workspace/${d.workspaceSyncId}`,
+      },
+      { label: d.breadcrumbCtx.collectionName ?? "Collection" },
+      { label: tabLabel },
+      { label: "Rename" },
+    ];
+  },
+};
 
 export function meta() {
   return [{ title: getPageTitle("Edit tab") }];
@@ -29,7 +51,10 @@ export type TabEditLoaderData = {
   workspaceSyncId: string;
   collectionSyncId: string;
   tab: { syncId: string; url: string; title: string | null; favIconUrl: string | null };
+  breadcrumbCtx: BreadcrumbContext;
 };
+
+type TabEditCore = Omit<TabEditLoaderData, "breadcrumbCtx">;
 
 export async function loadTabForEdit(
   dbInstance: Db,
@@ -37,7 +62,7 @@ export async function loadTabForEdit(
   workspaceSyncId: string,
   collectionSyncId: string,
   tabSyncId: string,
-): Promise<TabEditLoaderData> {
+): Promise<TabEditCore> {
   const rows = await dbInstance
     .select()
     .from(collectionTabs)
@@ -75,7 +100,13 @@ export async function loader({ context, params }: Route.LoaderArgs) {
     params.collectionSyncId,
     params.tabSyncId,
   );
-  return data(result);
+  const breadcrumbCtx = await loadBreadcrumbContext(
+    db as unknown as Db,
+    user.id,
+    params.workspaceSyncId,
+    params.collectionSyncId,
+  );
+  return data({ ...result, breadcrumbCtx });
 }
 
 // ---------------------------------------------------------------------------

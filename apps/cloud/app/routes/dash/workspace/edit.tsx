@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { workspaces } from "~/drizzle/schema";
+import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { getPageTitle } from "~/lib/utils";
 import { workspaceUpdateFormSchema } from "~/lib/validations/workspace";
 import { DEFAULT_WORKSPACE_ICON, WORKSPACE_ICON_OPTIONS } from "~/lib/web-constants";
@@ -17,6 +18,16 @@ import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
 import { runWorkspaceUpdateAction } from "../workspace-actions.server";
 import type { Route } from "./+types/edit";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: (data) => {
+    const d = data as WorkspaceEditLoaderData | undefined;
+    const wsCrumb = d
+      ? { label: d.workspace.name, href: `/dash/workspace/${d.workspace.syncId}` }
+      : { label: "Workspaces", href: "/dash/workspace" };
+    return [{ label: "Workspaces", href: "/dash/workspace" }, wsCrumb, { label: "Rename" }];
+  },
+};
 
 export function meta() {
   return [{ title: getPageTitle("Edit workspace") }];

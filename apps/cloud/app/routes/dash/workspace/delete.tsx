@@ -4,12 +4,23 @@ import { data, Form, Link, redirect, useActionData, useNavigation } from "react-
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { workspaces } from "~/drizzle/schema";
+import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { cn, getPageTitle } from "~/lib/utils";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
 import { runWorkspaceDeleteAction } from "../workspace-actions.server";
 import type { Route } from "./+types/delete";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: (data) => {
+    const d = data as WorkspaceDeleteLoaderData | undefined;
+    const wsCrumb = d
+      ? { label: d.workspace.name, href: `/dash/workspace/${d.workspace.syncId}` }
+      : { label: "Workspaces", href: "/dash/workspace" };
+    return [{ label: "Workspaces", href: "/dash/workspace" }, wsCrumb, { label: "Delete" }];
+  },
+};
 
 export function meta() {
   return [{ title: getPageTitle("Delete workspace") }];

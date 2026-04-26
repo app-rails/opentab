@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { tabCollections } from "~/drizzle/schema";
+import type { BreadcrumbContext, BreadcrumbHandle } from "~/lib/breadcrumbs";
+import { loadBreadcrumbContext } from "~/lib/loaders/breadcrumb-context.server";
 import { getPageTitle } from "~/lib/utils";
 import { collectionUpdateFormSchema } from "~/lib/validations/collection";
 import { requiredAuthContext } from "~/middlewares/auth";
@@ -16,6 +18,24 @@ import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
 import { runCollectionUpdateAction } from "../collection-actions.server";
 import type { Route } from "./+types/edit";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: (data) => {
+    const d = data as CollectionEditLoaderData | undefined;
+    if (!d) {
+      return [{ label: "Workspaces", href: "/dash/workspace" }];
+    }
+    return [
+      { label: "Workspaces", href: "/dash/workspace" },
+      {
+        label: d.breadcrumbCtx.workspaceName,
+        href: `/dash/workspace/${d.workspaceSyncId}`,
+      },
+      { label: d.collection.name },
+      { label: "Rename" },
+    ];
+  },
+};
 
 export function meta() {
   return [{ title: getPageTitle("Edit collection") }];
@@ -28,14 +48,17 @@ export function meta() {
 export type CollectionEditLoaderData = {
   workspaceSyncId: string;
   collection: { syncId: string; name: string };
+  breadcrumbCtx: BreadcrumbContext;
 };
+
+type CollectionEditCore = Omit<CollectionEditLoaderData, "breadcrumbCtx">;
 
 export async function loadCollectionForEdit(
   dbInstance: Db,
   userId: string,
   workspaceSyncId: string,
   collectionSyncId: string,
-): Promise<CollectionEditLoaderData> {
+): Promise<CollectionEditCore> {
   const rows = await dbInstance
     .select()
     .from(tabCollections)
@@ -52,7 +75,10 @@ export async function loadCollectionForEdit(
   if (!c) {
     throw new Response(null, { status: 404 });
   }
-  return { workspaceSyncId, collection: { syncId: c.syncId, name: c.name } };
+  return {
+    workspaceSyncId,
+    collection: { syncId: c.syncId, name: c.name },
+  };
 }
 
 export async function loader({ context, params }: Route.LoaderArgs) {
@@ -63,7 +89,13 @@ export async function loader({ context, params }: Route.LoaderArgs) {
     params.workspaceSyncId,
     params.collectionSyncId,
   );
-  return data(result);
+  const breadcrumbCtx = await loadBreadcrumbContext(
+    db as unknown as Db,
+    user.id,
+    params.workspaceSyncId,
+    params.collectionSyncId,
+  );
+  return data({ ...result, breadcrumbCtx });
 }
 
 // ---------------------------------------------------------------------------

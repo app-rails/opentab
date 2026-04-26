@@ -4,12 +4,32 @@ import { data, Form, Link, redirect, useActionData, useNavigation } from "react-
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { tabCollections } from "~/drizzle/schema";
+import type { BreadcrumbContext, BreadcrumbHandle } from "~/lib/breadcrumbs";
+import { loadBreadcrumbContext } from "~/lib/loaders/breadcrumb-context.server";
 import { cn, getPageTitle } from "~/lib/utils";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
 import { runCollectionDeleteAction } from "../collection-actions.server";
 import type { Route } from "./+types/delete";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: (data) => {
+    const d = data as CollectionDeleteLoaderData | undefined;
+    if (!d) {
+      return [{ label: "Workspaces", href: "/dash/workspace" }];
+    }
+    return [
+      { label: "Workspaces", href: "/dash/workspace" },
+      {
+        label: d.breadcrumbCtx.workspaceName,
+        href: `/dash/workspace/${d.workspaceSyncId}`,
+      },
+      { label: d.collection.name },
+      { label: "Delete" },
+    ];
+  },
+};
 
 export function meta() {
   return [{ title: getPageTitle("Delete collection") }];
@@ -22,14 +42,17 @@ export function meta() {
 export type CollectionDeleteLoaderData = {
   workspaceSyncId: string;
   collection: { syncId: string; name: string };
+  breadcrumbCtx: BreadcrumbContext;
 };
+
+type CollectionDeleteCore = Omit<CollectionDeleteLoaderData, "breadcrumbCtx">;
 
 export async function loadCollectionForDelete(
   dbInstance: Db,
   userId: string,
   workspaceSyncId: string,
   collectionSyncId: string,
-): Promise<CollectionDeleteLoaderData> {
+): Promise<CollectionDeleteCore> {
   const rows = await dbInstance
     .select()
     .from(tabCollections)
@@ -46,7 +69,10 @@ export async function loadCollectionForDelete(
   if (!c) {
     throw new Response(null, { status: 404 });
   }
-  return { workspaceSyncId, collection: { syncId: c.syncId, name: c.name } };
+  return {
+    workspaceSyncId,
+    collection: { syncId: c.syncId, name: c.name },
+  };
 }
 
 export async function loader({ context, params }: Route.LoaderArgs) {
@@ -57,7 +83,13 @@ export async function loader({ context, params }: Route.LoaderArgs) {
     params.workspaceSyncId,
     params.collectionSyncId,
   );
-  return data(result);
+  const breadcrumbCtx = await loadBreadcrumbContext(
+    db as unknown as Db,
+    user.id,
+    params.workspaceSyncId,
+    params.collectionSyncId,
+  );
+  return data({ ...result, breadcrumbCtx });
 }
 
 // ---------------------------------------------------------------------------

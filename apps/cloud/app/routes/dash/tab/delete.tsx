@@ -4,12 +4,34 @@ import { data, Form, Link, redirect, useActionData, useNavigation } from "react-
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { collectionTabs } from "~/drizzle/schema";
+import type { BreadcrumbContext, BreadcrumbHandle } from "~/lib/breadcrumbs";
+import { loadBreadcrumbContext } from "~/lib/loaders/breadcrumb-context.server";
 import { cn, getPageTitle } from "~/lib/utils";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
 import { runTabDeleteAction } from "../tab-actions.server";
 import type { Route } from "./+types/delete";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: (data) => {
+    const d = data as TabDeleteLoaderData | undefined;
+    if (!d) {
+      return [{ label: "Workspaces", href: "/dash/workspace" }];
+    }
+    const tabLabel = d.tab.title || d.tab.url;
+    return [
+      { label: "Workspaces", href: "/dash/workspace" },
+      {
+        label: d.breadcrumbCtx.workspaceName,
+        href: `/dash/workspace/${d.workspaceSyncId}`,
+      },
+      { label: d.breadcrumbCtx.collectionName ?? "Collection" },
+      { label: tabLabel },
+      { label: "Delete" },
+    ];
+  },
+};
 
 export function meta() {
   return [{ title: getPageTitle("Delete tab") }];
@@ -21,8 +43,12 @@ export function meta() {
 
 export type TabDeleteLoaderData = {
   workspaceSyncId: string;
+  collectionSyncId: string;
   tab: { syncId: string; url: string; title: string | null };
+  breadcrumbCtx: BreadcrumbContext;
 };
+
+type TabDeleteCore = Omit<TabDeleteLoaderData, "breadcrumbCtx">;
 
 export async function loadTabForDelete(
   dbInstance: Db,
@@ -30,7 +56,7 @@ export async function loadTabForDelete(
   workspaceSyncId: string,
   collectionSyncId: string,
   tabSyncId: string,
-): Promise<TabDeleteLoaderData> {
+): Promise<TabDeleteCore> {
   const rows = await dbInstance
     .select()
     .from(collectionTabs)
@@ -49,6 +75,7 @@ export async function loadTabForDelete(
   }
   return {
     workspaceSyncId,
+    collectionSyncId,
     tab: { syncId: t.syncId, url: t.url, title: t.title ?? null },
   };
 }
@@ -62,7 +89,13 @@ export async function loader({ context, params }: Route.LoaderArgs) {
     params.collectionSyncId,
     params.tabSyncId,
   );
-  return data(result);
+  const breadcrumbCtx = await loadBreadcrumbContext(
+    db as unknown as Db,
+    user.id,
+    params.workspaceSyncId,
+    params.collectionSyncId,
+  );
+  return data({ ...result, breadcrumbCtx });
 }
 
 // ---------------------------------------------------------------------------

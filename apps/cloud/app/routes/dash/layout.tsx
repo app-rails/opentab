@@ -1,11 +1,17 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { data, Outlet } from "react-router";
+import { DashHeader } from "~/components/dash/layout/header";
 import { AuthenticatedShell } from "~/components/shell/authenticated-shell";
 import { workspaces } from "~/drizzle/schema";
+import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
 import type { Route } from "./+types/layout";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: () => ({ label: "Dashboard", href: "/dash" }),
+};
 
 export type DashLayoutWorkspaceView = {
   syncId: string;
@@ -65,7 +71,10 @@ export async function loader({ context }: Route.LoaderArgs) {
 export default function DashLayout(_: Route.ComponentProps) {
   return (
     <AuthenticatedShell>
-      <Outlet />
+      <DashHeader />
+      <div className="flex w-full max-w-[1680px] flex-1 flex-col space-y-6 px-6 py-6">
+        <Outlet />
+      </div>
     </AuthenticatedShell>
   );
 }

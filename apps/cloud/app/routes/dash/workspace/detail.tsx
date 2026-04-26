@@ -16,11 +16,20 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { collectionTabs, tabCollections, workspaces } from "~/drizzle/schema";
+import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { cn, getPageTitle } from "~/lib/utils";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
 import type { Route } from "./+types/detail";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: (data) => {
+    const d = data as WorkspaceDetailLoaderData | undefined;
+    if (!d) return [{ label: "Workspaces", href: "/dash/workspace" }];
+    return [{ label: "Workspaces", href: "/dash/workspace" }, { label: d.workspace.name }];
+  },
+};
 
 // ---------------------------------------------------------------------------
 // View types
@@ -215,14 +224,6 @@ export default function WorkspaceDetailRoute({
 
   return (
     <div className="space-y-6 p-6">
-      <nav aria-label="Breadcrumb" className="text-muted-foreground text-sm">
-        <Link to="/dash" className="hover:text-foreground hover:underline">
-          Dashboard
-        </Link>
-        <span className="mx-2">›</span>
-        <span className="text-foreground">{workspace.name}</span>
-      </nav>
-
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <span aria-hidden className="text-3xl">

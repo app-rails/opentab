@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { workspaces } from "~/drizzle/schema";
+import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { getPageTitle } from "~/lib/utils";
 import { collectionCreateFormSchema } from "~/lib/validations/collection";
 import { requiredAuthContext } from "~/middlewares/auth";
@@ -16,6 +17,16 @@ import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
 import { runCollectionCreateAction } from "../collection-actions.server";
 import type { Route } from "./+types/new";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: (data) => {
+    const d = data as CollectionNewLoaderData | undefined;
+    const wsCrumb = d
+      ? { label: d.workspace.name, href: `/dash/workspace/${d.workspace.syncId}` }
+      : { label: "Workspaces", href: "/dash/workspace" };
+    return [{ label: "Workspaces", href: "/dash/workspace" }, wsCrumb, { label: "New collection" }];
+  },
+};
 
 export function meta() {
   return [{ title: getPageTitle("Create collection") }];

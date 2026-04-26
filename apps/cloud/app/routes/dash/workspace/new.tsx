@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import type { BreadcrumbHandle } from "~/lib/breadcrumbs";
 import { getPageTitle } from "~/lib/utils";
 import { workspaceCreateFormSchema } from "~/lib/validations/workspace";
 import { DEFAULT_WORKSPACE_ICON, WORKSPACE_ICON_OPTIONS } from "~/lib/web-constants";
@@ -15,6 +16,10 @@ import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
 import { runWorkspaceCreateAction } from "../workspace-actions.server";
 import type { Route } from "./+types/new";
+
+export const handle: BreadcrumbHandle = {
+  breadcrumb: () => [{ label: "Workspaces", href: "/dash/workspace" }, { label: "New" }],
+};
 
 export function meta() {
   return [{ title: getPageTitle("Create workspace") }];
