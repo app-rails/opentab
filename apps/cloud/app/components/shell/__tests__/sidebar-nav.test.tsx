@@ -80,8 +80,8 @@ describe("SidebarNav", () => {
     expect(screen.getByRole("link", { name: /Dashboard/ })).toHaveAttribute("data-active", "false");
   });
 
-  it("Devices is active on /devices subroutes; Workspaces stays inactive there", async () => {
-    renderNav({ role: "user", initialEntries: ["/devices/foo"] });
+  it("Devices is active on /dash/devices subroutes; Workspaces stays inactive there", async () => {
+    renderNav({ role: "user", initialEntries: ["/dash/devices/foo"] });
 
     expect(await screen.findByRole("link", { name: /Devices/ })).toHaveAttribute(
       "data-active",

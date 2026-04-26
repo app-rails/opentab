@@ -60,7 +60,7 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => navigate(href("/settings/account"))}>
+              <DropdownMenuItem onClick={() => navigate(href("/dash/settings/account"))}>
                 <CircleUserIcon />
                 Settings
               </DropdownMenuItem>

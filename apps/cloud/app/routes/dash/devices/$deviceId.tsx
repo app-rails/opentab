@@ -114,7 +114,7 @@ export async function action({ context, params, request }: Route.ActionArgs) {
   const intent = String(form.get("intent") ?? "");
   if (intent === "revoke") {
     await revokeDevice({ userId: user.id }, params.deviceId);
-    return redirect("/devices");
+    return redirect("/dash/devices");
   }
   throw new Response("unknown intent", { status: 400 });
 }
@@ -128,7 +128,7 @@ export default function DeviceDetailRoute({
     <div className="space-y-6">
       <div>
         <Link
-          to="/devices"
+          to="/dash/devices"
           className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />

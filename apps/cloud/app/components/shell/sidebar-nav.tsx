@@ -22,18 +22,18 @@ type NavItem = {
   exact?: boolean;
 };
 
-// `/dash`, `/dash/workspace`, and `/devices` use plain string paths so this
-// component compiles before those route keys exist in RR's type gen.
+// `/dash`, `/dash/workspace`, and `/dash/devices` use plain string paths so
+// this component compiles before those route keys exist in RR's type gen.
 const DASH_PATH = "/dash";
 const WORKSPACES_PATH = "/dash/workspace";
-const DEVICES_PATH = "/devices";
+const DEVICES_PATH = "/dash/devices";
 
 function buildNavItems(role: string | null | undefined): NavItem[] {
   const items: NavItem[] = [
     { to: DASH_PATH, label: "Dashboard", icon: LayoutDashboardIcon, exact: true },
     { to: WORKSPACES_PATH, label: "Workspaces", icon: Building2Icon },
     { to: DEVICES_PATH, label: "Devices", icon: LaptopIcon },
-    { to: href("/settings/account"), label: "Settings", icon: SettingsIcon },
+    { to: href("/dash/settings/account"), label: "Settings", icon: SettingsIcon },
   ];
   if (role === "admin") {
     items.push({ to: href("/admin"), label: "Admin", icon: CircleGaugeIcon });

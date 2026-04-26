@@ -19,27 +19,27 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   {
     title: "Account",
-    url: href("/settings/account"),
+    url: href("/dash/settings/account"),
     icon: UserIcon,
   },
   {
     title: "Appearance",
-    url: href("/settings/appearance"),
+    url: href("/dash/settings/appearance"),
     icon: SunMoonIcon,
   },
   {
     title: "Connections",
-    url: href("/settings/connections"),
+    url: href("/dash/settings/connections"),
     icon: Link2Icon,
   },
   {
     title: "Sessions",
-    url: href("/settings/sessions"),
+    url: href("/dash/settings/sessions"),
     icon: HardDriveIcon,
   },
   {
     title: "Password",
-    url: href("/settings/password"),
+    url: href("/dash/settings/password"),
     icon: KeyIcon,
   },
 ];

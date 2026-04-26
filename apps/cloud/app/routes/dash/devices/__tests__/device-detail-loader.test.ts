@@ -1,7 +1,7 @@
 import { v7 as uuidv7 } from "uuid";
 import { beforeEach, describe, expect, it } from "vitest";
 import { devices, syncChangeLogs } from "~/drizzle/schema";
-import { loadDeviceDetail } from "~/routes/devices/$deviceId";
+import { loadDeviceDetail } from "~/routes/dash/devices/$deviceId";
 import type { Db } from "~/services/sync-repo.server";
 import { createTestDb } from "~/test/db-harness";
 

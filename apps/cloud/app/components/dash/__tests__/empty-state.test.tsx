@@ -17,9 +17,9 @@ describe("EmptyState", () => {
     expect(href).not.toBe("");
   });
 
-  it("renders the secondary 'I already have it' link pointing to /settings/account", () => {
+  it("renders the secondary 'I already have it' link pointing to /dash/settings/account", () => {
     renderWithRouter(<EmptyState />);
     const secondary = screen.getByRole("link", { name: /I already have it/i });
-    expect(secondary).toHaveAttribute("href", "/settings/account");
+    expect(secondary).toHaveAttribute("href", "/dash/settings/account");
   });
 });

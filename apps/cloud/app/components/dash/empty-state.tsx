@@ -33,7 +33,7 @@ export function EmptyState() {
           </a>
         </Button>
         <Link
-          to="/settings/account"
+          to="/dash/settings/account"
           className="text-muted-foreground text-sm hover:text-foreground"
         >
           I already have it →

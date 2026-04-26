@@ -1,20 +1,7 @@
 import { index, layout, prefix, type RouteConfig, route } from "@react-router/dev/routes";
 
 export default [
-  layout("routes/layout.tsx", [
-    index("routes/index.tsx"),
-
-    // User settings routes
-    ...prefix("settings", [
-      layout("routes/settings/layout.tsx", [
-        route("account", "routes/settings/account.tsx"),
-        route("appearance", "routes/settings/appearance.tsx"),
-        route("sessions", "routes/settings/sessions.tsx"),
-        route("password", "routes/settings/password.tsx"),
-        route("connections", "routes/settings/connections.tsx"),
-      ]),
-    ]),
-  ]),
+  layout("routes/layout.tsx", [index("routes/index.tsx")]),
 
   // Public legal pages (Privacy, Terms, Security)
   ...prefix("legal", [
@@ -34,18 +21,25 @@ export default [
     route("reset-password", "routes/auth/reset-password.tsx"),
   ]),
 
-  // Devices routes (per-user device management)
-  ...prefix("devices", [
-    layout("routes/devices/layout.tsx", [
-      index("routes/devices/index.tsx"),
-      route(":deviceId", "routes/devices/$deviceId.tsx"),
-    ]),
-  ]),
-
   // Dashboard routes (workspace read-only viewer + Phase-2 Web editing)
+  // Devices and Settings are nested here so they share the dash shell
+  // (sidebar + DashHeader breadcrumb) instead of bare AuthenticatedShell.
   ...prefix("dash", [
     layout("routes/dash/layout.tsx", [
       index("routes/dash/index.tsx"),
+      ...prefix("devices", [
+        index("routes/dash/devices/index.tsx"),
+        route(":deviceId", "routes/dash/devices/$deviceId.tsx"),
+      ]),
+      ...prefix("settings", [
+        layout("routes/dash/settings/layout.tsx", [
+          route("account", "routes/dash/settings/account.tsx"),
+          route("appearance", "routes/dash/settings/appearance.tsx"),
+          route("sessions", "routes/dash/settings/sessions.tsx"),
+          route("password", "routes/dash/settings/password.tsx"),
+          route("connections", "routes/dash/settings/connections.tsx"),
+        ]),
+      ]),
       ...prefix("workspace", [
         index("routes/dash/workspace/index.tsx"),
         route("new", "routes/dash/workspace/new.tsx"),

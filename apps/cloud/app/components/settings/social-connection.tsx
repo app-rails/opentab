@@ -26,7 +26,7 @@ export function SocialConnection({
     setIsConnecting(true);
     const { error } = await authClient.linkSocial({
       provider: connection.provider,
-      callbackURL: "/settings/connections",
+      callbackURL: "/dash/settings/connections",
     });
     if (error) {
       toast.error(error.message || "Failed to connect.");

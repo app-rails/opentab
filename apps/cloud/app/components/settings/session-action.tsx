@@ -13,7 +13,7 @@ import {
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
-import type { clientAction } from "~/routes/settings/sessions";
+import type { clientAction } from "~/routes/dash/settings/sessions";
 import { LoadingButton } from "../forms";
 
 export function SignOutOfOtherSessions() {

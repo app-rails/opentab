@@ -55,7 +55,7 @@ export function UserNavMenuContent() {
       )}
       <DropdownMenuItem
         onClick={() => {
-          navigate(href("/settings/account"));
+          navigate(href("/dash/settings/account"));
         }}
       >
         <UserCogIcon />
