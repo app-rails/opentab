@@ -28,15 +28,18 @@ interface MockResponseSpec {
   jsonBody?: unknown;
   statusText?: string;
   ok?: boolean;
+  headers?: Record<string, string>;
 }
 
 function installFetchMock(response: MockResponseSpec): FetchMock {
   const fetchMock = vi.fn(async () => {
     const ok = response.ok ?? (response.status >= 200 && response.status < 300);
+    const headers = response.headers ?? {};
     return {
       ok,
       status: response.status,
       statusText: response.statusText ?? "",
+      headers: { get: (name: string) => headers[name.toLowerCase()] ?? null },
       json: async () => response.jsonBody ?? {},
     } as unknown as Response;
   });
@@ -166,6 +169,21 @@ describe("SyncClient auth + protocol lifecycle", () => {
     expect(sendMessage).toHaveBeenCalledWith({ type: MSG.SYNC_PROTOCOL_MISMATCH });
     // 426 is NOT an auth failure — we must not clear auth.
     expect(clearSyncAuth).not.toHaveBeenCalled();
+  });
+
+  it("captures Retry-After on 429 so the engine can schedule a cooldown", async () => {
+    installChromeMock();
+    installFetchMock({
+      status: 429,
+      jsonBody: { code: "RATE_LIMITED", message: "rate limited" },
+      headers: { "retry-after": "47" },
+    });
+
+    const err = await new SyncClient(HOST, TOKEN).push([]).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SyncClientError);
+    expect((err as SyncClientError).status).toBe(429);
+    expect((err as SyncClientError).code).toBe("RATE_LIMITED");
+    expect((err as SyncClientError).retryAfterSec).toBe(47);
   });
 
   it("surfaces other non-2xx as typed SyncClientError", async () => {

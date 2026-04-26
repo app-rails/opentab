@@ -31,6 +31,13 @@ export class SyncClientError extends Error {
     public readonly code: string,
     public readonly status: number,
     message: string,
+    /**
+     * For 429 RATE_LIMITED responses, the integer value of the server's
+     * Retry-After header. Callers can use this to schedule a cooldown
+     * shared across every sync entry point (alarm, manual button,
+     * post-mutate notify) so we don't re-hit the same limit immediately.
+     */
+    public readonly retryAfterSec?: number,
   ) {
     super(message);
     this.name = "SyncClientError";
@@ -166,6 +173,18 @@ export class SyncClient {
       broadcast(MSG.SYNC_PROTOCOL_MISMATCH);
       const { code, message } = await readErrorCode(response, SyncErrorCode.API_VERSION_MISMATCH);
       throw new SyncClientError(code, 426, message);
+    }
+
+    if (response.status === 429) {
+      const { code, message } = await readErrorCode(response, SyncErrorCode.RATE_LIMITED);
+      const retryHeader = response.headers.get("retry-after");
+      const retryAfterSec = retryHeader == null ? undefined : Number.parseInt(retryHeader, 10);
+      throw new SyncClientError(
+        code,
+        429,
+        message,
+        Number.isFinite(retryAfterSec) ? retryAfterSec : undefined,
+      );
     }
 
     if (!response.ok) {

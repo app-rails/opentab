@@ -68,6 +68,28 @@ function isSyncableUrl(url: string): boolean {
   return url.startsWith("http://") || url.startsWith("https://");
 }
 
+// ---------------------------------------------------------------------------
+// 429 cooldown — keyed in syncMeta so it survives MV3 worker restarts and is
+// shared between sync() and any future entry point.
+// ---------------------------------------------------------------------------
+
+const SYNC_COOLDOWN_KEY = "syncCooldownUntil";
+const DEFAULT_COOLDOWN_SEC = 60;
+
+async function isInCooldown(): Promise<boolean> {
+  const meta = await db.syncMeta.get(SYNC_COOLDOWN_KEY);
+  return typeof meta?.value === "number" && meta.value > Date.now();
+}
+
+async function applyCooldown(retryAfterSec: number | undefined): Promise<void> {
+  // Server's Retry-After is the source of truth; we fall back to a 60s
+  // floor if the response didn't carry one (older server / proxy stripped
+  // the header).
+  const seconds =
+    Number.isFinite(retryAfterSec) && retryAfterSec! > 0 ? retryAfterSec! : DEFAULT_COOLDOWN_SEC;
+  await db.syncMeta.put({ key: SYNC_COOLDOWN_KEY, value: Date.now() + seconds * 1000 });
+}
+
 /** LWW: existing wins if newer timestamp, or same timestamp with higher opId */
 function existingWinsLWW(
   existing: { updatedAt: number; lastOpId?: string },
@@ -134,6 +156,11 @@ export class SyncEngine {
   /** Main sync: push local changes, then pull remote changes. */
   async sync(): Promise<void> {
     if (this.isSyncing) return;
+    // Server rate-limits per-user; every entry point (storage-listener,
+    // alarm, manual Sync now button, debounced mutate notify) routes
+    // through this method, so a single cooldown floor prevents them from
+    // collectively re-tripping the same limit.
+    if (await isInCooldown()) return;
     this.isSyncing = true;
     try {
       await this.push();
@@ -444,6 +471,16 @@ export class SyncEngine {
           break;
         }
 
+        // 429 from push: record server-suggested cooldown so the next
+        // sync() returns early instead of immediately re-hammering. We do
+        // NOT mark the batch failed (the ops are still valid; we just
+        // need to wait), so they stay pending and get retried after
+        // cooldown expires.
+        if (err instanceof SyncClientError && err.status === 429) {
+          await applyCooldown(err.retryAfterSec);
+          break;
+        }
+
         // Network / other error: mark all as failed with backoff
         const now = Date.now();
         const failedIds = pendingOps.map((op) => op.id!);
@@ -480,6 +517,10 @@ export class SyncEngine {
         result = await this.client.pull(cursor, 100);
       } catch (err) {
         if (isTerminalBroadcastError(err)) break;
+        if (err instanceof SyncClientError && err.status === 429) {
+          await applyCooldown(err.retryAfterSec);
+          break;
+        }
         console.error("[sync] pull error:", err);
         break;
       }

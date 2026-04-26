@@ -375,6 +375,71 @@ describe("SyncEngine.push result bucketing", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Cooldown after 429 — every entry point (alarm, storage listener, manual
+// Sync now button, debounced mutate notify) calls engine.sync(); they all
+// must respect the same per-user rate-limit floor or we hammer the server.
+// ---------------------------------------------------------------------------
+
+describe("SyncEngine cooldown after 429", () => {
+  it("sync() returns early while syncMeta.syncCooldownUntil is in the future", async () => {
+    const future = Date.now() + 30_000;
+    getState().meta.set("syncCooldownUntil", future);
+
+    const client = mockSyncClient();
+    const engine = new SyncEngine(client);
+    await engine.sync();
+
+    expect(client.push).not.toHaveBeenCalled();
+    expect(client.pull).not.toHaveBeenCalled();
+  });
+
+  it("sync() proceeds once the cooldown has elapsed", async () => {
+    const past = Date.now() - 1;
+    getState().meta.set("syncCooldownUntil", past);
+
+    const client = mockSyncClient();
+    const engine = new SyncEngine(client);
+    await engine.sync();
+
+    expect(client.pull).toHaveBeenCalledTimes(1);
+  });
+
+  it("a 429 from push writes syncCooldownUntil = now + Retry-After (sec)", async () => {
+    seedPendingRow({ opId: "op-rl" });
+    const push = vi.fn().mockRejectedValueOnce(
+      Object.assign(new SyncClientError(SyncErrorCode.RATE_LIMITED, 429, "rate limited"), {
+        retryAfterSec: 60,
+      }),
+    );
+    const client = mockSyncClient({ push });
+    const engine = new SyncEngine(client);
+    const before = Date.now();
+
+    await engine.sync();
+
+    const cooldown = getState().meta.get("syncCooldownUntil") as number;
+    expect(cooldown).toBeGreaterThanOrEqual(before + 60_000);
+    expect(cooldown).toBeLessThan(before + 61_000);
+  });
+
+  it("a 429 from pull also writes the cooldown so subsequent sync()s skip", async () => {
+    const pull = vi.fn().mockRejectedValueOnce(
+      Object.assign(new SyncClientError(SyncErrorCode.RATE_LIMITED, 429, "rate limited"), {
+        retryAfterSec: 30,
+      }),
+    );
+    const client = mockSyncClient({ pull });
+    const engine = new SyncEngine(client);
+    const before = Date.now();
+
+    await engine.sync();
+
+    const cooldown = getState().meta.get("syncCooldownUntil") as number;
+    expect(cooldown).toBeGreaterThanOrEqual(before + 30_000);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // initialBootstrap payload contract — server pushOpSchema must accept what
 // we generate, otherwise the whole 100-op batch 400's and silently drops
 // data on the floor.
