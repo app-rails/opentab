@@ -16,11 +16,78 @@ import { getAvatarUrl } from "~/lib/utils";
 import { ThemeSelectorRadioGroup } from "../theme";
 import { UserAvatar } from "./user-avatar";
 
-export function UserNav() {
+/**
+ * Dropdown menu content for the authenticated user. Extracted so the same
+ * menu can be reused from multiple triggers (top-bar avatar, sidebar pill).
+ *
+ * Shape: header (avatar + name + email) → optional Admin Panel → Settings
+ * → Appearance submenu → Log out.
+ *
+ * @public
+ */
+export function UserNavMenuContent() {
   const user = useAuthUser();
   const { avatarUrl } = getAvatarUrl(user.image);
   const navigate = useNavigate();
   const submit = useSubmit();
+
+  return (
+    <>
+      <DropdownMenuLabel className="p-0 font-normal">
+        <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+          <UserAvatar image={avatarUrl} name={user.name} size={32} />
+          <div className="grid flex-1 text-left text-sm leading-tight">
+            <span className="truncate font-semibold">{user.name}</span>
+            <span className="truncate text-muted-foreground text-xs">{user.email}</span>
+          </div>
+        </div>
+      </DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      {user.role === "admin" && (
+        <DropdownMenuItem
+          onClick={() => {
+            navigate(href("/admin"));
+          }}
+        >
+          <CircleGaugeIcon />
+          Admin Panel
+        </DropdownMenuItem>
+      )}
+      <DropdownMenuItem
+        onClick={() => {
+          navigate(href("/settings/account"));
+        }}
+      >
+        <UserCogIcon />
+        Settings
+      </DropdownMenuItem>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <SwatchBookIcon className="size-4" />
+          Appearance
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>
+          <ThemeSelectorRadioGroup />
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        onClick={() => {
+          setTimeout(() => {
+            submit(null, { method: "POST", action: href("/auth/sign-out") });
+          }, 100);
+        }}
+      >
+        <LogOutIcon />
+        Log out
+      </DropdownMenuItem>
+    </>
+  );
+}
+
+export function UserNav() {
+  const user = useAuthUser();
+  const { avatarUrl } = getAvatarUrl(user.image);
 
   return (
     <DropdownMenu>
@@ -28,54 +95,7 @@ export function UserNav() {
         <UserAvatar image={avatarUrl} name={user.name} size={32} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" forceMount>
-        <DropdownMenuLabel className="p-0 font-normal">
-          <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-            <UserAvatar image={avatarUrl} name={user.name} size={32} />
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">{user.name}</span>
-              <span className="truncate text-muted-foreground text-xs">{user.email}</span>
-            </div>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {user.role === "admin" && (
-          <DropdownMenuItem
-            onClick={() => {
-              navigate(href("/admin"));
-            }}
-          >
-            <CircleGaugeIcon />
-            Admin Panel
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuItem
-          onClick={() => {
-            navigate(href("/settings/account"));
-          }}
-        >
-          <UserCogIcon />
-          Settings
-        </DropdownMenuItem>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <SwatchBookIcon className="size-4" />
-            Appearance
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <ThemeSelectorRadioGroup />
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => {
-            setTimeout(() => {
-              submit(null, { method: "POST", action: href("/auth/sign-out") });
-            }, 100);
-          }}
-        >
-          <LogOutIcon />
-          Log out
-        </DropdownMenuItem>
+        <UserNavMenuContent />
       </DropdownMenuContent>
     </DropdownMenu>
   );
