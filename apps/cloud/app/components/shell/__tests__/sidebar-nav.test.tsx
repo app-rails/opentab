@@ -92,4 +92,32 @@ describe("SidebarNav", () => {
       "false",
     );
   });
+
+  it("Settings stays active across all /dash/settings sibling pages", async () => {
+    renderNav({ role: "user", initialEntries: ["/dash/settings/appearance"] });
+
+    expect(await screen.findByRole("link", { name: /Settings/ })).toHaveAttribute(
+      "data-active",
+      "true",
+    );
+    expect(screen.getByRole("link", { name: /Dashboard/ })).toHaveAttribute("data-active", "false");
+  });
+
+  it("Settings is also active on the canonical landing /dash/settings/account", async () => {
+    renderNav({ role: "user", initialEntries: ["/dash/settings/account"] });
+
+    expect(await screen.findByRole("link", { name: /Settings/ })).toHaveAttribute(
+      "data-active",
+      "true",
+    );
+  });
+
+  it("Settings stays inactive on unrelated /dash routes", async () => {
+    renderNav({ role: "user", initialEntries: ["/dash/workspace/abc"] });
+
+    expect(await screen.findByRole("link", { name: /Settings/ })).toHaveAttribute(
+      "data-active",
+      "false",
+    );
+  });
 });

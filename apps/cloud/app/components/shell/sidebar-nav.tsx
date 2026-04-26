@@ -16,10 +16,18 @@ type NavItem = {
   /**
    * When true, only an exact path match activates this item; otherwise a
    * `currentPath.startsWith(to + "/")` prefix match also counts so subroutes
-   * (e.g. `/settings/account`, `/dash/workspace/:id/collection/:cid/edit`)
-   * keep their parent item highlighted.
+   * (e.g. `/dash/workspace/:id/collection/:cid/edit`) keep their parent item
+   * highlighted. Ignored when `activePath` is set.
    */
   exact?: boolean;
+  /**
+   * Override the path used to compute the active state. Set this when the
+   * link target (`to`) is a leaf URL like `/dash/settings/account` but the
+   * item should also light up across its sibling pages (e.g. on
+   * `/dash/settings/appearance`). The active rule is then
+   * `currentPath === activePath || currentPath.startsWith(activePath + "/")`.
+   */
+  activePath?: string;
 };
 
 // `/dash`, `/dash/workspace`, and `/dash/devices` use plain string paths so
@@ -27,13 +35,19 @@ type NavItem = {
 const DASH_PATH = "/dash";
 const WORKSPACES_PATH = "/dash/workspace";
 const DEVICES_PATH = "/dash/devices";
+const SETTINGS_ROOT = "/dash/settings";
 
 function buildNavItems(role: string | null | undefined): NavItem[] {
   const items: NavItem[] = [
     { to: DASH_PATH, label: "Dashboard", icon: LayoutDashboardIcon, exact: true },
     { to: WORKSPACES_PATH, label: "Workspaces", icon: Building2Icon },
     { to: DEVICES_PATH, label: "Devices", icon: LaptopIcon },
-    { to: href("/dash/settings/account"), label: "Settings", icon: SettingsIcon },
+    {
+      to: href("/dash/settings/account"),
+      label: "Settings",
+      icon: SettingsIcon,
+      activePath: SETTINGS_ROOT,
+    },
   ];
   if (role === "admin") {
     items.push({ to: href("/admin"), label: "Admin", icon: CircleGaugeIcon });
@@ -41,10 +55,11 @@ function buildNavItems(role: string | null | undefined): NavItem[] {
   return items;
 }
 
-function isActiveLink(currentPath: string, targetUrl: string, exact = false): boolean {
-  if (currentPath === targetUrl) return true;
-  if (exact) return false;
-  return currentPath.startsWith(`${targetUrl}/`);
+function isActiveLink(currentPath: string, item: NavItem): boolean {
+  const matchPath = item.activePath ?? item.to;
+  if (currentPath === matchPath) return true;
+  if (item.exact) return false;
+  return currentPath.startsWith(`${matchPath}/`);
 }
 
 /**
@@ -64,11 +79,7 @@ export function SidebarNav() {
     <SidebarMenu>
       {items.map((item) => (
         <SidebarMenuItem key={item.to}>
-          <SidebarMenuButton
-            asChild
-            isActive={isActiveLink(pathname, item.to, item.exact)}
-            tooltip={item.label}
-          >
+          <SidebarMenuButton asChild isActive={isActiveLink(pathname, item)} tooltip={item.label}>
             <Link to={item.to}>
               <item.icon />
               <span>{item.label}</span>
