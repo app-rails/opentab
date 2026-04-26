@@ -38,10 +38,14 @@ import { useSetupCallbackBridge } from "@/lib/sync-setup/use-callback-bridge";
 import {
   clearProgress,
   loadProgress,
-  type SetupStepId,
   saveProgress,
   type WizardProgress,
 } from "@/lib/sync-setup/wizard-progress";
+
+// User-visible step ids; the wizard owns this naming. We deliberately do
+// NOT persist this set across sessions — only `lastHost` + `backupFilename`
+// survive a reload (see wizard-progress.ts comment for the rationale).
+type SetupStepId = "backup" | "connect" | "authorize" | "transfer";
 
 /**
  * Sync setup wizard (spec §2.4.5 + §2.4.5a).
@@ -370,7 +374,6 @@ function SyncSetupWizardInner(props: WizardInnerProps) {
   const [progress, setProgress] = useState<WizardProgress>(
     () =>
       loadProgress() ?? {
-        completedSteps: [],
         lastHost: null,
         backupFilename: null,
         updatedAt: 0,
@@ -424,43 +427,38 @@ function SyncSetupWizardInner(props: WizardInnerProps) {
   const ctx = state.context;
   const machineActiveStep: SetupStepId = STEP_OF_STATE[value] ?? "backup";
 
-  // --- Completion derivation ----------------------------------------------
-  // A step is "done" if (a) localStorage says so OR (b) the machine has
-  // already crossed past it in this run.
+  // --- Completion derivation (current session only) ------------------------
+  // Step ✓ marks come purely from machine progression in *this* session. We
+  // intentionally don't seed from localStorage: persisted "connect / authorize
+  // done" is a lie because both reset on reload (single-use OAuth code, fresh
+  // health check), and showing them as ✓ on remount caused the inconsistency
+  // bug where a re-mounted machine at idle showed connect+authorize ✓ but
+  // the active backup step looked pending.
   const completedSet = useMemo(() => {
-    const set = new Set<SetupStepId>(progress.completedSteps);
+    const set = new Set<SetupStepId>();
     const currentIdx = STEP_ORDER.indexOf(machineActiveStep);
     for (let i = 0; i < currentIdx; i++) set.add(STEP_ORDER[i]);
     if (value === "complete") for (const s of STEP_ORDER) set.add(s);
     return set;
-  }, [progress.completedSteps, machineActiveStep, value]);
+  }, [machineActiveStep, value]);
 
-  // --- Persist progress when meaningful state changes ---------------------
+  // --- Persist host + backup filename only (see wizard-progress.ts) -------
   useEffect(() => {
-    const completedArr = STEP_ORDER.filter((s) => completedSet.has(s));
     const nextHost = ctx.host || progress.lastHost;
     const nextBackup = ctx.backupFilename || progress.backupFilename;
 
-    const sameSteps =
-      completedArr.length === progress.completedSteps.length &&
-      completedArr.every((s, i) => progress.completedSteps[i] === s);
-    if (sameSteps && nextHost === progress.lastHost && nextBackup === progress.backupFilename) {
+    if (nextHost === progress.lastHost && nextBackup === progress.backupFilename) {
       return;
     }
 
-    saveProgress({
-      completedSteps: completedArr,
-      lastHost: nextHost,
-      backupFilename: nextBackup,
-    });
+    saveProgress({ lastHost: nextHost, backupFilename: nextBackup });
     setProgress((prev) => ({
       ...prev,
-      completedSteps: completedArr,
       lastHost: nextHost,
       backupFilename: nextBackup,
       updatedAt: Date.now(),
     }));
-  }, [completedSet, ctx.host, ctx.backupFilename, progress]);
+  }, [ctx.host, ctx.backupFilename, progress]);
 
   // --- Accordion controlled state (default = active step) -----------------
   const [openStepId, setOpenStepId] = useState<SetupStepId>(machineActiveStep);
@@ -484,7 +482,7 @@ function SyncSetupWizardInner(props: WizardInnerProps) {
   const handleCancel = useCallback(() => {
     send({ type: "CANCEL" });
     clearProgress();
-    setProgress({ completedSteps: [], lastHost: null, backupFilename: null, updatedAt: 0 });
+    setProgress({ lastHost: null, backupFilename: null, updatedAt: 0 });
     onCancel?.();
   }, [send, onCancel]);
 
@@ -623,6 +621,15 @@ function BackupBody({ value, backupFilename, onStart, onCancel }: BackupBodyProp
       <p className="text-muted-foreground text-sm">
         Enable sync to share your workspaces across devices. We'll back up locally first.
       </p>
+      {/* If a previous wizard run already wrote a backup, surface it so the
+          user knows the file isn't lost — the local-first invariant is the
+          point of this whole step. The wizard still re-runs backup on
+          Enable Sync because each session writes a fresh timestamped file. */}
+      {backupFilename && value === "idle" && (
+        <p className="text-muted-foreground text-xs">
+          Last backup: <code className="rounded bg-muted px-1">{backupFilename}</code>
+        </p>
+      )}
       <div className="flex gap-2">
         <Button size="sm" onClick={onStart}>
           {value === "backup_done" ? "Continue" : "Enable Sync"}

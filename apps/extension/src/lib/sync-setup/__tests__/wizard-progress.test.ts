@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { clearProgress, loadProgress, saveProgress, type WizardProgress } from "../wizard-progress";
+import { clearProgress, loadProgress, saveProgress } from "../wizard-progress";
 
 const STORAGE_KEY = "opentab_sync_setup_progress_v1";
 
@@ -18,31 +18,38 @@ describe("wizard-progress", () => {
 
   it("roundtrips a valid progress payload", () => {
     saveProgress({
-      completedSteps: ["backup", "connect"],
       lastHost: "https://sync.example.com",
       backupFilename: "opentab-backup.json",
     });
     const loaded = loadProgress();
     expect(loaded).not.toBeNull();
-    expect(loaded!.completedSteps).toEqual(["backup", "connect"]);
     expect(loaded!.lastHost).toBe("https://sync.example.com");
     expect(loaded!.backupFilename).toBe("opentab-backup.json");
     expect(typeof loaded!.updatedAt).toBe("number");
     expect(loaded!.updatedAt).toBeGreaterThan(0);
   });
 
-  it("filters out unknown step ids — defends against an old client writing a step that no longer exists", () => {
+  it("ignores any legacy `completedSteps` field a previous version may have written", () => {
+    // Earlier builds persisted a `completedSteps` array. That field led to a
+    // confusing UX after reload (later steps shown as ✓ while the active
+    // step rendered as 'active'), so it was removed. Make sure we don't
+    // crash or surface it on the way back.
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        completedSteps: ["backup", "ghost-step", "connect"],
-        lastHost: null,
-        backupFilename: null,
+        completedSteps: ["backup", "connect"],
+        lastHost: "https://x",
+        backupFilename: "f.json",
         updatedAt: 1,
-      } satisfies Record<keyof WizardProgress, unknown>),
+      }),
     );
     const loaded = loadProgress();
-    expect(loaded?.completedSteps).toEqual(["backup", "connect"]);
+    expect(loaded).toMatchObject({
+      lastHost: "https://x",
+      backupFilename: "f.json",
+      updatedAt: 1,
+    });
+    expect(loaded as Record<string, unknown>).not.toHaveProperty("completedSteps");
   });
 
   it("returns null and clears the entry on corrupted JSON so the next save starts clean", () => {
@@ -60,7 +67,6 @@ describe("wizard-progress", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        completedSteps: [],
         lastHost: 42,
         backupFilename: { wrong: "shape" },
         updatedAt: "not-a-number",
@@ -74,7 +80,6 @@ describe("wizard-progress", () => {
 
   it("clearProgress removes the persisted entry", () => {
     saveProgress({
-      completedSteps: ["backup"],
       lastHost: "h",
       backupFilename: "f.json",
     });

@@ -1,45 +1,46 @@
 /**
- * Persistence for the sync-setup wizard's user-facing step progress.
+ * Persistence for the sync-setup wizard's *durable* context.
  *
  * The XState machine in `state-machine.ts` is in-memory and dies when the
- * settings tab unmounts; without this layer, a user who closes settings
- * mid-flow loses every checkpoint and re-runs `Enable Sync` from zero. We
- * persist the *minimum* needed to resurrect a useful state on reopen:
+ * settings tab unmounts. We persist the only two values that remain
+ * meaningful across a remount:
  *
- *   - `completedSteps`: which of the 4 user-visible steps have ever finished
  *   - `lastHost`: the host the user typed (so `Connect` step prefills it)
- *   - `backupFilename`: the JSON backup the wizard wrote (lets `Backup` step
- *     show as ✓ even after a remount, and surfaces the filename)
+ *   - `backupFilename`: the JSON backup the wizard wrote (lets the Backup
+ *     step show "previously saved as …" so the user knows we didn't lose
+ *     their backup record)
  *
  * What we deliberately DON'T persist:
  *
- *   - `nonce` / `exchangeCode`: lifetime ~seconds; reading them back on
- *     reopen would only generate confusing "expired" errors. The Authorize
- *     step always re-mints both.
+ *   - `completedSteps`: tempting but lies. `connect` "done" = a previous
+ *     health-check passed, which says nothing about the next request.
+ *     `authorize` "done" = the OAuth code was consumed once; the code is
+ *     single-use and expires in seconds, so the next session MUST redo it.
+ *     If we mark these as ✓ on remount the UI claims work that isn't
+ *     actually durable, and the user sees the bug they reported: connect
+ *     and authorize ✓ while backup looks pending, even though the wizard
+ *     would have to redo all three.
+ *   - `nonce` / `exchangeCode`: same lifetime issue; the Authorize step
+ *     always re-mints both.
  *   - `deviceToken`: already owned by `sync-auth-storage` (chrome.storage.local).
- *     A second copy here would diverge.
+ *     Two copies would diverge.
+ *
+ * Step completion is computed purely from the current session's machine
+ * state in `sync-setup-wizard.tsx`, so the ✓ marks always match what
+ * actually happened in the current run.
  *
  * Storage backend is `localStorage` (per user request); the settings page
  * lives at `chrome-extension://<id>/settings.html`, so localStorage is
  * per-extension-profile and survives tab close + browser restart.
  */
 
-export type SetupStepId = "backup" | "connect" | "authorize" | "transfer";
-
 export type WizardProgress = {
-  completedSteps: SetupStepId[];
   lastHost: string | null;
   backupFilename: string | null;
   updatedAt: number;
 };
 
 const STORAGE_KEY = "opentab_sync_setup_progress_v1";
-const VALID_STEP_IDS: ReadonlySet<SetupStepId> = new Set([
-  "backup",
-  "connect",
-  "authorize",
-  "transfer",
-]);
 
 function safeStorage(): Storage | null {
   // jsdom + WXT background contexts don't always expose `localStorage`; guard
@@ -60,12 +61,7 @@ export function loadProgress(): WizardProgress | null {
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object") return null;
     const obj = parsed as Record<string, unknown>;
-    const stepsRaw = Array.isArray(obj.completedSteps) ? obj.completedSteps : [];
-    const completedSteps = stepsRaw.filter(
-      (s): s is SetupStepId => typeof s === "string" && VALID_STEP_IDS.has(s as SetupStepId),
-    );
     return {
-      completedSteps,
       lastHost: typeof obj.lastHost === "string" ? obj.lastHost : null,
       backupFilename: typeof obj.backupFilename === "string" ? obj.backupFilename : null,
       updatedAt: typeof obj.updatedAt === "number" ? obj.updatedAt : 0,
