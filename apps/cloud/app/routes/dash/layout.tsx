@@ -1,4 +1,5 @@
 import { Outlet } from "react-router";
+import { AuthenticatedShell } from "~/components/shell/authenticated-shell";
 import type { Route } from "./+types/layout";
 
 /**
@@ -7,5 +8,9 @@ import type { Route } from "./+types/layout";
  * workspace-detail routes share a single mount point.
  */
 export default function DashLayout(_: Route.ComponentProps) {
-  return <Outlet />;
+  return (
+    <AuthenticatedShell>
+      <Outlet />
+    </AuthenticatedShell>
+  );
 }
