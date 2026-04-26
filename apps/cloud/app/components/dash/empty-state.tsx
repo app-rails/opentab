@@ -1,9 +1,7 @@
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
-
-// TODO: replace with published listing URL
-const CHROME_STORE_URL = "https://chromewebstore.google.com/detail/opentab/PLACEHOLDER";
+import { CHROME_STORE_URL } from "~/lib/external-links";
 
 /**
  * Dashboard empty state. Shown when the user has no synced workspaces yet.

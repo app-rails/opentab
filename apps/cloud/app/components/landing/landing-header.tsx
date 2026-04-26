@@ -1,9 +1,7 @@
 import { Link } from "react-router";
 import { AppLogo } from "~/components/app-logo";
 import { Button } from "~/components/ui/button";
-
-// TODO: replace with published listing URL
-const CHROME_STORE_URL = "https://chromewebstore.google.com/detail/opentab/PLACEHOLDER";
+import { CHROME_STORE_URL } from "~/lib/external-links";
 
 /**
  * Public landing page header. Logo on the left, brief nav in the middle
