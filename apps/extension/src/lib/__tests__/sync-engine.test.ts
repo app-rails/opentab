@@ -372,6 +372,60 @@ describe("SyncEngine.push result bucketing", () => {
     expect(stored1.lastError).toContain("fetch failed");
     expect(stored1.nextRetryAt).not.toBeNull();
   });
+
+  it("never escalates to 'dead' on 5xx no matter how many attempts the op has burned", async () => {
+    // Server-side 5xx is by definition a server problem and the op is fine;
+    // dead = data loss because cleanupOutbox bulkDelete's it after 7 days.
+    const row = seedPendingRow({ opId: "op-5xx", attemptCount: 99 });
+    const push = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new SyncClientError(SyncErrorCode.INTERNAL, 503, "service unavailable"),
+      );
+    const engine = new SyncEngine(mockSyncClient({ push }));
+
+    await engine.sync();
+
+    const stored = getState().outbox.find((r) => r.id === row.id)!;
+    expect(stored.status).toBe("failed");
+    // Crucially: NOT "dead".
+    expect(stored.status).not.toBe("dead");
+    expect(stored.lastError).toContain("503");
+  });
+
+  it("never escalates to 'dead' on a non-429 4xx batch reject either (server contract drift is reportable, not data-discard)", async () => {
+    const row = seedPendingRow({ opId: "op-400", attemptCount: 99 });
+    const push = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new SyncClientError(SyncErrorCode.INVALID_PAYLOAD, 400, "schema rejected"),
+      );
+    const engine = new SyncEngine(mockSyncClient({ push }));
+
+    await engine.sync();
+
+    const stored = getState().outbox.find((r) => r.id === row.id)!;
+    expect(stored.status).toBe("failed");
+    expect(stored.status).not.toBe("dead");
+    expect(stored.lastError).toContain("400");
+  });
+
+  it("never escalates per-op rejection to 'dead' even after MAX_ATTEMPT_COUNT", async () => {
+    const bad = seedPendingRow({ opId: "op-bad", attemptCount: 99 });
+    const push = vi.fn().mockResolvedValueOnce({
+      applied: [],
+      duplicates: [],
+      lwwSkipped: [],
+      error: { opId: bad.opId, code: SyncErrorCode.SYNC_ID_MISMATCH, message: "mismatch" },
+    });
+    const engine = new SyncEngine(mockSyncClient({ push }));
+
+    await engine.sync();
+
+    const stored = getState().outbox.find((r) => r.id === bad.id)!;
+    expect(stored.status).toBe("failed");
+    expect(stored.status).not.toBe("dead");
+  });
 });
 
 // ---------------------------------------------------------------------------

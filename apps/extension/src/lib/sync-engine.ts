@@ -30,7 +30,6 @@ interface ChangeEntry {
 // Constants
 // ---------------------------------------------------------------------------
 
-const MAX_ATTEMPT_COUNT = 20;
 const PUSH_DEBOUNCE_MS = 500;
 const PUSH_LOOP_TIME_LIMIT = 30_000;
 const PUSH_LOOP_BATCH_LIMIT = 10;
@@ -88,6 +87,22 @@ async function applyCooldown(retryAfterSec: number | undefined): Promise<void> {
   const seconds =
     Number.isFinite(retryAfterSec) && retryAfterSec! > 0 ? retryAfterSec! : DEFAULT_COOLDOWN_SEC;
   await db.syncMeta.put({ key: SYNC_COOLDOWN_KEY, value: Date.now() + seconds * 1000 });
+}
+
+/**
+ * Categorise an error for the outbox `lastError` field. Distinguishing
+ * server-side (5xx) from client-side (4xx ≠ 429) from transport (no
+ * SyncClientError = network / fetch failure) makes the failed-count UI
+ * actionable: a wall of "server error 503" tells a different story from
+ * "client error 400 INVALID_PAYLOAD".
+ */
+function describeFailure(err: unknown): string {
+  if (err instanceof SyncClientError) {
+    if (err.status >= 500) return `server error ${err.status}: ${err.message}`;
+    if (err.status >= 400) return `client error ${err.status} ${err.code}: ${err.message}`;
+    return `${err.status} ${err.code}: ${err.message}`;
+  }
+  return `network error: ${String(err)}`;
 }
 
 /** LWW: existing wins if newer timestamp, or same timestamp with higher opId */
@@ -201,23 +216,16 @@ export class SyncEngine {
 
     if (failedOps.length === 0) return;
 
-    // Mark ops that exceed max attempts as dead
-    const deadOps = failedOps.filter((op) => op.attemptCount >= MAX_ATTEMPT_COUNT);
-    const retryableOps = failedOps.filter((op) => op.attemptCount < MAX_ATTEMPT_COUNT);
-
-    if (deadOps.length > 0) {
-      const deadIds = deadOps.map((op) => op.id!);
-      await db.syncOutbox.where("id").anyOf(deadIds).modify({ status: "dead" });
-    }
-
-    if (retryableOps.length === 0) return;
-
+    // Same data-loss-aversion stance as push(): never auto-promote to dead
+    // based on attempt count. A persistent failure is a UX problem the user
+    // needs to see (via SyncStatusCard's failed-count surface), not a
+    // silent discard. Retry every failed op forever with capped backoff.
     try {
-      const result = await this.client.push(retryableOps.map(toWireOp));
+      const result = await this.client.push(failedOps.map(toWireOp));
 
       // Mark synced: applied ∪ duplicates ∪ lwwSkipped are all terminal.
       const syncedOpIds = new Set([...result.applied, ...result.duplicates, ...result.lwwSkipped]);
-      const idsToSync = retryableOps.filter((op) => syncedOpIds.has(op.opId)).map((op) => op.id!);
+      const idsToSync = failedOps.filter((op) => syncedOpIds.has(op.opId)).map((op) => op.id!);
       if (idsToSync.length > 0) {
         await db.syncOutbox
           .where("id")
@@ -226,19 +234,18 @@ export class SyncEngine {
       }
     } catch (err) {
       if (isTerminalBroadcastError(err)) return;
-      // Increment attempt count for all retryable ops
-      for (const op of retryableOps) {
+      if (err instanceof SyncClientError && err.status === 429) {
+        await applyCooldown(err.retryAfterSec);
+        return;
+      }
+      for (const op of failedOps) {
         const newAttempt = op.attemptCount + 1;
-        if (newAttempt >= MAX_ATTEMPT_COUNT) {
-          await db.syncOutbox.update(op.id!, { status: "dead" });
-        } else {
-          await db.syncOutbox.update(op.id!, {
-            status: "failed",
-            attemptCount: newAttempt,
-            lastError: "retry failed",
-            nextRetryAt: now + backoffMs(newAttempt),
-          });
-        }
+        await db.syncOutbox.update(op.id!, {
+          status: "failed",
+          attemptCount: newAttempt,
+          lastError: describeFailure(err),
+          nextRetryAt: now + backoffMs(newAttempt),
+        });
       }
     }
   }
@@ -455,21 +462,22 @@ export class SyncEngine {
 
         // Handle partial failure: exactly one op (at `error.opId`) is marked
         // failed for retry; the server short-circuits the batch so any ops
-        // after the failing one remain in `pending` for the next cycle.
+        // after the failing one remain in `pending` for the next cycle. We
+        // deliberately never escalate to "dead" — that's the data-loss path
+        // (cleanupOutbox bulkDeletes dead rows after 7 days, which means a
+        // local change that never reached the server is silently discarded).
+        // Stuck ops are a UX problem worth surfacing, not a data-integrity
+        // outcome to bury.
         if (result.error) {
           const failingOp = pendingOps.find((op) => op.opId === result.error!.opId);
           if (failingOp) {
             const newAttempt = failingOp.attemptCount + 1;
-            if (newAttempt >= MAX_ATTEMPT_COUNT) {
-              await db.syncOutbox.update(failingOp.id!, { status: "dead" });
-            } else {
-              await db.syncOutbox.update(failingOp.id!, {
-                status: "failed" as const,
-                attemptCount: newAttempt,
-                lastError: `${result.error.code}: ${result.error.message}`,
-                nextRetryAt: Date.now() + backoffMs(newAttempt),
-              });
-            }
+            await db.syncOutbox.update(failingOp.id!, {
+              status: "failed" as const,
+              attemptCount: newAttempt,
+              lastError: `${result.error.code}: ${result.error.message}`,
+              nextRetryAt: Date.now() + backoffMs(newAttempt),
+            });
           }
           break;
         }
@@ -479,34 +487,33 @@ export class SyncEngine {
           break;
         }
 
-        // 429 from push: record server-suggested cooldown so the next
-        // sync() returns early instead of immediately re-hammering. We do
-        // NOT mark the batch failed (the ops are still valid; we just
-        // need to wait), so they stay pending and get retried after
-        // cooldown expires.
+        // 429: record server-suggested cooldown; ops stay pending for the
+        // next sync (no failure marking — they're valid, we just need to
+        // wait).
         if (err instanceof SyncClientError && err.status === 429) {
           await applyCooldown(err.retryAfterSec);
           break;
         }
 
-        // Network / other error: mark all as failed with backoff
+        // Any other HTTP error (4xx ≠ 429, 5xx) or network error: mark the
+        // batch failed with backoff. Same data-loss-aversion note as above:
+        // never auto-escalate to dead. 5xx is by definition a server problem
+        // and the op is fine; 4xx might be a server contract drift the user
+        // can recover from once we (or they) fix it. Either way, dropping
+        // the op silently is wrong.
         const now = Date.now();
         const failedIds = pendingOps.map((op) => op.id!);
         const newAttempt = pendingOps[0].attemptCount + 1;
-        if (newAttempt >= MAX_ATTEMPT_COUNT) {
-          await db.syncOutbox.where("id").anyOf(failedIds).modify({ status: "dead" });
-        } else {
-          const backoff = backoffMs(newAttempt);
-          await db.syncOutbox
-            .where("id")
-            .anyOf(failedIds)
-            .modify({
-              status: "failed" as const,
-              attemptCount: newAttempt,
-              lastError: String(err),
-              nextRetryAt: now + backoff,
-            });
-        }
+        const backoff = backoffMs(newAttempt);
+        await db.syncOutbox
+          .where("id")
+          .anyOf(failedIds)
+          .modify({
+            status: "failed" as const,
+            attemptCount: newAttempt,
+            lastError: describeFailure(err),
+            nextRetryAt: now + backoff,
+          });
         break;
       }
     }
