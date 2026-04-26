@@ -25,7 +25,14 @@ export type SyncAuthState =
       deviceName: string;
     };
 
-const STORAGE_KEY = "opentab_sync_auth_v1";
+/**
+ * chrome.storage.local key for the sync-auth state. Exported so background
+ * + UI can subscribe to `chrome.storage.onChanged` without a magic string in
+ * three places.
+ */
+export const SYNC_AUTH_STORAGE_KEY = "opentab_sync_auth_v1";
+
+const STORAGE_KEY = SYNC_AUTH_STORAGE_KEY;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;

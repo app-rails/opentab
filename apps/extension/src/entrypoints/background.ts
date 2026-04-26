@@ -1,6 +1,6 @@
 import { initializeAuth } from "@/lib/auth-manager";
 import { MSG } from "@/lib/constants";
-import { getSyncAuth } from "@/lib/sync-auth-storage";
+import { getSyncAuth, SYNC_AUTH_STORAGE_KEY } from "@/lib/sync-auth-storage";
 import { createSyncEngine, type SyncEngine } from "@/lib/sync-engine";
 
 /**
@@ -74,6 +74,30 @@ export default defineBackground(() => {
   // Defensive: also reconcile on worker spin-up (happens on every message in
   // MV3 after idle eviction). `ensureSyncEngine` is cheap when already wired.
   void ensureSyncEngine();
+
+  // --- React to wizard-side auth flips ---
+  //
+  // The wizard finishes auth by writing chrome.storage.local under
+  // SYNC_AUTH_STORAGE_KEY (via setSyncAuth). It also dispatches
+  // SYNC_SETUP_COMPLETE in `handleComplete`, but that handler only fires
+  // when the user clicks the wizard's "Setup complete" Close button — and
+  // App.tsx swaps the wizard for SyncStatusCard the moment auth flips, so
+  // the user typically never sees that step. Result: bg's ensureSyncEngine
+  // would be stuck on the pre-auth `disabled` snapshot until the next worker
+  // restart, and the outbox would never drain. Subscribe to storage changes
+  // directly so bg auto-wires the moment the wizard authenticates,
+  // independent of any UI message.
+  chrome.storage.onChanged.addListener(async (changes, area) => {
+    if (area !== "local") return;
+    if (!(SYNC_AUTH_STORAGE_KEY in changes)) return;
+    await ensureSyncEngine();
+    // If auth just flipped to authenticated, kick off a sync immediately so
+    // the wizard's bulk-pushed ops drain without waiting up to 10 min for
+    // the first alarm tick. Subsequent drains happen on the alarm.
+    if (syncEngine) {
+      syncEngine.sync().catch((err) => console.error("[bg] auth-flip sync error:", err));
+    }
+  });
 
   // --- Message listeners ---
   chrome.runtime.onMessage.addListener((message) => {
