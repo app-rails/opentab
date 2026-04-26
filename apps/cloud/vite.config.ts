@@ -30,6 +30,18 @@ export default defineConfig({
     // far from the root cause.
     port: 5173,
     strictPort: true,
+    // Vite 6+ tightened the dev-server CORS default to localhost/127.0.0.1
+    // only (CVE-2025-30208), which blocks `chrome-extension://…` preflights
+    // before they ever reach `workers/app.ts`'s CORS wrapper. Re-allow
+    // chrome-extension here so the extension wizard can talk to the local
+    // worker; the actual trust list for cross-origin API calls still lives
+    // in app/lib/cors.ts (shared with BetterAuth's trustedOrigins).
+    cors: {
+      origin: [
+        /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/,
+        /^chrome-extension:\/\/.+$/,
+      ],
+    },
   },
   build: {
     minify: true,

@@ -20,6 +20,13 @@ export type RateLimitOpts = {
 
 type Bucket = { count: number; resetAt: number };
 
+// Cloudflare KV rejects PUTs with `expirationTtl < 60`. The bucket's truth
+// is `resetAt` (a wall-clock timestamp checked on the next read), so the
+// TTL is purely for KV's own GC — extending it past `resetAt` by a few
+// seconds is harmless: a stale bucket whose `resetAt <= now` is replaced
+// on the next request, regardless of how long KV keeps the value alive.
+const CF_KV_MIN_EXPIRATION_TTL_SEC = 60;
+
 /**
  * KV-backed token bucket (spec §2.3.9).
  *
@@ -37,7 +44,7 @@ export async function enforceRateLimit(opts: RateLimitOpts): Promise<void> {
 
   if (!raw || raw.resetAt <= now) {
     await opts.kv.put(key, JSON.stringify({ count: 1, resetAt: now + opts.windowSec }), {
-      expirationTtl: opts.windowSec,
+      expirationTtl: Math.max(CF_KV_MIN_EXPIRATION_TTL_SEC, opts.windowSec),
     });
     return;
   }
@@ -57,6 +64,6 @@ export async function enforceRateLimit(opts: RateLimitOpts): Promise<void> {
   }
 
   await opts.kv.put(key, JSON.stringify({ count: raw.count + 1, resetAt: raw.resetAt }), {
-    expirationTtl: Math.max(1, raw.resetAt - now),
+    expirationTtl: Math.max(CF_KV_MIN_EXPIRATION_TTL_SEC, raw.resetAt - now),
   });
 }

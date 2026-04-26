@@ -2,6 +2,11 @@ import { SyncErrorCode } from "@opentab/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { enforceRateLimit, type RateLimitKv } from "../rate-limit";
 
+// CF KV's real constraint: expirationTtl must be >= 60. The fake mirrors
+// that so a regression — passing a smaller TTL — fails in tests instead of
+// only blowing up at runtime against a live KV namespace.
+const CF_KV_MIN_TTL_SEC = 60;
+
 function makeKv(): RateLimitKv & { store: Map<string, string> } {
   const store = new Map<string, string>();
   return {
@@ -10,7 +15,12 @@ function makeKv(): RateLimitKv & { store: Map<string, string> } {
       const v = store.get(key);
       return v == null ? null : JSON.parse(v);
     },
-    put: async (key: string, value: string) => {
+    put: async (key: string, value: string, options?: { expirationTtl?: number }) => {
+      if (options?.expirationTtl !== undefined && options.expirationTtl < CF_KV_MIN_TTL_SEC) {
+        throw new Error(
+          `KV PUT failed: 400 Invalid expiration_ttl of ${options.expirationTtl}. Expiration TTL must be at least ${CF_KV_MIN_TTL_SEC}.`,
+        );
+      }
       store.set(key, value);
     },
   };
@@ -82,6 +92,22 @@ describe("enforceRateLimit", () => {
 
     // same scope, different endpoint — fresh bucket
     await expect(enforceRateLimit(userAPull)).resolves.toBeUndefined();
+  });
+
+  it("clamps expirationTtl to CF KV minimum on increments near window end", async () => {
+    // Reproduces the runtime crash:
+    //   "KV PUT failed: 400 Invalid expiration_ttl of 47.
+    //    Expiration TTL must be at least 60."
+    // First PUT creates the bucket with TTL=windowSec (60, OK). After 13s,
+    // an increment PUT would naturally use TTL=47 — the bucket's remaining
+    // resetAt minus now — which CF KV refuses.
+    const kv = makeKv();
+    const opts = { kv, scope: "user-1", endpoint: "sync.push", max: 5, windowSec: 60 };
+
+    await enforceRateLimit(opts);
+    vi.advanceTimersByTime(13_000);
+
+    await expect(enforceRateLimit(opts)).resolves.toBeUndefined();
   });
 
   it("sets Retry-After to the remaining window", async () => {
