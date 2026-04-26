@@ -1,5 +1,6 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MSG } from "@/lib/constants";
 
 // The card reads two things: lastSyncAt (from db.syncMeta) and pending op
 // count (from db.syncOutbox). The earlier version pulled lastSync from
@@ -23,13 +24,15 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+const sendMessage = vi.fn().mockResolvedValue(undefined);
+
 beforeEach(() => {
   vi.clearAllMocks();
   syncMetaGet.mockResolvedValue(undefined);
   syncOutboxCount.mockResolvedValue(0);
   vi.stubGlobal("chrome", {
     runtime: {
-      sendMessage: vi.fn().mockResolvedValue(undefined),
+      sendMessage: (msg: unknown) => sendMessage(msg),
       onMessage: {
         addListener: vi.fn(),
         removeListener: vi.fn(),
@@ -82,5 +85,17 @@ describe("SyncStatusCard", () => {
     render(<SyncStatusCard auth={AUTH} />);
 
     await waitFor(() => expect(screen.getByText("Not yet synced")).toBeTruthy());
+  });
+
+  it("Sync now button dispatches SYNC_REQUEST so bg engine drains the outbox on demand", async () => {
+    const SyncStatusCard = await loadComponent();
+    render(<SyncStatusCard auth={AUTH} />);
+
+    // Wait for initial refresh so the button is mounted in the post-load tree.
+    await waitFor(() => expect(screen.getByRole("button", { name: /sync now/i })).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: MSG.SYNC_REQUEST }));
   });
 });

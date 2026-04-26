@@ -15,6 +15,7 @@ export function SyncStatusCard({ auth, onDisconnected }: SyncStatusCardProps) {
   const [lastSync, setLastSync] = useState<number | null>(null);
   const [pending, setPending] = useState<number>(0);
   const [open, setOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Both reads come from the local Dexie DB — that's the single source of
   // truth the engine writes to (`db.syncMeta.lastSyncAt` after every
@@ -46,12 +47,28 @@ export function SyncStatusCard({ auth, onDisconnected }: SyncStatusCardProps) {
       if (!message || typeof message !== "object") return;
       const type = (message as { type?: unknown }).type;
       if (type === MSG.SYNC_PROGRESS || type === MSG.SYNC_APPLIED) {
+        // SYNC_PROGRESS arrives at the end of every engine.sync(), so it's
+        // also our signal that an in-flight manual "Sync now" finished.
+        setSyncing(false);
         refresh();
       }
     };
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
   }, [refresh]);
+
+  const handleSyncNow = useCallback(() => {
+    // Fire-and-forget: bg's onMessage handler invokes syncEngine.sync().
+    // We rely on the SYNC_PROGRESS broadcast at the end of that cycle to
+    // flip syncing back to false (handled in the listener above), so the
+    // button accurately mirrors engine state instead of timing out blindly.
+    setSyncing(true);
+    chrome.runtime.sendMessage({ type: MSG.SYNC_REQUEST }).catch(() => {
+      // No bg listener (e.g., service worker not running in tests) — drop
+      // the busy state so the button doesn't get stuck.
+      setSyncing(false);
+    });
+  }, []);
 
   return (
     <div className="space-y-3 rounded-lg border border-border p-4">
@@ -74,7 +91,10 @@ export function SyncStatusCard({ auth, onDisconnected }: SyncStatusCardProps) {
           <dd>{pending}</dd>
         </div>
       </dl>
-      <div className="pt-2">
+      <div className="flex gap-2 pt-2">
+        <Button size="sm" onClick={handleSyncNow} disabled={syncing}>
+          {syncing ? "Syncing…" : "Sync now"}
+        </Button>
         <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
           Disconnect
         </Button>
