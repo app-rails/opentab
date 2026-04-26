@@ -29,31 +29,67 @@ function renderNav(opts: { role: "user" | "admin"; initialEntries?: string[] }) 
 }
 
 describe("SidebarNav", () => {
-  it("renders 3 fixed items for non-admin users", async () => {
+  it("renders 4 fixed items for non-admin users in order", async () => {
     renderNav({ role: "user" });
 
     expect(await screen.findByRole("link", { name: /Dashboard/ })).toBeVisible();
+    expect(screen.getByRole("link", { name: /Workspaces/ })).toBeVisible();
     expect(screen.getByRole("link", { name: /Devices/ })).toBeVisible();
     expect(screen.getByRole("link", { name: /Settings/ })).toBeVisible();
     expect(screen.queryByRole("link", { name: /Admin/ })).toBeNull();
   });
 
-  it("renders 4 items including Admin for admin users", async () => {
+  it("renders 5 items including Admin for admin users", async () => {
     renderNav({ role: "admin" });
 
     expect(await screen.findByRole("link", { name: /Dashboard/ })).toBeVisible();
+    expect(screen.getByRole("link", { name: /Workspaces/ })).toBeVisible();
     expect(screen.getByRole("link", { name: /Devices/ })).toBeVisible();
     expect(screen.getByRole("link", { name: /Settings/ })).toBeVisible();
     expect(screen.getByRole("link", { name: /Admin/ })).toBeVisible();
   });
 
-  it("marks the active route via data-active on the matching item", async () => {
+  it("Workspaces link points at /dash/workspace", async () => {
+    renderNav({ role: "user" });
+    const ws = await screen.findByRole("link", { name: /Workspaces/ });
+    expect(ws).toHaveAttribute("href", "/dash/workspace");
+  });
+
+  it("Dashboard is exact-active only on /dash, not on /dash/workspace", async () => {
     renderNav({ role: "user", initialEntries: ["/dash"] });
 
     const dashboardLink = await screen.findByRole("link", { name: /Dashboard/ });
     expect(dashboardLink).toHaveAttribute("data-active", "true");
+    expect(screen.getByRole("link", { name: /Workspaces/ })).toHaveAttribute(
+      "data-active",
+      "false",
+    );
+    expect(screen.getByRole("link", { name: /Devices/ })).toHaveAttribute("data-active", "false");
+  });
 
-    const devicesLink = screen.getByRole("link", { name: /Devices/ });
-    expect(devicesLink).toHaveAttribute("data-active", "false");
+  it("Workspaces stays active on prefix matches under /dash/workspace", async () => {
+    renderNav({
+      role: "user",
+      initialEntries: ["/dash/workspace/abc/collection/def/edit"],
+    });
+
+    expect(await screen.findByRole("link", { name: /Workspaces/ })).toHaveAttribute(
+      "data-active",
+      "true",
+    );
+    expect(screen.getByRole("link", { name: /Dashboard/ })).toHaveAttribute("data-active", "false");
+  });
+
+  it("Devices is active on /devices subroutes; Workspaces stays inactive there", async () => {
+    renderNav({ role: "user", initialEntries: ["/devices/foo"] });
+
+    expect(await screen.findByRole("link", { name: /Devices/ })).toHaveAttribute(
+      "data-active",
+      "true",
+    );
+    expect(screen.getByRole("link", { name: /Workspaces/ })).toHaveAttribute(
+      "data-active",
+      "false",
+    );
   });
 });

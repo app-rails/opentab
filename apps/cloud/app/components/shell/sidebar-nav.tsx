@@ -1,4 +1,10 @@
-import { CircleGaugeIcon, LaptopIcon, LayoutDashboardIcon, SettingsIcon } from "lucide-react";
+import {
+  Building2Icon,
+  CircleGaugeIcon,
+  LaptopIcon,
+  LayoutDashboardIcon,
+  SettingsIcon,
+} from "lucide-react";
 import { href, Link, useLocation } from "react-router";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "~/components/ui/sidebar";
 import { useAuthUser } from "~/hooks/use-auth-user";
@@ -10,19 +16,22 @@ type NavItem = {
   /**
    * When true, only an exact path match activates this item; otherwise a
    * `currentPath.startsWith(to + "/")` prefix match also counts so subroutes
-   * (e.g. `/settings/account`) keep their parent item highlighted.
+   * (e.g. `/settings/account`, `/dash/workspace/:id/collection/:cid/edit`)
+   * keep their parent item highlighted.
    */
   exact?: boolean;
 };
 
-// `/dash` and `/devices` use plain string paths (matches `routes/layout.tsx`)
-// so this component compiles before those route keys exist in RR's type gen.
+// `/dash`, `/dash/workspace`, and `/devices` use plain string paths so this
+// component compiles before those route keys exist in RR's type gen.
 const DASH_PATH = "/dash";
+const WORKSPACES_PATH = "/dash/workspace";
 const DEVICES_PATH = "/devices";
 
 function buildNavItems(role: string | null | undefined): NavItem[] {
   const items: NavItem[] = [
     { to: DASH_PATH, label: "Dashboard", icon: LayoutDashboardIcon, exact: true },
+    { to: WORKSPACES_PATH, label: "Workspaces", icon: Building2Icon },
     { to: DEVICES_PATH, label: "Devices", icon: LaptopIcon },
     { to: href("/settings/account"), label: "Settings", icon: SettingsIcon },
   ];
