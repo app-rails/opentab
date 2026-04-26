@@ -1,7 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { data, Outlet } from "react-router";
 import { AuthenticatedShell } from "~/components/shell/authenticated-shell";
-import { DashSidebar } from "~/components/shell/dash-sidebar";
 import { workspaces } from "~/drizzle/schema";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
@@ -21,10 +20,9 @@ export type DashLayoutLoaderData = {
 };
 
 /**
- * Lightweight loader for the `/dash` subtree. Powers both the workspace
- * sidebar (DashSidebar) and the dashboard index's "Recently updated" list,
- * so we run it once at the layout level and let descendants read via
- * `useRouteLoaderData("routes/dash/layout")`.
+ * Lightweight loader for the `/dash` subtree. Powers the dashboard index's
+ * "Recently updated" list, so we run it once at the layout level and let
+ * descendants read via `useRouteLoaderData("routes/dash/layout")`.
  */
 export async function loadDashLayout(
   dbInstance: Db,
@@ -66,7 +64,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 
 export default function DashLayout(_: Route.ComponentProps) {
   return (
-    <AuthenticatedShell sidebar={<DashSidebar />}>
+    <AuthenticatedShell>
       <Outlet />
     </AuthenticatedShell>
   );

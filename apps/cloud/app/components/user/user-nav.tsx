@@ -1,4 +1,4 @@
-import { CircleGaugeIcon, LaptopIcon, LogOutIcon, SwatchBookIcon, UserCogIcon } from "lucide-react";
+import { CircleGaugeIcon, LogOutIcon, SwatchBookIcon, UserCogIcon } from "lucide-react";
 import { href, useNavigate, useSubmit } from "react-router";
 import {
   DropdownMenu,
@@ -53,14 +53,6 @@ export function UserNavMenuContent() {
           Admin Panel
         </DropdownMenuItem>
       )}
-      <DropdownMenuItem
-        onClick={() => {
-          navigate("/devices");
-        }}
-      >
-        <LaptopIcon />
-        Devices
-      </DropdownMenuItem>
       <DropdownMenuItem
         onClick={() => {
           navigate(href("/settings/account"));

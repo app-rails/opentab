@@ -4,21 +4,14 @@ import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 
 /**
  * Wraps an authenticated route subtree with the sidebar layout: shadcn
- * `SidebarProvider` + a sidebar (default `AppSidebar`) + `SidebarInset` for
- * page content. The `sidebar` prop lets `/dash` swap in a workspace-centric
- * sidebar while `/devices`, `/settings`, and `/admin` keep the global one.
+ * `SidebarProvider` + `AppSidebar` + `SidebarInset` for page content. Used
+ * uniformly across `/dash`, `/devices`, `/settings`, and `/admin`.
  */
-export function AuthenticatedShell({
-  children,
-  sidebar,
-}: {
-  children: ReactNode;
-  sidebar?: ReactNode;
-}) {
+export function AuthenticatedShell({ children }: { children: ReactNode }) {
   return (
     // 200px per spec §3.7 desktop breakpoint.
     <SidebarProvider style={{ "--sidebar-width": "200px" } as CSSProperties}>
-      {sidebar ?? <AppSidebar />}
+      <AppSidebar />
       <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
   );
