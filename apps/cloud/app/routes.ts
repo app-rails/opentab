@@ -47,6 +47,7 @@ export default [
     layout("routes/dash/layout.tsx", [
       index("routes/dash/index.tsx"),
       ...prefix("workspace", [
+        index("routes/dash/workspace/index.tsx"),
         route("new", "routes/dash/workspace/new.tsx"),
         route(":workspaceSyncId", "routes/dash/workspace/detail.tsx"),
         route(":workspaceSyncId/edit", "routes/dash/workspace/edit.tsx"),
