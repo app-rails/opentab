@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { data, Link } from "react-router";
+import { ExpandCollapseToolbar } from "~/components/dash/expand-collapse-toolbar";
 import { DateTimeDisplay } from "~/components/datetime-display";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -195,8 +196,25 @@ export async function loader({ context, params }: Route.LoaderArgs) {
 export default function WorkspaceDetailRoute({
   loaderData: { workspace, collections, tabsByCollection, totalTabs },
 }: Route.ComponentProps) {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(
+    () => new Set(collections.map((c) => c.syncId)),
+  );
+  const toggle = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+  const expandAll = () => setExpandedIds(new Set(collections.map((c) => c.syncId)));
+  const collapseAll = () => setExpandedIds(new Set());
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <nav aria-label="Breadcrumb" className="text-muted-foreground text-sm">
         <Link to="/dash" className="hover:text-foreground hover:underline">
           Dashboard
@@ -238,6 +256,8 @@ export default function WorkspaceDetailRoute({
         </div>
       </header>
 
+      <ExpandCollapseToolbar onExpandAll={expandAll} onCollapseAll={collapseAll} />
+
       <div className="flex items-center justify-between">
         <h2 className="font-medium text-lg">Collections</h2>
         <Button asChild size="sm">
@@ -262,6 +282,8 @@ export default function WorkspaceDetailRoute({
               workspaceSyncId={workspace.syncId}
               collection={c}
               tabs={tabsByCollection[c.syncId] ?? []}
+              open={expandedIds.has(c.syncId)}
+              onOpenChange={() => toggle(c.syncId)}
             />
           ))}
         </div>
@@ -274,14 +296,17 @@ function CollectionBlock({
   workspaceSyncId,
   collection,
   tabs,
+  open,
+  onOpenChange,
 }: {
   workspaceSyncId: string;
   collection: CollectionView;
   tabs: TabView[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(true);
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
+    <Collapsible open={open} onOpenChange={onOpenChange}>
       <Card>
         <CardHeader className="pb-0">
           <div className="flex w-full items-center justify-between gap-3">
