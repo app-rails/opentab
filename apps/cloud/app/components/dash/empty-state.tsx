@@ -9,9 +9,9 @@ import { CHROME_STORE_URL } from "~/lib/external-links";
  * Single CTA card per spec §3.4: a dashed-border tile centered in the page,
  * with an emoji, headline, body, primary "Get Chrome extension" button, and
  * a secondary "I already have it" link to the account settings (where the
- * sync wizard / device pairing lives). The page-level title and sub-text
- * ("Welcome to OpenTab Cloud", "No workspaces synced yet") are rendered by
- * the parent route, not this component.
+ * sync wizard / device pairing lives). The page-level greeting + sync status
+ * are rendered by the parent route via `dashboardGreeting()` from
+ * `~/lib/dashboard-greeting`; this component owns only the dashed CTA card.
  */
 export function EmptyState() {
   return (
