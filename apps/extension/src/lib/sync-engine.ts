@@ -130,6 +130,12 @@ export class SyncEngine {
 
       await db.syncMeta.put({ key: "lastSyncAt", value: Date.now() });
 
+      // SYNC_PROGRESS fires every cycle so status displays (lastSync,
+      // pending count) tick down in real time as the bg drains the outbox.
+      // SYNC_APPLIED is reserved for "remote data arrived" — it triggers
+      // workspace re-fetch in the dashboard, which is wasteful when no
+      // pull happened.
+      this.broadcastSyncProgress();
       if (pullCount > 0) {
         this.broadcastSyncApplied();
       }
@@ -335,6 +341,10 @@ export class SyncEngine {
 
   private broadcastSyncApplied() {
     chrome.runtime.sendMessage({ type: MSG.SYNC_APPLIED }).catch(() => {});
+  }
+
+  private broadcastSyncProgress() {
+    chrome.runtime.sendMessage({ type: MSG.SYNC_PROGRESS }).catch(() => {});
   }
 
   // ---- push -------------------------------------------------------------
