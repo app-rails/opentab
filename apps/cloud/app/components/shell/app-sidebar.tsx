@@ -26,6 +26,8 @@ import {
  */
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
+    // Intentionally NOT using variant="inset" (admin uses it). Spec §3.1's
+    // wireframe shows a plain sidebar+main layout, not a card-in-frame.
     <Sidebar className="group-data-[side=left]:border-border/50" {...props}>
       <SidebarHeader>
         <SidebarMenu>

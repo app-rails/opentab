@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { AppSidebar } from "~/components/shell/app-sidebar";
 import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 
@@ -14,7 +14,8 @@ import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
  */
 export function AuthenticatedShell({ children }: { children: ReactNode }) {
   return (
-    <SidebarProvider>
+    // 200px per spec §3.7 desktop breakpoint.
+    <SidebarProvider style={{ "--sidebar-width": "200px" } as CSSProperties}>
       <AppSidebar />
       <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
