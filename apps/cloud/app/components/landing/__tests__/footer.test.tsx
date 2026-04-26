@@ -22,6 +22,12 @@ describe("Footer", () => {
     expect(link).toHaveAttribute("href", "/legal/terms");
   });
 
+  it("renders a Security link to /legal/security", () => {
+    renderWithRouter(<Footer />);
+    const link = screen.getByRole("link", { name: /Security/i });
+    expect(link).toHaveAttribute("href", "/legal/security");
+  });
+
   it("renders an external GitHub link with target=_blank rel=noreferrer", () => {
     renderWithRouter(<Footer />);
     const link = screen.getByRole("link", { name: /GitHub/i });

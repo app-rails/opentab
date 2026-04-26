@@ -16,11 +16,12 @@ export default [
     ]),
   ]),
 
-  // Public legal pages (Privacy, Terms)
+  // Public legal pages (Privacy, Terms, Security)
   ...prefix("legal", [
     layout("routes/legal/layout.tsx", [
       route("privacy", "routes/legal/privacy.tsx"),
       route("terms", "routes/legal/terms.tsx"),
+      route("security", "routes/legal/security.tsx"),
     ]),
   ]),
 

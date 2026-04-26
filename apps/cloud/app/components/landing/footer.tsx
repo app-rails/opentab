@@ -18,6 +18,9 @@ export function Footer() {
           <Link to="/legal/terms" className="hover:text-foreground">
             Terms
           </Link>
+          <Link to="/legal/security" className="hover:text-foreground">
+            Security
+          </Link>
           <a
             href={GITHUB_REPO_URL}
             target="_blank"
