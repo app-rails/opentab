@@ -8,54 +8,62 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { workspaces } from "~/drizzle/schema";
+import { tabCollections } from "~/drizzle/schema";
 import { getPageTitle } from "~/lib/utils";
-import { collectionCreateFormSchema } from "~/lib/validations/collection";
+import { tabCreateFormSchema } from "~/lib/validations/tab";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
-import type { Route } from "./+types/workspace.$workspaceSyncId.collection.new";
-import { runCollectionCreateAction } from "./collection-actions.server";
+import { runTabCreateAction } from "../tab-actions.server";
+import type { Route } from "./+types/new";
 
 export function meta() {
-  return [{ title: getPageTitle("Create collection") }];
+  return [{ title: getPageTitle("Add tab") }];
 }
 
 // ---------------------------------------------------------------------------
-// Loader: confirm the parent workspace exists so the form renders with a
-// breadcrumb label.
+// Loader
 // ---------------------------------------------------------------------------
 
-export type CollectionNewLoaderData = {
-  workspace: { syncId: string; name: string };
+export type TabNewLoaderData = {
+  collection: { syncId: string; name: string; workspaceSyncId: string };
 };
 
-export async function loadCollectionNew(
+export async function loadTabNew(
   dbInstance: Db,
   userId: string,
   workspaceSyncId: string,
-): Promise<CollectionNewLoaderData> {
+  collectionSyncId: string,
+): Promise<TabNewLoaderData> {
   const rows = await dbInstance
     .select()
-    .from(workspaces)
+    .from(tabCollections)
     .where(
       and(
-        eq(workspaces.userId, userId),
-        eq(workspaces.syncId, workspaceSyncId),
-        isNull(workspaces.deletedAt),
+        eq(tabCollections.userId, userId),
+        eq(tabCollections.syncId, collectionSyncId),
+        eq(tabCollections.workspaceSyncId, workspaceSyncId),
+        isNull(tabCollections.deletedAt),
       ),
     )
     .limit(1);
-  const ws = (rows as (typeof workspaces.$inferSelect)[])[0];
-  if (!ws) {
+  const c = (rows as (typeof tabCollections.$inferSelect)[])[0];
+  if (!c) {
     throw new Response(null, { status: 404 });
   }
-  return { workspace: { syncId: ws.syncId, name: ws.name } };
+  return {
+    collection: { syncId: c.syncId, name: c.name, workspaceSyncId: c.workspaceSyncId },
+  };
 }
 
 export async function loader({ context, params }: Route.LoaderArgs) {
   const { user } = context.get(requiredAuthContext);
-  const result = await loadCollectionNew(db as unknown as Db, user.id, params.workspaceSyncId);
+  const result = await loadTabNew(
+    db as unknown as Db,
+    user.id,
+    params.workspaceSyncId,
+    params.collectionSyncId,
+  );
   return data(result);
 }
 
@@ -66,10 +74,11 @@ export async function loader({ context, params }: Route.LoaderArgs) {
 export async function action({ request, context, params }: Route.ActionArgs) {
   const { user } = context.get(requiredAuthContext);
   const formData = await request.formData();
-  const outcome = await runCollectionCreateAction({
+  const outcome = await runTabCreateAction({
     dbInstance: db as unknown as Db,
     userId: user.id,
     workspaceSyncId: params.workspaceSyncId,
+    collectionSyncId: params.collectionSyncId,
     formData,
   });
   if (outcome.kind === "parent-not-found") {
@@ -85,13 +94,13 @@ export async function action({ request, context, params }: Route.ActionArgs) {
 // UI
 // ---------------------------------------------------------------------------
 
-export default function CollectionNewRoute({ loaderData: { workspace } }: Route.ComponentProps) {
+export default function TabNewRoute({ loaderData: { collection } }: Route.ComponentProps) {
   const actionData = useActionData() as { lastResult?: ReturnType<typeof report> } | undefined;
   const navigation = useNavigation();
   const isPending = navigation.state === "submitting";
 
-  const { form, fields } = useForm(collectionCreateFormSchema, {
-    constraint: getZodConstraint(collectionCreateFormSchema),
+  const { form, fields } = useForm(tabCreateFormSchema, {
+    constraint: getZodConstraint(tabCreateFormSchema),
     lastResult: actionData?.lastResult,
   });
 
@@ -99,37 +108,56 @@ export default function CollectionNewRoute({ loaderData: { workspace } }: Route.
     <div className="mx-auto max-w-xl space-y-6">
       <div>
         <Link
-          to={`/dash/workspace/${workspace.syncId}`}
+          to={`/dash/workspace/${collection.workspaceSyncId}`}
           className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />
-          Back to {workspace.name}
+          Back to workspace
         </Link>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>New collection in {workspace.name}</CardTitle>
+          <CardTitle>Add tab to {collection.name}</CardTitle>
         </CardHeader>
         <CardContent>
           <Form method="POST" context={form.context} showErrors {...form.props}>
             <Field>
-              <FieldLabel htmlFor={fields.name.id}>Name</FieldLabel>
-              <Input {...fields.name.inputProps} placeholder="My collection" type="text" required />
+              <FieldLabel htmlFor={fields.url.id}>URL</FieldLabel>
+              <Input
+                {...fields.url.inputProps}
+                placeholder="https://example.com"
+                type="url"
+                required
+              />
               <FieldError
-                errors={fields.name.errors?.map((error) => ({
+                errors={fields.url.errors?.map((error) => ({
+                  message: error,
+                }))}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={fields.title.id}>Title</FieldLabel>
+              <Input {...fields.title.inputProps} placeholder="Optional" type="text" />
+              <FieldError
+                errors={fields.title.errors?.map((error) => ({
+                  message: error,
+                }))}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={fields.favIconUrl.id}>Favicon URL</FieldLabel>
+              <Input {...fields.favIconUrl.inputProps} placeholder="Optional" type="url" />
+              <FieldError
+                errors={fields.favIconUrl.errors?.map((error) => ({
                   message: error,
                 }))}
               />
             </Field>
             <div className="flex gap-2">
-              <LoadingButton
-                buttonText="Create collection"
-                loadingText="Creating..."
-                isPending={isPending}
-              />
+              <LoadingButton buttonText="Add tab" loadingText="Adding..." isPending={isPending} />
               <Button asChild variant="outline">
-                <Link to={`/dash/workspace/${workspace.syncId}`}>Cancel</Link>
+                <Link to={`/dash/workspace/${collection.workspaceSyncId}`}>Cancel</Link>
               </Button>
             </div>
           </Form>

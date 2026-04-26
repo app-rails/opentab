@@ -8,73 +8,54 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { collectionTabs } from "~/drizzle/schema";
+import { workspaces } from "~/drizzle/schema";
 import { getPageTitle } from "~/lib/utils";
-import { tabUpdateFormSchema } from "~/lib/validations/tab";
+import { collectionCreateFormSchema } from "~/lib/validations/collection";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
-import type { Route } from "./+types/workspace.$workspaceSyncId.collection.$collectionSyncId.tab.$tabSyncId.edit";
-import { runTabUpdateAction } from "./tab-actions.server";
+import { runCollectionCreateAction } from "../collection-actions.server";
+import type { Route } from "./+types/new";
 
 export function meta() {
-  return [{ title: getPageTitle("Edit tab") }];
+  return [{ title: getPageTitle("Create collection") }];
 }
 
 // ---------------------------------------------------------------------------
-// Loader
+// Loader: confirm the parent workspace exists so the form renders with a
+// breadcrumb label.
 // ---------------------------------------------------------------------------
 
-export type TabEditLoaderData = {
-  workspaceSyncId: string;
-  collectionSyncId: string;
-  tab: { syncId: string; url: string; title: string | null; favIconUrl: string | null };
+export type CollectionNewLoaderData = {
+  workspace: { syncId: string; name: string };
 };
 
-export async function loadTabForEdit(
+export async function loadCollectionNew(
   dbInstance: Db,
   userId: string,
   workspaceSyncId: string,
-  collectionSyncId: string,
-  tabSyncId: string,
-): Promise<TabEditLoaderData> {
+): Promise<CollectionNewLoaderData> {
   const rows = await dbInstance
     .select()
-    .from(collectionTabs)
+    .from(workspaces)
     .where(
       and(
-        eq(collectionTabs.userId, userId),
-        eq(collectionTabs.syncId, tabSyncId),
-        eq(collectionTabs.collectionSyncId, collectionSyncId),
-        isNull(collectionTabs.deletedAt),
+        eq(workspaces.userId, userId),
+        eq(workspaces.syncId, workspaceSyncId),
+        isNull(workspaces.deletedAt),
       ),
     )
     .limit(1);
-  const t = (rows as (typeof collectionTabs.$inferSelect)[])[0];
-  if (!t) {
+  const ws = (rows as (typeof workspaces.$inferSelect)[])[0];
+  if (!ws) {
     throw new Response(null, { status: 404 });
   }
-  return {
-    workspaceSyncId,
-    collectionSyncId,
-    tab: {
-      syncId: t.syncId,
-      url: t.url,
-      title: t.title ?? null,
-      favIconUrl: t.favIconUrl ?? null,
-    },
-  };
+  return { workspace: { syncId: ws.syncId, name: ws.name } };
 }
 
 export async function loader({ context, params }: Route.LoaderArgs) {
   const { user } = context.get(requiredAuthContext);
-  const result = await loadTabForEdit(
-    db as unknown as Db,
-    user.id,
-    params.workspaceSyncId,
-    params.collectionSyncId,
-    params.tabSyncId,
-  );
+  const result = await loadCollectionNew(db as unknown as Db, user.id, params.workspaceSyncId);
   return data(result);
 }
 
@@ -85,15 +66,13 @@ export async function loader({ context, params }: Route.LoaderArgs) {
 export async function action({ request, context, params }: Route.ActionArgs) {
   const { user } = context.get(requiredAuthContext);
   const formData = await request.formData();
-  const outcome = await runTabUpdateAction({
+  const outcome = await runCollectionCreateAction({
     dbInstance: db as unknown as Db,
     userId: user.id,
     workspaceSyncId: params.workspaceSyncId,
-    collectionSyncId: params.collectionSyncId,
-    tabSyncId: params.tabSyncId,
     formData,
   });
-  if (outcome.kind === "not-found") {
+  if (outcome.kind === "parent-not-found") {
     throw new Response(null, { status: 404 });
   }
   if (outcome.kind === "redirect") {
@@ -106,76 +85,51 @@ export async function action({ request, context, params }: Route.ActionArgs) {
 // UI
 // ---------------------------------------------------------------------------
 
-export default function TabEditRoute({
-  loaderData: { workspaceSyncId, tab },
-}: Route.ComponentProps) {
+export default function CollectionNewRoute({ loaderData: { workspace } }: Route.ComponentProps) {
   const actionData = useActionData() as { lastResult?: ReturnType<typeof report> } | undefined;
   const navigation = useNavigation();
   const isPending = navigation.state === "submitting";
 
-  const { form, fields } = useForm(tabUpdateFormSchema, {
-    constraint: getZodConstraint(tabUpdateFormSchema),
+  const { form, fields } = useForm(collectionCreateFormSchema, {
+    constraint: getZodConstraint(collectionCreateFormSchema),
     lastResult: actionData?.lastResult,
-    defaultValue: {
-      url: tab.url,
-      title: tab.title ?? undefined,
-      favIconUrl: tab.favIconUrl ?? undefined,
-    },
   });
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div>
         <Link
-          to={`/dash/workspace/${workspaceSyncId}`}
+          to={`/dash/workspace/${workspace.syncId}`}
           className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />
-          Back to workspace
+          Back to {workspace.name}
         </Link>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Edit tab</CardTitle>
+          <CardTitle>New collection in {workspace.name}</CardTitle>
         </CardHeader>
         <CardContent>
           <Form method="POST" context={form.context} showErrors {...form.props}>
             <Field>
-              <FieldLabel htmlFor={fields.url.id}>URL</FieldLabel>
-              <Input {...fields.url.inputProps} type="url" required />
+              <FieldLabel htmlFor={fields.name.id}>Name</FieldLabel>
+              <Input {...fields.name.inputProps} placeholder="My collection" type="text" required />
               <FieldError
-                errors={fields.url.errors?.map((error) => ({
-                  message: error,
-                }))}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={fields.title.id}>Title</FieldLabel>
-              <Input {...fields.title.inputProps} placeholder="Optional" type="text" />
-              <FieldError
-                errors={fields.title.errors?.map((error) => ({
-                  message: error,
-                }))}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={fields.favIconUrl.id}>Favicon URL</FieldLabel>
-              <Input {...fields.favIconUrl.inputProps} placeholder="Optional" type="url" />
-              <FieldError
-                errors={fields.favIconUrl.errors?.map((error) => ({
+                errors={fields.name.errors?.map((error) => ({
                   message: error,
                 }))}
               />
             </Field>
             <div className="flex gap-2">
               <LoadingButton
-                buttonText="Save changes"
-                loadingText="Saving..."
+                buttonText="Create collection"
+                loadingText="Creating..."
                 isPending={isPending}
               />
               <Button asChild variant="outline">
-                <Link to={`/dash/workspace/${workspaceSyncId}`}>Cancel</Link>
+                <Link to={`/dash/workspace/${workspace.syncId}`}>Cancel</Link>
               </Button>
             </div>
           </Form>

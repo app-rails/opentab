@@ -20,7 +20,7 @@ import { cn, getPageTitle } from "~/lib/utils";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
-import type { Route } from "./+types/workspace.$workspaceSyncId";
+import type { Route } from "./+types/detail";
 
 // ---------------------------------------------------------------------------
 // View types

@@ -47,33 +47,27 @@ export default [
     layout("routes/dash/layout.tsx", [
       index("routes/dash/index.tsx"),
       ...prefix("workspace", [
-        route("new", "routes/dash/workspace.new.tsx"),
-        route(":workspaceSyncId", "routes/dash/workspace.$workspaceSyncId.tsx"),
-        route(":workspaceSyncId/edit", "routes/dash/workspace.$workspaceSyncId.edit.tsx"),
-        route(":workspaceSyncId/delete", "routes/dash/workspace.$workspaceSyncId.delete.tsx"),
-        route(
-          ":workspaceSyncId/collection/new",
-          "routes/dash/workspace.$workspaceSyncId.collection.new.tsx",
-        ),
+        route("new", "routes/dash/workspace/new.tsx"),
+        route(":workspaceSyncId", "routes/dash/workspace/detail.tsx"),
+        route(":workspaceSyncId/edit", "routes/dash/workspace/edit.tsx"),
+        route(":workspaceSyncId/delete", "routes/dash/workspace/delete.tsx"),
+        route(":workspaceSyncId/collection/new", "routes/dash/collection/new.tsx"),
         route(
           ":workspaceSyncId/collection/:collectionSyncId/edit",
-          "routes/dash/workspace.$workspaceSyncId.collection.$collectionSyncId.edit.tsx",
+          "routes/dash/collection/edit.tsx",
         ),
         route(
           ":workspaceSyncId/collection/:collectionSyncId/delete",
-          "routes/dash/workspace.$workspaceSyncId.collection.$collectionSyncId.delete.tsx",
+          "routes/dash/collection/delete.tsx",
         ),
-        route(
-          ":workspaceSyncId/collection/:collectionSyncId/tab/new",
-          "routes/dash/workspace.$workspaceSyncId.collection.$collectionSyncId.tab.new.tsx",
-        ),
+        route(":workspaceSyncId/collection/:collectionSyncId/tab/new", "routes/dash/tab/new.tsx"),
         route(
           ":workspaceSyncId/collection/:collectionSyncId/tab/:tabSyncId/edit",
-          "routes/dash/workspace.$workspaceSyncId.collection.$collectionSyncId.tab.$tabSyncId.edit.tsx",
+          "routes/dash/tab/edit.tsx",
         ),
         route(
           ":workspaceSyncId/collection/:collectionSyncId/tab/:tabSyncId/delete",
-          "routes/dash/workspace.$workspaceSyncId.collection.$collectionSyncId.tab.$tabSyncId.delete.tsx",
+          "routes/dash/tab/delete.tsx",
         ),
       ]),
     ]),

@@ -10,31 +10,32 @@ import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { tabCollections } from "~/drizzle/schema";
 import { getPageTitle } from "~/lib/utils";
-import { tabCreateFormSchema } from "~/lib/validations/tab";
+import { collectionUpdateFormSchema } from "~/lib/validations/collection";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
-import type { Route } from "./+types/workspace.$workspaceSyncId.collection.$collectionSyncId.tab.new";
-import { runTabCreateAction } from "./tab-actions.server";
+import { runCollectionUpdateAction } from "../collection-actions.server";
+import type { Route } from "./+types/edit";
 
 export function meta() {
-  return [{ title: getPageTitle("Add tab") }];
+  return [{ title: getPageTitle("Edit collection") }];
 }
 
 // ---------------------------------------------------------------------------
 // Loader
 // ---------------------------------------------------------------------------
 
-export type TabNewLoaderData = {
-  collection: { syncId: string; name: string; workspaceSyncId: string };
+export type CollectionEditLoaderData = {
+  workspaceSyncId: string;
+  collection: { syncId: string; name: string };
 };
 
-export async function loadTabNew(
+export async function loadCollectionForEdit(
   dbInstance: Db,
   userId: string,
   workspaceSyncId: string,
   collectionSyncId: string,
-): Promise<TabNewLoaderData> {
+): Promise<CollectionEditLoaderData> {
   const rows = await dbInstance
     .select()
     .from(tabCollections)
@@ -51,14 +52,12 @@ export async function loadTabNew(
   if (!c) {
     throw new Response(null, { status: 404 });
   }
-  return {
-    collection: { syncId: c.syncId, name: c.name, workspaceSyncId: c.workspaceSyncId },
-  };
+  return { workspaceSyncId, collection: { syncId: c.syncId, name: c.name } };
 }
 
 export async function loader({ context, params }: Route.LoaderArgs) {
   const { user } = context.get(requiredAuthContext);
-  const result = await loadTabNew(
+  const result = await loadCollectionForEdit(
     db as unknown as Db,
     user.id,
     params.workspaceSyncId,
@@ -74,14 +73,14 @@ export async function loader({ context, params }: Route.LoaderArgs) {
 export async function action({ request, context, params }: Route.ActionArgs) {
   const { user } = context.get(requiredAuthContext);
   const formData = await request.formData();
-  const outcome = await runTabCreateAction({
+  const outcome = await runCollectionUpdateAction({
     dbInstance: db as unknown as Db,
     userId: user.id,
     workspaceSyncId: params.workspaceSyncId,
     collectionSyncId: params.collectionSyncId,
     formData,
   });
-  if (outcome.kind === "parent-not-found") {
+  if (outcome.kind === "not-found") {
     throw new Response(null, { status: 404 });
   }
   if (outcome.kind === "redirect") {
@@ -94,21 +93,24 @@ export async function action({ request, context, params }: Route.ActionArgs) {
 // UI
 // ---------------------------------------------------------------------------
 
-export default function TabNewRoute({ loaderData: { collection } }: Route.ComponentProps) {
+export default function CollectionEditRoute({
+  loaderData: { workspaceSyncId, collection },
+}: Route.ComponentProps) {
   const actionData = useActionData() as { lastResult?: ReturnType<typeof report> } | undefined;
   const navigation = useNavigation();
   const isPending = navigation.state === "submitting";
 
-  const { form, fields } = useForm(tabCreateFormSchema, {
-    constraint: getZodConstraint(tabCreateFormSchema),
+  const { form, fields } = useForm(collectionUpdateFormSchema, {
+    constraint: getZodConstraint(collectionUpdateFormSchema),
     lastResult: actionData?.lastResult,
+    defaultValue: { name: collection.name },
   });
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div>
         <Link
-          to={`/dash/workspace/${collection.workspaceSyncId}`}
+          to={`/dash/workspace/${workspaceSyncId}`}
           className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />
@@ -118,46 +120,27 @@ export default function TabNewRoute({ loaderData: { collection } }: Route.Compon
 
       <Card>
         <CardHeader>
-          <CardTitle>Add tab to {collection.name}</CardTitle>
+          <CardTitle>Rename collection</CardTitle>
         </CardHeader>
         <CardContent>
           <Form method="POST" context={form.context} showErrors {...form.props}>
             <Field>
-              <FieldLabel htmlFor={fields.url.id}>URL</FieldLabel>
-              <Input
-                {...fields.url.inputProps}
-                placeholder="https://example.com"
-                type="url"
-                required
-              />
+              <FieldLabel htmlFor={fields.name.id}>Name</FieldLabel>
+              <Input {...fields.name.inputProps} type="text" required />
               <FieldError
-                errors={fields.url.errors?.map((error) => ({
-                  message: error,
-                }))}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={fields.title.id}>Title</FieldLabel>
-              <Input {...fields.title.inputProps} placeholder="Optional" type="text" />
-              <FieldError
-                errors={fields.title.errors?.map((error) => ({
-                  message: error,
-                }))}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={fields.favIconUrl.id}>Favicon URL</FieldLabel>
-              <Input {...fields.favIconUrl.inputProps} placeholder="Optional" type="url" />
-              <FieldError
-                errors={fields.favIconUrl.errors?.map((error) => ({
+                errors={fields.name.errors?.map((error) => ({
                   message: error,
                 }))}
               />
             </Field>
             <div className="flex gap-2">
-              <LoadingButton buttonText="Add tab" loadingText="Adding..." isPending={isPending} />
+              <LoadingButton
+                buttonText="Save changes"
+                loadingText="Saving..."
+                isPending={isPending}
+              />
               <Button asChild variant="outline">
-                <Link to={`/dash/workspace/${collection.workspaceSyncId}`}>Cancel</Link>
+                <Link to={`/dash/workspace/${workspaceSyncId}`}>Cancel</Link>
               </Button>
             </div>
           </Form>
