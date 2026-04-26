@@ -304,6 +304,10 @@ export class SyncEngine {
     // Generate create ops in parent-first order
     const now = Date.now();
     const ops: SyncOpInput[] = [];
+    // Count what we drop so the UI can surface "X items not synced
+    // (chrome:// / file:// / orphan)" — silent skips were a debugging
+    // black hole when the user wondered where their tabs went.
+    let skippedCount = 0;
 
     for (const ws of workspaces) {
       ops.push({
@@ -329,6 +333,7 @@ export class SyncEngine {
       const parentSyncId = col.workspaceSyncId || ws?.syncId;
       if (!parentSyncId) {
         console.warn("[sync] skipping collection with no parent workspace:", col.syncId);
+        skippedCount++;
         continue;
       }
       ops.push({
@@ -360,10 +365,12 @@ export class SyncEngine {
       // build the payload without explicit-null sentinels.
       if (!parentSyncId) {
         console.warn("[sync] skipping tab with no parent collection:", tab.syncId);
+        skippedCount++;
         continue;
       }
       if (!isSyncableUrl(tab.url)) {
         console.warn("[sync] skipping tab with non-http(s) URL:", tab.url);
+        skippedCount++;
         continue;
       }
       ops.push({
@@ -391,6 +398,7 @@ export class SyncEngine {
     }
 
     await db.syncMeta.put({ key: "initialPushCompleted", value: true });
+    await db.syncMeta.put({ key: "lastBootstrapSkipped", value: skippedCount });
 
     // Trigger sync immediately
     await this.sync();

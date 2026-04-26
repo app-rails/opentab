@@ -14,23 +14,28 @@ interface SyncStatusCardProps {
 export function SyncStatusCard({ auth, onDisconnected }: SyncStatusCardProps) {
   const [lastSync, setLastSync] = useState<number | null>(null);
   const [pending, setPending] = useState<number>(0);
+  const [skipped, setSkipped] = useState<number>(0);
   const [open, setOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
-  // Both reads come from the local Dexie DB — that's the single source of
-  // truth the engine writes to (`db.syncMeta.lastSyncAt` after every
-  // successful sync, `db.syncOutbox` for queued writes). An earlier version
-  // tried to read lastSync from `chrome.storage.local.opentab_sync_last_sync`,
-  // which the engine never writes — so the card was permanently stuck on
-  // "Not yet synced" no matter how many syncs ran.
+  // All three reads come from the local Dexie DB — that's the single source
+  // of truth the engine writes to. An earlier version tried to read lastSync
+  // from `chrome.storage.local.opentab_sync_last_sync`, which the engine
+  // never writes — so the card was permanently stuck on "Not yet synced"
+  // no matter how many syncs ran. lastBootstrapSkipped surfaces the count
+  // of tabs/collections initialBootstrap dropped (chrome:// URLs, orphans)
+  // so the user knows their server-side picture is intentionally smaller
+  // than their local one.
   const refresh = useCallback(async () => {
     try {
-      const [meta, pendingCount] = await Promise.all([
+      const [lastSyncMeta, pendingCount, skippedMeta] = await Promise.all([
         db.syncMeta.get("lastSyncAt"),
         db.syncOutbox.where("status").equals("pending").count(),
+        db.syncMeta.get("lastBootstrapSkipped"),
       ]);
-      setLastSync(typeof meta?.value === "number" ? meta.value : null);
+      setLastSync(typeof lastSyncMeta?.value === "number" ? lastSyncMeta.value : null);
       setPending(pendingCount);
+      setSkipped(typeof skippedMeta?.value === "number" ? skippedMeta.value : 0);
     } catch (err) {
       console.warn("[sync-status-card] refresh failed", err);
     }
@@ -91,6 +96,12 @@ export function SyncStatusCard({ auth, onDisconnected }: SyncStatusCardProps) {
           <dd>{pending}</dd>
         </div>
       </dl>
+      {skipped > 0 && (
+        <p className="text-muted-foreground text-xs">
+          {skipped} item{skipped === 1 ? "" : "s"} not synced (chrome:// / file:// URLs are
+          local-only).
+        </p>
+      )}
       <div className="flex gap-2 pt-2">
         <Button size="sm" onClick={handleSyncNow} disabled={syncing}>
           {syncing ? "Syncing…" : "Sync now"}

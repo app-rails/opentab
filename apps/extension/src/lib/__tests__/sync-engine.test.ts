@@ -566,6 +566,23 @@ describe("SyncEngine.initialBootstrap wire payload validity", () => {
     expect(tabRows.map((r) => r.entitySyncId)).toEqual([TAB_ID_OK]);
   });
 
+  it("records the skipped count in syncMeta.lastBootstrapSkipped so the UI can surface it", async () => {
+    seedEntities({
+      workspaces: [workspace()],
+      collections: [collection()],
+      tabs: [
+        tab({ syncId: TAB_ID_CHROME_URL, url: "chrome://newtab/" }),
+        tab({ syncId: "018f1a2b-3c4d-7abc-8def-0123456789a5", url: "file:///etc/hosts" }),
+        tab({ syncId: TAB_ID_OK }),
+      ],
+    });
+
+    const engine = new SyncEngine(mockSyncClient());
+    await engine.initialBootstrap({ force: true });
+
+    expect(getState().meta.get("lastBootstrapSkipped")).toBe(2);
+  });
+
   it("every generated op (workspace/collection/tab) parses against the wire pushOpSchema", async () => {
     seedEntities({
       workspaces: [workspace()],

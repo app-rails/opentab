@@ -98,4 +98,29 @@ describe("SyncStatusCard", () => {
 
     await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: MSG.SYNC_REQUEST }));
   });
+
+  it("surfaces lastBootstrapSkipped count when > 0 so the user knows some tabs aren't synced", async () => {
+    syncMetaGet.mockImplementation(async (key: string) => {
+      if (key === "lastBootstrapSkipped") return { key, value: 12 };
+      return undefined;
+    });
+
+    const SyncStatusCard = await loadComponent();
+    render(<SyncStatusCard auth={AUTH} />);
+
+    await waitFor(() => expect(screen.getByText(/12.*not synced/i)).toBeTruthy());
+  });
+
+  it("does NOT render the skipped-count line when the count is 0", async () => {
+    syncMetaGet.mockImplementation(async (key: string) => {
+      if (key === "lastBootstrapSkipped") return { key, value: 0 };
+      return undefined;
+    });
+
+    const SyncStatusCard = await loadComponent();
+    render(<SyncStatusCard auth={AUTH} />);
+
+    await waitFor(() => expect(screen.getByText("Disconnect")).toBeTruthy());
+    expect(screen.queryByText(/not synced/i)).toBeNull();
+  });
 });
