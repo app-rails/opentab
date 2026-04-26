@@ -14,7 +14,7 @@ vi.mock("~/middlewares", async (importOriginal) => {
   };
 });
 
-import { loader } from "../snapshot";
+import { loader, SNAPSHOT_RATE_LIMIT } from "../snapshot";
 
 type LoaderArgs = Parameters<typeof loader>[0];
 
@@ -83,7 +83,7 @@ describe("GET /api/sync/snapshot", () => {
     expect(getSnapshotMock).toHaveBeenCalledWith({ userId: "u1", deviceId: "d1" });
   });
 
-  it("rate-limits per user (1 req per 300s window)", async () => {
+  it("rate-limits per user once SNAPSHOT_RATE_LIMIT.max is reached", async () => {
     getSnapshotMock.mockResolvedValue({
       workspaces: [],
       collections: [],
@@ -92,10 +92,14 @@ describe("GET /api/sync/snapshot", () => {
     });
     const ctx = makeContext();
 
-    // First call succeeds.
-    await callLoader(makeRequest(), ctx);
+    // Burn through the allowed budget. Test env reads APP_ENV=test → isProdEnv
+    // is false → dev limit (100) applies; the loop adapts to whatever the
+    // route exports so prod-vs-dev tuning doesn't silently break the test.
+    for (let i = 0; i < SNAPSHOT_RATE_LIMIT.max; i++) {
+      await callLoader(makeRequest(), ctx);
+    }
 
-    // Second call in the same window is rate-limited.
+    // The next call in the same window is rate-limited.
     try {
       await callLoader(makeRequest(), ctx);
       throw new Error("should have thrown");

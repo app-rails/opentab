@@ -96,8 +96,8 @@ const options = {
   rateLimit: {
     enabled: true,
     storage: "secondary-storage",
-    window: 60, // time window in seconds
-    max: 10, // max requests in the window
+    window: 300, // time window in seconds
+    max: 100, // max requests in the window
   },
 
   plugins: [
