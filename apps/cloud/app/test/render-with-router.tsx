@@ -1,6 +1,6 @@
 import { type RenderOptions, type RenderResult, render } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { createMemoryRouter, Outlet, RouterProvider } from "react-router";
+import { createMemoryRouter, RouterProvider } from "react-router";
 
 type RootLoaderData = Record<string, unknown>;
 
@@ -23,14 +23,16 @@ interface RenderWithRouterOptions extends RenderOptions {
 export function renderWithRouter(ui: ReactElement, opts?: RenderWithRouterOptions): RenderResult {
   const { initialEntries = ["/"], rootLoaderData, ...rest } = opts ?? {};
 
+  // Single splat-rooted route so tests can drive `initialEntries` to any
+  // URL (including `/` and e.g. `/dash` for asserting NavLink active
+  // state) without tripping React Router's "no route matches URL" error.
   const router = createMemoryRouter(
     [
       {
         id: "root",
-        path: "/",
+        path: "*",
         loader: rootLoaderData ? () => rootLoaderData : undefined,
-        Component: () => <Outlet />,
-        children: [{ index: true, element: ui }],
+        element: ui,
       },
     ],
     { initialEntries },
