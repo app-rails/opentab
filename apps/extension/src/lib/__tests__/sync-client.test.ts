@@ -104,6 +104,40 @@ describe("SyncClient headers", () => {
     expect(headers.authorization).toBe(`Bearer ${TOKEN}`);
     expect(headers["content-type"]).toBe("application/json");
   });
+
+  it("issues pull as GET with cursor + limit query params (server route is loader-only)", async () => {
+    // Regression: client previously POSTed pull with a JSON body, but the
+    // server route only defines `loader` (= GET). That returned 405 in dev
+    // and silently broke `sync()` for every authenticated extension.
+    installChromeMock();
+    const fetchMock = installFetchMock({
+      status: 200,
+      jsonBody: { changes: [], cursor: 7, hasMore: false, resetRequired: false },
+    });
+
+    await new SyncClient(HOST, TOKEN).pull(7, 50);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${HOST}/api/sync/pull?cursor=7&limit=50`);
+    expect(init.method).toBe("GET");
+    expect(init.body).toBeUndefined();
+    const headers = init.headers as Record<string, string>;
+    expect(headers["content-type"]).toBeUndefined();
+    expect(headers.authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("omits the limit query param when not provided", async () => {
+    installChromeMock();
+    const fetchMock = installFetchMock({
+      status: 200,
+      jsonBody: { changes: [], cursor: 0, hasMore: false, resetRequired: false },
+    });
+
+    await new SyncClient(HOST, TOKEN).pull(0);
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${HOST}/api/sync/pull?cursor=0`);
+  });
 });
 
 describe("SyncClient auth + protocol lifecycle", () => {

@@ -41,6 +41,11 @@ interface RequestInitInternal<T> {
   path: string;
   method: "GET" | "POST";
   body?: unknown;
+  /**
+   * Query string params for GET endpoints. Undefined values are dropped so
+   * callers can pass an optional param without conditional construction.
+   */
+  query?: Record<string, string | number | undefined>;
   parser: Parser<T>;
   /** Set to true for endpoints that must NOT carry the Authorization header. */
   publicEndpoint?: boolean;
@@ -111,10 +116,13 @@ export class SyncClient {
   }
 
   async pull(cursor: number, limit?: number): Promise<PullResponse> {
+    // GET (not POST) — the server route is a `loader`, which only handles
+    // GET in React Router 7. Posting a body 405's silently inside sync()'s
+    // try/catch and breaks every authenticated extension.
     return this.request({
       path: "/api/sync/pull",
-      method: "POST",
-      body: limit === undefined ? { cursor } : { cursor, limit },
+      method: "GET",
+      query: { cursor, limit },
       parser: pullResponseSchema,
     });
   }
@@ -140,7 +148,7 @@ export class SyncClient {
     const hasBody = init.body !== undefined;
     const headers = this.buildHeaders(hasBody, init.publicEndpoint === true);
 
-    const url = `${this.host}${init.path}`;
+    const url = `${this.host}${init.path}${buildQueryString(init.query)}`;
     const response = await fetch(url, {
       method: init.method,
       headers,
@@ -168,6 +176,21 @@ export class SyncClient {
     const json = (await response.json()) as unknown;
     return init.parser.parse(json);
   }
+}
+
+/**
+ * Build a `?k=v&k=v` suffix from a sparse param map; undefined values are
+ * skipped so callers can pass optional params without pre-filtering.
+ */
+function buildQueryString(query: Record<string, string | number | undefined> | undefined): string {
+  if (!query) return "";
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined) continue;
+    params.set(key, String(value));
+  }
+  const s = params.toString();
+  return s.length === 0 ? "" : `?${s}`;
 }
 
 /**
