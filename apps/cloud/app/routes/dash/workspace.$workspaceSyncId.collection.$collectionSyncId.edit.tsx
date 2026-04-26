@@ -14,7 +14,7 @@ import { collectionUpdateFormSchema } from "~/lib/validations/collection";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
-import type { Route } from "./+types/$workspaceSyncId.collections.$collectionSyncId.edit";
+import type { Route } from "./+types/workspace.$workspaceSyncId.collection.$collectionSyncId.edit";
 import { runCollectionUpdateAction } from "./collection-actions.server";
 
 export function meta() {
@@ -110,7 +110,7 @@ export default function CollectionEditRoute({
     <div className="mx-auto max-w-xl space-y-6">
       <div>
         <Link
-          to={`/dash/${workspaceSyncId}`}
+          to={`/dash/workspace/${workspaceSyncId}`}
           className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />
@@ -140,7 +140,7 @@ export default function CollectionEditRoute({
                 isPending={isPending}
               />
               <Button asChild variant="outline">
-                <Link to={`/dash/${workspaceSyncId}`}>Cancel</Link>
+                <Link to={`/dash/workspace/${workspaceSyncId}`}>Cancel</Link>
               </Button>
             </div>
           </Form>

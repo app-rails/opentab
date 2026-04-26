@@ -107,13 +107,14 @@ describe("runTabCreateAction", () => {
     const outcome = await runTabCreateAction({
       dbInstance: db,
       userId: USER_A,
+      workspaceSyncId: ws.syncId,
       collectionSyncId: c.syncId,
       formData: fd,
     });
 
     expect(outcome.kind).toBe("redirect");
     if (outcome.kind !== "redirect") throw new Error("expected redirect");
-    expect(outcome.location).toBe(`/dash/${ws.syncId}`);
+    expect(outcome.location).toBe(`/dash/workspace/${ws.syncId}`);
 
     const stored = await db
       .select()
@@ -135,6 +136,7 @@ describe("runTabCreateAction", () => {
     const outcome = await runTabCreateAction({
       dbInstance: db,
       userId: USER_A,
+      workspaceSyncId: uuidv7(),
       collectionSyncId: uuidv7(),
       formData: fd,
     });
@@ -151,6 +153,7 @@ describe("runTabCreateAction", () => {
     const outcome = await runTabCreateAction({
       dbInstance: db,
       userId: USER_A,
+      workspaceSyncId: ws.syncId,
       collectionSyncId: c.syncId,
       formData: fd,
     });
@@ -178,6 +181,7 @@ describe("runTabUpdateAction", () => {
     const outcome = await runTabUpdateAction({
       dbInstance: db,
       userId: USER_A,
+      workspaceSyncId: ws.syncId,
       collectionSyncId: c.syncId,
       tabSyncId: t.syncId,
       formData: fd,
@@ -185,7 +189,7 @@ describe("runTabUpdateAction", () => {
 
     expect(outcome.kind).toBe("redirect");
     if (outcome.kind !== "redirect") throw new Error("expected redirect");
-    expect(outcome.location).toBe(`/dash/${ws.syncId}`);
+    expect(outcome.location).toBe(`/dash/workspace/${ws.syncId}`);
 
     const stored = (
       await db.select().from(collectionTabs).where(eq(collectionTabs.syncId, t.syncId))
@@ -205,6 +209,7 @@ describe("runTabUpdateAction", () => {
     const outcome = await runTabUpdateAction({
       dbInstance: db,
       userId: USER_A,
+      workspaceSyncId: ws.syncId,
       collectionSyncId: c1.syncId, // wrong parent
       tabSyncId: t.syncId,
       formData: fd,
@@ -229,13 +234,14 @@ describe("runTabDeleteAction", () => {
     const outcome = await runTabDeleteAction({
       dbInstance: db,
       userId: USER_A,
+      workspaceSyncId: ws.syncId,
       collectionSyncId: c.syncId,
       tabSyncId: t.syncId,
     });
 
     expect(outcome.kind).toBe("redirect");
     if (outcome.kind !== "redirect") throw new Error("expected redirect");
-    expect(outcome.location).toBe(`/dash/${ws.syncId}`);
+    expect(outcome.location).toBe(`/dash/workspace/${ws.syncId}`);
 
     const stored = (
       await db.select().from(collectionTabs).where(eq(collectionTabs.syncId, t.syncId))
@@ -251,6 +257,7 @@ describe("runTabDeleteAction", () => {
     const outcome = await runTabDeleteAction({
       dbInstance: db,
       userId: USER_A,
+      workspaceSyncId: ws.syncId,
       collectionSyncId: c.syncId,
       tabSyncId: t.syncId,
     });

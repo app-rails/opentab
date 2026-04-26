@@ -14,7 +14,7 @@ import { tabCreateFormSchema } from "~/lib/validations/tab";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
-import type { Route } from "./+types/collections.$collectionSyncId.tabs.new";
+import type { Route } from "./+types/workspace.$workspaceSyncId.collection.$collectionSyncId.tab.new";
 import { runTabCreateAction } from "./tab-actions.server";
 
 export function meta() {
@@ -32,6 +32,7 @@ export type TabNewLoaderData = {
 export async function loadTabNew(
   dbInstance: Db,
   userId: string,
+  workspaceSyncId: string,
   collectionSyncId: string,
 ): Promise<TabNewLoaderData> {
   const rows = await dbInstance
@@ -41,6 +42,7 @@ export async function loadTabNew(
       and(
         eq(tabCollections.userId, userId),
         eq(tabCollections.syncId, collectionSyncId),
+        eq(tabCollections.workspaceSyncId, workspaceSyncId),
         isNull(tabCollections.deletedAt),
       ),
     )
@@ -56,7 +58,12 @@ export async function loadTabNew(
 
 export async function loader({ context, params }: Route.LoaderArgs) {
   const { user } = context.get(requiredAuthContext);
-  const result = await loadTabNew(db as unknown as Db, user.id, params.collectionSyncId);
+  const result = await loadTabNew(
+    db as unknown as Db,
+    user.id,
+    params.workspaceSyncId,
+    params.collectionSyncId,
+  );
   return data(result);
 }
 
@@ -70,6 +77,7 @@ export async function action({ request, context, params }: Route.ActionArgs) {
   const outcome = await runTabCreateAction({
     dbInstance: db as unknown as Db,
     userId: user.id,
+    workspaceSyncId: params.workspaceSyncId,
     collectionSyncId: params.collectionSyncId,
     formData,
   });
@@ -100,7 +108,7 @@ export default function TabNewRoute({ loaderData: { collection } }: Route.Compon
     <div className="mx-auto max-w-xl space-y-6">
       <div>
         <Link
-          to={`/dash/${collection.workspaceSyncId}`}
+          to={`/dash/workspace/${collection.workspaceSyncId}`}
           className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />
@@ -149,7 +157,7 @@ export default function TabNewRoute({ loaderData: { collection } }: Route.Compon
             <div className="flex gap-2">
               <LoadingButton buttonText="Add tab" loadingText="Adding..." isPending={isPending} />
               <Button asChild variant="outline">
-                <Link to={`/dash/${collection.workspaceSyncId}`}>Cancel</Link>
+                <Link to={`/dash/workspace/${collection.workspaceSyncId}`}>Cancel</Link>
               </Button>
             </div>
           </Form>

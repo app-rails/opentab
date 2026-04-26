@@ -6,7 +6,7 @@ import {
   loadWorkspaceDetail,
   sortByOrder,
   type TabView,
-} from "~/routes/dash/$workspaceSyncId";
+} from "~/routes/dash/workspace.$workspaceSyncId";
 import type { Db } from "~/services/sync-repo.server";
 import { createTestDb } from "~/test/db-harness";
 

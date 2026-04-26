@@ -8,13 +8,13 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { collectionTabs, tabCollections } from "~/drizzle/schema";
+import { collectionTabs } from "~/drizzle/schema";
 import { getPageTitle } from "~/lib/utils";
 import { tabUpdateFormSchema } from "~/lib/validations/tab";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
-import type { Route } from "./+types/collections.$collectionSyncId.tabs.$tabSyncId.edit";
+import type { Route } from "./+types/workspace.$workspaceSyncId.collection.$collectionSyncId.tab.$tabSyncId.edit";
 import { runTabUpdateAction } from "./tab-actions.server";
 
 export function meta() {
@@ -34,35 +34,28 @@ export type TabEditLoaderData = {
 export async function loadTabForEdit(
   dbInstance: Db,
   userId: string,
+  workspaceSyncId: string,
   collectionSyncId: string,
   tabSyncId: string,
 ): Promise<TabEditLoaderData> {
-  const [tabRows, parentRows] = await dbInstance.batch([
-    dbInstance
-      .select()
-      .from(collectionTabs)
-      .where(
-        and(
-          eq(collectionTabs.userId, userId),
-          eq(collectionTabs.syncId, tabSyncId),
-          eq(collectionTabs.collectionSyncId, collectionSyncId),
-          isNull(collectionTabs.deletedAt),
-        ),
-      )
-      .limit(1),
-    dbInstance
-      .select()
-      .from(tabCollections)
-      .where(and(eq(tabCollections.userId, userId), eq(tabCollections.syncId, collectionSyncId)))
-      .limit(1),
-  ]);
-  const t = (tabRows as (typeof collectionTabs.$inferSelect)[])[0];
-  const p = (parentRows as (typeof tabCollections.$inferSelect)[])[0];
-  if (!t || !p) {
+  const rows = await dbInstance
+    .select()
+    .from(collectionTabs)
+    .where(
+      and(
+        eq(collectionTabs.userId, userId),
+        eq(collectionTabs.syncId, tabSyncId),
+        eq(collectionTabs.collectionSyncId, collectionSyncId),
+        isNull(collectionTabs.deletedAt),
+      ),
+    )
+    .limit(1);
+  const t = (rows as (typeof collectionTabs.$inferSelect)[])[0];
+  if (!t) {
     throw new Response(null, { status: 404 });
   }
   return {
-    workspaceSyncId: p.workspaceSyncId,
+    workspaceSyncId,
     collectionSyncId,
     tab: {
       syncId: t.syncId,
@@ -78,6 +71,7 @@ export async function loader({ context, params }: Route.LoaderArgs) {
   const result = await loadTabForEdit(
     db as unknown as Db,
     user.id,
+    params.workspaceSyncId,
     params.collectionSyncId,
     params.tabSyncId,
   );
@@ -94,6 +88,7 @@ export async function action({ request, context, params }: Route.ActionArgs) {
   const outcome = await runTabUpdateAction({
     dbInstance: db as unknown as Db,
     userId: user.id,
+    workspaceSyncId: params.workspaceSyncId,
     collectionSyncId: params.collectionSyncId,
     tabSyncId: params.tabSyncId,
     formData,
@@ -132,7 +127,7 @@ export default function TabEditRoute({
     <div className="mx-auto max-w-xl space-y-6">
       <div>
         <Link
-          to={`/dash/${workspaceSyncId}`}
+          to={`/dash/workspace/${workspaceSyncId}`}
           className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />
@@ -180,7 +175,7 @@ export default function TabEditRoute({
                 isPending={isPending}
               />
               <Button asChild variant="outline">
-                <Link to={`/dash/${workspaceSyncId}`}>Cancel</Link>
+                <Link to={`/dash/workspace/${workspaceSyncId}`}>Cancel</Link>
               </Button>
             </div>
           </Form>

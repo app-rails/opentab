@@ -15,7 +15,7 @@ import { DEFAULT_WORKSPACE_ICON, WORKSPACE_ICON_OPTIONS } from "~/lib/web-consta
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
-import type { Route } from "./+types/$workspaceSyncId.edit";
+import type { Route } from "./+types/workspace.$workspaceSyncId.edit";
 import { runWorkspaceUpdateAction } from "./workspace-actions.server";
 
 export function meta() {
@@ -121,7 +121,7 @@ export default function WorkspaceEditRoute({ loaderData: { workspace } }: Route.
     <div className="mx-auto max-w-xl space-y-6">
       <div>
         <Link
-          to={`/dash/${workspace.syncId}`}
+          to={`/dash/workspace/${workspace.syncId}`}
           className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />
@@ -185,7 +185,7 @@ export default function WorkspaceEditRoute({ loaderData: { workspace } }: Route.
                 isPending={isPending}
               />
               <Button asChild variant="outline">
-                <Link to={`/dash/${workspace.syncId}`}>Cancel</Link>
+                <Link to={`/dash/workspace/${workspace.syncId}`}>Cancel</Link>
               </Button>
             </div>
           </Form>

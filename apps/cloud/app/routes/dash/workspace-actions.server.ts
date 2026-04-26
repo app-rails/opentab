@@ -168,7 +168,7 @@ export async function runWorkspaceUpdateAction(args: {
     };
   }
 
-  return { kind: "redirect", location: `/dash/${existing.syncId}` };
+  return { kind: "redirect", location: `/dash/workspace/${existing.syncId}` };
 }
 
 /**

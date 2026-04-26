@@ -81,7 +81,7 @@ describe("runCollectionCreateAction", () => {
 
     expect(outcome.kind).toBe("redirect");
     if (outcome.kind !== "redirect") throw new Error("expected redirect");
-    expect(outcome.location).toBe(`/dash/${ws.syncId}`);
+    expect(outcome.location).toBe(`/dash/workspace/${ws.syncId}`);
 
     const stored = await db
       .select()

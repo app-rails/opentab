@@ -46,31 +46,36 @@ export default [
   ...prefix("dash", [
     layout("routes/dash/layout.tsx", [
       index("routes/dash/index.tsx"),
-      route("workspaces/new", "routes/dash/workspaces.new.tsx"),
-      route(":workspaceSyncId", "routes/dash/$workspaceSyncId.tsx"),
-      route(":workspaceSyncId/edit", "routes/dash/$workspaceSyncId.edit.tsx"),
-      route(":workspaceSyncId/delete", "routes/dash/$workspaceSyncId.delete.tsx"),
-      route(":workspaceSyncId/collections/new", "routes/dash/$workspaceSyncId.collections.new.tsx"),
-      route(
-        ":workspaceSyncId/collections/:collectionSyncId/edit",
-        "routes/dash/$workspaceSyncId.collections.$collectionSyncId.edit.tsx",
-      ),
-      route(
-        ":workspaceSyncId/collections/:collectionSyncId/delete",
-        "routes/dash/$workspaceSyncId.collections.$collectionSyncId.delete.tsx",
-      ),
-      route(
-        "collections/:collectionSyncId/tabs/new",
-        "routes/dash/collections.$collectionSyncId.tabs.new.tsx",
-      ),
-      route(
-        "collections/:collectionSyncId/tabs/:tabSyncId/edit",
-        "routes/dash/collections.$collectionSyncId.tabs.$tabSyncId.edit.tsx",
-      ),
-      route(
-        "collections/:collectionSyncId/tabs/:tabSyncId/delete",
-        "routes/dash/collections.$collectionSyncId.tabs.$tabSyncId.delete.tsx",
-      ),
+      ...prefix("workspace", [
+        route("new", "routes/dash/workspace.new.tsx"),
+        route(":workspaceSyncId", "routes/dash/workspace.$workspaceSyncId.tsx"),
+        route(":workspaceSyncId/edit", "routes/dash/workspace.$workspaceSyncId.edit.tsx"),
+        route(":workspaceSyncId/delete", "routes/dash/workspace.$workspaceSyncId.delete.tsx"),
+        route(
+          ":workspaceSyncId/collection/new",
+          "routes/dash/workspace.$workspaceSyncId.collection.new.tsx",
+        ),
+        route(
+          ":workspaceSyncId/collection/:collectionSyncId/edit",
+          "routes/dash/workspace.$workspaceSyncId.collection.$collectionSyncId.edit.tsx",
+        ),
+        route(
+          ":workspaceSyncId/collection/:collectionSyncId/delete",
+          "routes/dash/workspace.$workspaceSyncId.collection.$collectionSyncId.delete.tsx",
+        ),
+        route(
+          ":workspaceSyncId/collection/:collectionSyncId/tab/new",
+          "routes/dash/workspace.$workspaceSyncId.collection.$collectionSyncId.tab.new.tsx",
+        ),
+        route(
+          ":workspaceSyncId/collection/:collectionSyncId/tab/:tabSyncId/edit",
+          "routes/dash/workspace.$workspaceSyncId.collection.$collectionSyncId.tab.$tabSyncId.edit.tsx",
+        ),
+        route(
+          ":workspaceSyncId/collection/:collectionSyncId/tab/:tabSyncId/delete",
+          "routes/dash/workspace.$workspaceSyncId.collection.$collectionSyncId.tab.$tabSyncId.delete.tsx",
+        ),
+      ]),
     ]),
   ]),
 

@@ -117,7 +117,7 @@ export async function runCollectionCreateAction(args: {
     };
   }
 
-  return { kind: "redirect", location: `/dash/${args.workspaceSyncId}` };
+  return { kind: "redirect", location: `/dash/workspace/${args.workspaceSyncId}` };
 }
 
 export async function runCollectionUpdateAction(args: {
@@ -188,7 +188,7 @@ export async function runCollectionUpdateAction(args: {
     };
   }
 
-  return { kind: "redirect", location: `/dash/${args.workspaceSyncId}` };
+  return { kind: "redirect", location: `/dash/workspace/${args.workspaceSyncId}` };
 }
 
 export async function runCollectionDeleteAction(args: {
@@ -236,5 +236,5 @@ export async function runCollectionDeleteAction(args: {
     return { kind: "error", message: result.errorMessage };
   }
 
-  return { kind: "redirect", location: `/dash/${args.workspaceSyncId}` };
+  return { kind: "redirect", location: `/dash/workspace/${args.workspaceSyncId}` };
 }

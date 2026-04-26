@@ -13,7 +13,7 @@ import { DEFAULT_WORKSPACE_ICON, WORKSPACE_ICON_OPTIONS } from "~/lib/web-consta
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
-import type { Route } from "./+types/workspaces.new";
+import type { Route } from "./+types/workspace.new";
 import { runWorkspaceCreateAction } from "./workspace-actions.server";
 
 export function meta() {

@@ -46,6 +46,7 @@ function blankToUndefined(value: string | undefined): string | undefined {
 export async function runTabCreateAction(args: {
   dbInstance: Db;
   userId: string;
+  workspaceSyncId: string;
   collectionSyncId: string;
   formData: FormData;
 }): Promise<TabCreateActionResult> {
@@ -73,6 +74,7 @@ export async function runTabCreateAction(args: {
         and(
           eq(tabCollections.userId, args.userId),
           eq(tabCollections.syncId, args.collectionSyncId),
+          eq(tabCollections.workspaceSyncId, args.workspaceSyncId),
           isNull(tabCollections.deletedAt),
         ),
       )
@@ -118,12 +120,13 @@ export async function runTabCreateAction(args: {
     };
   }
 
-  return { kind: "redirect", location: `/dash/${parent.workspaceSyncId}` };
+  return { kind: "redirect", location: `/dash/workspace/${args.workspaceSyncId}` };
 }
 
 export async function runTabUpdateAction(args: {
   dbInstance: Db;
   userId: string;
+  workspaceSyncId: string;
   collectionSyncId: string;
   tabSyncId: string;
   formData: FormData;
@@ -162,22 +165,6 @@ export async function runTabUpdateAction(args: {
     return { kind: "not-found" };
   }
 
-  // Look up the parent workspace via the parent collection so the post-submit
-  // redirect lands on the workspace detail page — not the collection, which
-  // has no dedicated view.
-  const parent = (
-    await args.dbInstance
-      .select()
-      .from(tabCollections)
-      .where(
-        and(
-          eq(tabCollections.userId, args.userId),
-          eq(tabCollections.syncId, existing.collectionSyncId),
-        ),
-      )
-      .limit(1)
-  )[0] as typeof tabCollections.$inferSelect | undefined;
-
   const op: PushOp = {
     kind: "tab.update",
     opId: uuidv7(),
@@ -207,16 +194,16 @@ export async function runTabUpdateAction(args: {
     };
   }
 
-  const redirectWorkspaceSyncId = parent?.workspaceSyncId;
   return {
     kind: "redirect",
-    location: redirectWorkspaceSyncId ? `/dash/${redirectWorkspaceSyncId}` : "/dash",
+    location: `/dash/workspace/${args.workspaceSyncId}`,
   };
 }
 
 export async function runTabDeleteAction(args: {
   dbInstance: Db;
   userId: string;
+  workspaceSyncId: string;
   collectionSyncId: string;
   tabSyncId: string;
 }): Promise<TabDeleteActionResult> {
@@ -237,19 +224,6 @@ export async function runTabDeleteAction(args: {
   if (!existing) {
     return { kind: "not-found" };
   }
-
-  const parent = (
-    await args.dbInstance
-      .select()
-      .from(tabCollections)
-      .where(
-        and(
-          eq(tabCollections.userId, args.userId),
-          eq(tabCollections.syncId, existing.collectionSyncId),
-        ),
-      )
-      .limit(1)
-  )[0] as typeof tabCollections.$inferSelect | undefined;
 
   const now = Date.now();
   const op: PushOp = {
@@ -272,9 +246,8 @@ export async function runTabDeleteAction(args: {
     return { kind: "error", message: result.errorMessage };
   }
 
-  const redirectWorkspaceSyncId = parent?.workspaceSyncId;
   return {
     kind: "redirect",
-    location: redirectWorkspaceSyncId ? `/dash/${redirectWorkspaceSyncId}` : "/dash",
+    location: `/dash/workspace/${args.workspaceSyncId}`,
   };
 }

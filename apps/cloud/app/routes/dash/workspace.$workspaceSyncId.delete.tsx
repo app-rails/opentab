@@ -3,60 +3,52 @@ import { AlertTriangleIcon, ArrowLeftIcon } from "lucide-react";
 import { data, Form, Link, redirect, useActionData, useNavigation } from "react-router";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { tabCollections } from "~/drizzle/schema";
+import { workspaces } from "~/drizzle/schema";
 import { cn, getPageTitle } from "~/lib/utils";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
-import type { Route } from "./+types/$workspaceSyncId.collections.$collectionSyncId.delete";
-import { runCollectionDeleteAction } from "./collection-actions.server";
+import type { Route } from "./+types/workspace.$workspaceSyncId.delete";
+import { runWorkspaceDeleteAction } from "./workspace-actions.server";
 
 export function meta() {
-  return [{ title: getPageTitle("Delete collection") }];
+  return [{ title: getPageTitle("Delete workspace") }];
 }
 
 // ---------------------------------------------------------------------------
 // Loader
 // ---------------------------------------------------------------------------
 
-export type CollectionDeleteLoaderData = {
-  workspaceSyncId: string;
-  collection: { syncId: string; name: string };
+export type WorkspaceDeleteLoaderData = {
+  workspace: { syncId: string; name: string };
 };
 
-export async function loadCollectionForDelete(
+export async function loadWorkspaceForDelete(
   dbInstance: Db,
   userId: string,
   workspaceSyncId: string,
-  collectionSyncId: string,
-): Promise<CollectionDeleteLoaderData> {
+): Promise<WorkspaceDeleteLoaderData> {
   const rows = await dbInstance
     .select()
-    .from(tabCollections)
+    .from(workspaces)
     .where(
       and(
-        eq(tabCollections.userId, userId),
-        eq(tabCollections.syncId, collectionSyncId),
-        eq(tabCollections.workspaceSyncId, workspaceSyncId),
-        isNull(tabCollections.deletedAt),
+        eq(workspaces.userId, userId),
+        eq(workspaces.syncId, workspaceSyncId),
+        isNull(workspaces.deletedAt),
       ),
     )
     .limit(1);
-  const c = (rows as (typeof tabCollections.$inferSelect)[])[0];
-  if (!c) {
+  const ws = (rows as (typeof workspaces.$inferSelect)[])[0];
+  if (!ws) {
     throw new Response(null, { status: 404 });
   }
-  return { workspaceSyncId, collection: { syncId: c.syncId, name: c.name } };
+  return { workspace: { syncId: ws.syncId, name: ws.name } };
 }
 
 export async function loader({ context, params }: Route.LoaderArgs) {
   const { user } = context.get(requiredAuthContext);
-  const result = await loadCollectionForDelete(
-    db as unknown as Db,
-    user.id,
-    params.workspaceSyncId,
-    params.collectionSyncId,
-  );
+  const result = await loadWorkspaceForDelete(db as unknown as Db, user.id, params.workspaceSyncId);
   return data(result);
 }
 
@@ -66,11 +58,10 @@ export async function loader({ context, params }: Route.LoaderArgs) {
 
 export async function action({ context, params }: Route.ActionArgs) {
   const { user } = context.get(requiredAuthContext);
-  const outcome = await runCollectionDeleteAction({
+  const outcome = await runWorkspaceDeleteAction({
     dbInstance: db as unknown as Db,
     userId: user.id,
     workspaceSyncId: params.workspaceSyncId,
-    collectionSyncId: params.collectionSyncId,
   });
   if (outcome.kind === "not-found") {
     throw new Response(null, { status: 404 });
@@ -85,9 +76,7 @@ export async function action({ context, params }: Route.ActionArgs) {
 // UI
 // ---------------------------------------------------------------------------
 
-export default function CollectionDeleteRoute({
-  loaderData: { workspaceSyncId, collection },
-}: Route.ComponentProps) {
+export default function WorkspaceDeleteRoute({ loaderData: { workspace } }: Route.ComponentProps) {
   const actionData = useActionData() as { errorMessage?: string } | undefined;
   const navigation = useNavigation();
   const isPending = navigation.state === "submitting";
@@ -96,7 +85,7 @@ export default function CollectionDeleteRoute({
     <div className="mx-auto max-w-xl space-y-6">
       <div>
         <Link
-          to={`/dash/${workspaceSyncId}`}
+          to={`/dash/workspace/${workspace.syncId}`}
           className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />
@@ -108,14 +97,14 @@ export default function CollectionDeleteRoute({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangleIcon className="size-5 text-destructive" />
-            Delete collection
+            Delete workspace
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm">
-            Deleting <span className="font-semibold">{collection.name}</span> tombstones it for
-            every signed-in device. Tabs inside remain stored but become unreachable from the
-            dashboard.
+            Deleting <span className="font-semibold">{workspace.name}</span> will tombstone it for
+            every signed-in device. Existing collections and tabs remain in place but become
+            unreachable from the dashboard.
           </p>
           {actionData?.errorMessage ? (
             <p className="text-destructive text-sm">{actionData.errorMessage}</p>
@@ -126,10 +115,10 @@ export default function CollectionDeleteRoute({
               className={cn(buttonVariants({ variant: "destructive" }))}
               disabled={isPending}
             >
-              {isPending ? "Deleting..." : "Delete collection"}
+              {isPending ? "Deleting..." : "Delete workspace"}
             </Button>
             <Button asChild variant="outline">
-              <Link to={`/dash/${workspaceSyncId}`}>Cancel</Link>
+              <Link to={`/dash/workspace/${workspace.syncId}`}>Cancel</Link>
             </Button>
           </Form>
         </CardContent>

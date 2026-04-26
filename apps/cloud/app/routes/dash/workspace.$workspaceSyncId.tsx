@@ -20,7 +20,7 @@ import { cn, getPageTitle } from "~/lib/utils";
 import { requiredAuthContext } from "~/middlewares/auth";
 import { db } from "~/services/db.server";
 import type { Db } from "~/services/sync-repo.server";
-import type { Route } from "./+types/$workspaceSyncId";
+import type { Route } from "./+types/workspace.$workspaceSyncId";
 
 // ---------------------------------------------------------------------------
 // View types
@@ -242,13 +242,13 @@ export default function WorkspaceDetailRoute({
             </span>
           </p>
           <Button asChild size="sm" variant="outline">
-            <Link to={`/dash/${workspace.syncId}/edit`}>
+            <Link to={`/dash/workspace/${workspace.syncId}/edit`}>
               <PencilIcon className="size-4" />
               Rename
             </Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link to={`/dash/${workspace.syncId}/delete`}>
+            <Link to={`/dash/workspace/${workspace.syncId}/delete`}>
               <Trash2Icon className="size-4" />
               Delete
             </Link>
@@ -261,7 +261,7 @@ export default function WorkspaceDetailRoute({
       <div className="flex items-center justify-between">
         <h2 className="font-medium text-lg">Collections</h2>
         <Button asChild size="sm">
-          <Link to={`/dash/${workspace.syncId}/collections/new`}>
+          <Link to={`/dash/workspace/${workspace.syncId}/collection/new`}>
             <PlusIcon className="size-4" />
             Create collection
           </Link>
@@ -326,7 +326,7 @@ function CollectionBlock({
               <DateTimeDisplay date={collection.updatedAt} className="text-xs" />
               <Button asChild size="sm" variant="ghost" aria-label="Rename collection">
                 <Link
-                  to={`/dash/${workspaceSyncId}/collections/${collection.syncId}/edit`}
+                  to={`/dash/workspace/${workspaceSyncId}/collection/${collection.syncId}/edit`}
                   title="Rename collection"
                 >
                   <PencilIcon className="size-4" />
@@ -334,7 +334,7 @@ function CollectionBlock({
               </Button>
               <Button asChild size="sm" variant="ghost" aria-label="Delete collection">
                 <Link
-                  to={`/dash/${workspaceSyncId}/collections/${collection.syncId}/delete`}
+                  to={`/dash/workspace/${workspaceSyncId}/collection/${collection.syncId}/delete`}
                   title="Delete collection"
                 >
                   <Trash2Icon className="size-4" />
@@ -350,13 +350,15 @@ function CollectionBlock({
             ) : (
               <ul className="space-y-1">
                 {tabs.map((t) => (
-                  <TabRow key={t.syncId} tab={t} />
+                  <TabRow key={t.syncId} workspaceSyncId={workspaceSyncId} tab={t} />
                 ))}
               </ul>
             )}
             <div>
               <Button asChild size="sm" variant="outline">
-                <Link to={`/dash/collections/${collection.syncId}/tabs/new`}>
+                <Link
+                  to={`/dash/workspace/${workspaceSyncId}/collection/${collection.syncId}/tab/new`}
+                >
                   <PlusIcon className="size-4" />
                   Add tab
                 </Link>
@@ -369,7 +371,7 @@ function CollectionBlock({
   );
 }
 
-function TabRow({ tab }: { tab: TabView }) {
+function TabRow({ workspaceSyncId, tab }: { workspaceSyncId: string; tab: TabView }) {
   const title = tab.title || tab.url;
   return (
     <li className="group flex items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-accent/40">
@@ -393,7 +395,7 @@ function TabRow({ tab }: { tab: TabView }) {
       <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
         <Button asChild size="sm" variant="ghost" aria-label="Edit tab">
           <Link
-            to={`/dash/collections/${tab.collectionSyncId}/tabs/${tab.syncId}/edit`}
+            to={`/dash/workspace/${workspaceSyncId}/collection/${tab.collectionSyncId}/tab/${tab.syncId}/edit`}
             title="Edit tab"
           >
             <PencilIcon className="size-3.5" />
@@ -401,7 +403,7 @@ function TabRow({ tab }: { tab: TabView }) {
         </Button>
         <Button asChild size="sm" variant="ghost" aria-label="Delete tab">
           <Link
-            to={`/dash/collections/${tab.collectionSyncId}/tabs/${tab.syncId}/delete`}
+            to={`/dash/workspace/${workspaceSyncId}/collection/${tab.collectionSyncId}/tab/${tab.syncId}/delete`}
             title="Delete tab"
           >
             <Trash2Icon className="size-3.5" />
