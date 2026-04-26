@@ -24,6 +24,7 @@ export type WorkspaceCardView = {
   updatedAt: number;
   collectionCount: number;
   tabCount: number;
+  previewFavIcons: string[];
 };
 
 export type DashLoaderData = {
@@ -41,7 +42,8 @@ export type DashLoaderData = {
  * the roll-up happens app-side. See spec §2.5.4.
  */
 export async function loadDash(dbInstance: Db, userId: string): Promise<DashLoaderData> {
-  const [wsRows, collRows, tabRows] = await dbInstance.batch([
+  // NOTE: 4th batch is an ungrouped fetch. If tabs exceed ~10k per user, reconsider (may need LIMIT or a separate favicon-cache).
+  const [wsRows, collRows, tabRows, favIconRows] = await dbInstance.batch([
     dbInstance
       .select()
       .from(workspaces)
@@ -63,16 +65,41 @@ export async function loadDash(dbInstance: Db, userId: string): Promise<DashLoad
       .from(collectionTabs)
       .where(and(eq(collectionTabs.userId, userId), isNull(collectionTabs.deletedAt)))
       .groupBy(collectionTabs.collectionSyncId),
+    dbInstance
+      .select({
+        collectionSyncId: collectionTabs.collectionSyncId,
+        favIconUrl: collectionTabs.favIconUrl,
+      })
+      .from(collectionTabs)
+      .where(and(eq(collectionTabs.userId, userId), isNull(collectionTabs.deletedAt))),
   ]);
 
   const wsList = wsRows as (typeof workspaces.$inferSelect)[];
   const collList = collRows as { workspaceSyncId: string; syncId: string; n: number }[];
   const tabList = tabRows as { collectionSyncId: string; n: number }[];
+  const favIconList = favIconRows as { collectionSyncId: string; favIconUrl: string | null }[];
 
   // collection syncId -> tab count
   const tabsByCollection = new Map<string, number>();
   for (const row of tabList) {
     tabsByCollection.set(row.collectionSyncId, row.n);
+  }
+
+  // collection syncId -> non-null favIconUrls (insertion order from DB; no ORDER BY, so deterministic only within a single fetch)
+  const favIconsByCollection = new Map<string, string[]>();
+  for (const row of favIconList) {
+    if (!row.favIconUrl) continue;
+    const list = favIconsByCollection.get(row.collectionSyncId) ?? [];
+    list.push(row.favIconUrl);
+    favIconsByCollection.set(row.collectionSyncId, list);
+  }
+
+  // workspace syncId -> collection syncId list (for per-workspace favIcon roll-up)
+  const collectionsByWorkspace = new Map<string, string[]>();
+  for (const c of collList) {
+    const list = collectionsByWorkspace.get(c.workspaceSyncId) ?? [];
+    list.push(c.syncId);
+    collectionsByWorkspace.set(c.workspaceSyncId, list);
   }
 
   // workspace syncId -> { collections, tabs } aggregate
@@ -92,6 +119,13 @@ export async function loadDash(dbInstance: Db, userId: string): Promise<DashLoad
 
   const wsCards: WorkspaceCardView[] = sorted.map((w) => {
     const agg = countsByWorkspace.get(w.syncId) ?? { collections: 0, tabs: 0 };
+    const collSyncIds = collectionsByWorkspace.get(w.syncId) ?? [];
+    const allFavIcons: string[] = [];
+    for (const cid of collSyncIds) {
+      const list = favIconsByCollection.get(cid);
+      if (list) allFavIcons.push(...list);
+    }
+    const previewFavIcons = [...new Set(allFavIcons)].slice(0, 5);
     return {
       id: w.id,
       syncId: w.syncId,
@@ -101,6 +135,7 @@ export async function loadDash(dbInstance: Db, userId: string): Promise<DashLoad
       updatedAt: w.updatedAt.getTime(),
       collectionCount: agg.collections,
       tabCount: agg.tabs,
+      previewFavIcons,
     };
   });
 

@@ -151,4 +151,78 @@ describe("loadDash", () => {
     expect(typeof wsCards[0]?.updatedAt).toBe("number");
     expect(wsCards[0]?.updatedAt).toBe(7000);
   });
+
+  describe("previewFavIcons", () => {
+    it("aggregates unique non-null favIcons per workspace, capped at 5", async () => {
+      // WS1: 2 collections, 8 tabs. Mix of unique + duplicate favicons + nulls.
+      const w1 = await seedWorkspace(db, { name: "W1", order: "a0" });
+      const w1c1 = await seedCollection(db, w1.syncId);
+      const w1c2 = await seedCollection(db, w1.syncId);
+      // c1: a, b, null, a (dup)
+      await seedTab(db, w1c1.syncId, { favIconUrl: "https://a.example/icon.png" });
+      await seedTab(db, w1c1.syncId, { favIconUrl: "https://b.example/icon.png" });
+      await seedTab(db, w1c1.syncId, { favIconUrl: null });
+      await seedTab(db, w1c1.syncId, { favIconUrl: "https://a.example/icon.png" });
+      // c2: c, b (dup across collections), null, d
+      await seedTab(db, w1c2.syncId, { favIconUrl: "https://c.example/icon.png" });
+      await seedTab(db, w1c2.syncId, { favIconUrl: "https://b.example/icon.png" });
+      await seedTab(db, w1c2.syncId, { favIconUrl: null });
+      await seedTab(db, w1c2.syncId, { favIconUrl: "https://d.example/icon.png" });
+
+      // WS2: 2 collections, 10 tabs, all unique favicons → expect cap at 5.
+      const w2 = await seedWorkspace(db, { name: "W2", order: "a1" });
+      const w2c1 = await seedCollection(db, w2.syncId);
+      const w2c2 = await seedCollection(db, w2.syncId);
+      for (let i = 0; i < 5; i++) {
+        await seedTab(db, w2c1.syncId, { favIconUrl: `https://w2c1-${i}.example/icon.png` });
+      }
+      for (let i = 0; i < 5; i++) {
+        await seedTab(db, w2c2.syncId, { favIconUrl: `https://w2c2-${i}.example/icon.png` });
+      }
+
+      // WS3: 2 collections, 7 tabs, all favIconUrl null → expect [].
+      const w3 = await seedWorkspace(db, { name: "W3", order: "a2" });
+      const w3c1 = await seedCollection(db, w3.syncId);
+      const w3c2 = await seedCollection(db, w3.syncId);
+      for (let i = 0; i < 4; i++) {
+        await seedTab(db, w3c1.syncId, { favIconUrl: null });
+      }
+      for (let i = 0; i < 3; i++) {
+        await seedTab(db, w3c2.syncId, { favIconUrl: null });
+      }
+
+      const { workspaces: wsCards } = await loadDash(db, USER_A);
+      const w1Card = wsCards.find((w) => w.syncId === w1.syncId);
+      const w2Card = wsCards.find((w) => w.syncId === w2.syncId);
+      const w3Card = wsCards.find((w) => w.syncId === w3.syncId);
+
+      // W1: should have 4 unique non-null favicons (a, b, c, d), no nulls, no dups.
+      expect(w1Card?.previewFavIcons).toBeDefined();
+      expect(Array.isArray(w1Card?.previewFavIcons)).toBe(true);
+      expect(w1Card?.previewFavIcons.length).toBeGreaterThanOrEqual(1);
+      expect(w1Card?.previewFavIcons.length).toBeLessThanOrEqual(5);
+      expect(w1Card?.previewFavIcons.every((u) => typeof u === "string" && u.length > 0)).toBe(
+        true,
+      );
+      expect(new Set(w1Card?.previewFavIcons).size).toBe(w1Card?.previewFavIcons.length);
+      expect(new Set(w1Card?.previewFavIcons)).toEqual(
+        new Set([
+          "https://a.example/icon.png",
+          "https://b.example/icon.png",
+          "https://c.example/icon.png",
+          "https://d.example/icon.png",
+        ]),
+      );
+
+      // W2: capped at 5 unique non-null entries.
+      expect(w2Card?.previewFavIcons.length).toBe(5);
+      expect(new Set(w2Card?.previewFavIcons).size).toBe(5);
+      expect(w2Card?.previewFavIcons.every((u) => typeof u === "string" && u.length > 0)).toBe(
+        true,
+      );
+
+      // W3: no favicons → empty array.
+      expect(w3Card?.previewFavIcons).toEqual([]);
+    });
+  });
 });
