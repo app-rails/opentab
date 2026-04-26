@@ -1,4 +1,5 @@
 import { Outlet } from "react-router";
+import { AuthenticatedShell } from "~/components/shell/authenticated-shell";
 import type { Route } from "./+types/layout";
 
 /**
@@ -8,5 +9,9 @@ import type { Route } from "./+types/layout";
  * share a single crumb/title once the shell grows.
  */
 export default function DevicesLayout(_: Route.ComponentProps) {
-  return <Outlet />;
+  return (
+    <AuthenticatedShell>
+      <Outlet />
+    </AuthenticatedShell>
+  );
 }
