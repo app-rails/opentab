@@ -153,16 +153,20 @@ vi.mock("@/lib/resolve-account-id", () => ({
   resolveAccountId: vi.fn(async () => "account-1"),
 }));
 
-// initialBootstrap walks the active-entity tree via these helpers; the unit
-// tests only care about the flag-gated short-circuit behaviour, so a flat
-// "no entities exist" stub is enough to let the function reach its tail.
+// initialBootstrap walks the active-entity tree via these helpers. Tests
+// reassign per-call returns via mockReturnValueOnce (kept here as a default
+// "empty world" so the older tests don't have to set them up).
+const activeWorkspacesMock = vi.fn(() => ({
+  toArray: async () => [] as unknown[],
+  count: async () => 0,
+}));
+const activeCollectionsMock = vi.fn(() => ({ toArray: async () => [] as unknown[] }));
+const activeTabsMock = vi.fn(() => ({ toArray: async () => [] as unknown[] }));
+
 vi.mock("@/lib/db-queries", () => ({
-  activeWorkspaces: vi.fn(() => ({
-    toArray: async () => [],
-    count: async () => 0,
-  })),
-  activeCollections: vi.fn(() => ({ toArray: async () => [] })),
-  activeTabs: vi.fn(() => ({ toArray: async () => [] })),
+  activeWorkspaces: () => activeWorkspacesMock(),
+  activeCollections: () => activeCollectionsMock(),
+  activeTabs: () => activeTabsMock(),
 }));
 
 // Chrome runtime mock for broadcastSyncApplied()
@@ -367,6 +371,155 @@ describe("SyncEngine.push result bucketing", () => {
     expect(stored1.attemptCount).toBe(1);
     expect(stored1.lastError).toContain("fetch failed");
     expect(stored1.nextRetryAt).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// initialBootstrap payload contract — server pushOpSchema must accept what
+// we generate, otherwise the whole 100-op batch 400's and silently drops
+// data on the floor.
+// ---------------------------------------------------------------------------
+
+import { type PushOp, pushOpSchema } from "@opentab/protocol";
+
+const WS_ID = "018f1a2b-3c4d-7abc-8def-0123456789a0";
+const COL_ID = "018f1a2b-3c4d-7abc-8def-0123456789a1";
+const TAB_ID_NO_FAVICON = "018f1a2b-3c4d-7abc-8def-0123456789a2";
+const TAB_ID_CHROME_URL = "018f1a2b-3c4d-7abc-8def-0123456789a3";
+const TAB_ID_OK = "018f1a2b-3c4d-7abc-8def-0123456789a4";
+
+function workspace(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 1,
+    accountId: "account-1",
+    name: "Personal",
+    icon: "folder",
+    order: "a0",
+    syncId: WS_ID,
+    deletedAt: null,
+    createdAt: 1_700_000_000_000,
+    updatedAt: 1_700_000_000_000,
+    ...overrides,
+  };
+}
+
+function collection(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 1,
+    workspaceId: 1,
+    workspaceSyncId: WS_ID,
+    name: "Research",
+    order: "a0",
+    syncId: COL_ID,
+    deletedAt: null,
+    createdAt: 1_700_000_000_000,
+    updatedAt: 1_700_000_000_000,
+    ...overrides,
+  };
+}
+
+function tab(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 1,
+    collectionId: 1,
+    collectionSyncId: COL_ID,
+    url: "https://example.com/",
+    title: "Example",
+    favIconUrl: "https://example.com/favicon.ico",
+    order: "a0",
+    syncId: TAB_ID_OK,
+    deletedAt: null,
+    createdAt: 1_700_000_000_000,
+    updatedAt: 1_700_000_000_000,
+    ...overrides,
+  };
+}
+
+function seedEntities({
+  workspaces = [],
+  collections = [],
+  tabs = [],
+}: {
+  workspaces?: ReturnType<typeof workspace>[];
+  collections?: ReturnType<typeof collection>[];
+  tabs?: ReturnType<typeof tab>[];
+}) {
+  activeWorkspacesMock.mockReturnValueOnce({
+    toArray: async () => workspaces,
+    count: async () => workspaces.length,
+  });
+  activeCollectionsMock.mockReturnValueOnce({ toArray: async () => collections });
+  activeTabsMock.mockReturnValueOnce({ toArray: async () => tabs });
+}
+
+function toWireFromOutboxRow(row: OutboxRow): PushOp {
+  return {
+    kind: `${row.entityType}.${row.action}` as PushOp["kind"],
+    opId: row.opId,
+    entitySyncId: row.entitySyncId,
+    payload: row.payload,
+  } as PushOp;
+}
+
+describe("SyncEngine.initialBootstrap wire payload validity", () => {
+  it("emits a tab.create op with no favIconUrl key when the tab has no favicon (server schema rejects favIconUrl: null)", async () => {
+    seedEntities({
+      workspaces: [workspace()],
+      collections: [collection()],
+      tabs: [tab({ syncId: TAB_ID_NO_FAVICON, favIconUrl: undefined })],
+    });
+
+    const engine = new SyncEngine(mockSyncClient());
+    await engine.initialBootstrap({ force: true });
+
+    const tabRow = getState().outbox.find(
+      (r) => r.entityType === "tab" && r.entitySyncId === TAB_ID_NO_FAVICON,
+    );
+    expect(tabRow).toBeDefined();
+    // Schema is the actual contract the server uses on push — assert the
+    // generated op parses, otherwise the whole batch 400's at the edge.
+    const result = pushOpSchema.safeParse(toWireFromOutboxRow(tabRow!));
+    expect(result.success).toBe(true);
+    // Defensive: the field must be ABSENT, not present-with-null.
+    expect(tabRow!.payload).not.toHaveProperty("favIconUrl");
+  });
+
+  it("skips tabs whose URL is not http/https (chrome://, file://, etc.) — they would 400 the batch", async () => {
+    seedEntities({
+      workspaces: [workspace()],
+      collections: [collection()],
+      tabs: [
+        tab({ syncId: TAB_ID_CHROME_URL, url: "chrome://newtab/" }),
+        tab({ syncId: TAB_ID_OK }),
+      ],
+    });
+
+    const engine = new SyncEngine(mockSyncClient());
+    await engine.initialBootstrap({ force: true });
+
+    const tabRows = getState().outbox.filter((r) => r.entityType === "tab");
+    expect(tabRows.map((r) => r.entitySyncId)).toEqual([TAB_ID_OK]);
+  });
+
+  it("every generated op (workspace/collection/tab) parses against the wire pushOpSchema", async () => {
+    seedEntities({
+      workspaces: [workspace()],
+      collections: [collection()],
+      tabs: [tab(), tab({ syncId: TAB_ID_NO_FAVICON, favIconUrl: undefined })],
+    });
+
+    const engine = new SyncEngine(mockSyncClient());
+    await engine.initialBootstrap({ force: true });
+
+    for (const row of getState().outbox) {
+      const wire = toWireFromOutboxRow(row);
+      const result = pushOpSchema.safeParse(wire);
+      if (!result.success) {
+        throw new Error(
+          `op ${row.entityType}.${row.action} failed wire validation: ${result.error.message}`,
+        );
+      }
+    }
   });
 });
 

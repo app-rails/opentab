@@ -57,6 +57,17 @@ function backoffMs(attempt: number): number {
   return Math.min(1000 * 2 ** attempt, 300_000);
 }
 
+/**
+ * The wire URL schema (`httpUrlSchema`) only accepts http/https. chrome://
+ * file://, chrome-extension://, etc. round-trip locally but would 400 the
+ * entire push batch on the server. We drop them silently from sync rather
+ * than blow up the batch — they'd be meaningless on a different device
+ * anyway (different chrome internals, different file paths).
+ */
+function isSyncableUrl(url: string): boolean {
+  return url.startsWith("http://") || url.startsWith("https://");
+}
+
 /** LWW: existing wins if newer timestamp, or same timestamp with higher opId */
 function existingWinsLWW(
   existing: { updatedAt: number; lastOpId?: string },
@@ -288,6 +299,11 @@ export class SyncEngine {
 
     for (const col of allCollections) {
       const ws = workspaces.find((w) => w.id === col.workspaceId);
+      const parentSyncId = col.workspaceSyncId || ws?.syncId;
+      if (!parentSyncId) {
+        console.warn("[sync] skipping collection with no parent workspace:", col.syncId);
+        continue;
+      }
       ops.push({
         opId: uuidv7(),
         entityType: "collection",
@@ -297,7 +313,7 @@ export class SyncEngine {
           syncId: col.syncId,
           name: col.name,
           order: col.order,
-          parentSyncId: col.workspaceSyncId || ws?.syncId || "",
+          parentSyncId,
           updatedAt: col.updatedAt,
           deletedAt: null,
         },
@@ -307,6 +323,22 @@ export class SyncEngine {
 
     for (const tab of allTabs) {
       const col = allCollections.find((c) => c.id === tab.collectionId);
+      const parentSyncId = tab.collectionSyncId || col?.syncId;
+      // The wire schema (`tabCreatePayloadSchema` in @opentab/protocol) requires
+      // a uuid v7 parentSyncId and an http(s) url, and treats favIconUrl/title
+      // as `optional()` — meaning omit-or-undefined, NOT null. Send anything
+      // that violates these and the server's zod parse rejects the entire
+      // 100-op batch with 400 INVALID_PAYLOAD, taking every other op in the
+      // batch down with it. So: skip orphans, skip non-http(s) URLs, and
+      // build the payload without explicit-null sentinels.
+      if (!parentSyncId) {
+        console.warn("[sync] skipping tab with no parent collection:", tab.syncId);
+        continue;
+      }
+      if (!isSyncableUrl(tab.url)) {
+        console.warn("[sync] skipping tab with non-http(s) URL:", tab.url);
+        continue;
+      }
       ops.push({
         opId: uuidv7(),
         entityType: "tab",
@@ -315,10 +347,10 @@ export class SyncEngine {
         payload: {
           syncId: tab.syncId,
           url: tab.url,
-          title: tab.title,
-          favIconUrl: tab.favIconUrl ?? null,
+          ...(tab.title != null && tab.title !== "" && { title: tab.title }),
+          ...(tab.favIconUrl != null && { favIconUrl: tab.favIconUrl }),
           order: tab.order,
-          parentSyncId: tab.collectionSyncId || col?.syncId || "",
+          parentSyncId,
           updatedAt: tab.updatedAt,
           deletedAt: null,
         },
