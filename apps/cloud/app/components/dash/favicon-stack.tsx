@@ -18,12 +18,14 @@ const MAX_VISIBLE = 5;
 export function FaviconStack({ urls, totalTabs, className }: FaviconStackProps) {
   const visible = urls.slice(0, MAX_VISIBLE);
   const remaining = totalTabs - urls.length;
-  const [failed, setFailed] = useState<Set<number>>(new Set());
+  // Keyed by URL (not stack index) so re-renders with a different `urls[]`
+  // don't preserve stale failure flags on positions whose URL has shifted.
+  const [failed, setFailed] = useState<Map<string, true>>(new Map());
 
   return (
     <div className={cn("flex items-center", className)}>
       {visible.map((url, i) =>
-        failed.has(i) ? (
+        failed.has(url) ? (
           <div
             // biome-ignore lint/suspicious/noArrayIndexKey: stack position is the identity here
             key={i}
@@ -40,8 +42,9 @@ export function FaviconStack({ urls, totalTabs, className }: FaviconStackProps) 
             loading="lazy"
             onError={() =>
               setFailed((prev) => {
-                const next = new Set(prev);
-                next.add(i);
+                if (prev.has(url)) return prev;
+                const next = new Map(prev);
+                next.set(url, true);
                 return next;
               })
             }
