@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./components/accordion": "./src/components/accordion.tsx",
     "./components/alert-dialog": "./src/components/alert-dialog.tsx",
     "./components/button": "./src/components/button.tsx",
     "./components/card": "./src/components/card.tsx",
