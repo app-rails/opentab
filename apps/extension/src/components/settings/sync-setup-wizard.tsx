@@ -299,10 +299,15 @@ export function SyncSetupWizard({ onClose, onCancel }: SyncSetupWizardProps) {
         if (cred) {
           await setSyncAuth({ kind: "authenticated", ...cred });
         }
-        // `force: true` is required: a previous (failed) wizard run leaves
-        // syncMeta.initialPushCompleted=true. Without force, the second
-        // user-driven Upload short-circuits at the first line of
-        // initialBootstrap and produces zero network requests.
+        // Reset the outbox before re-bootstrapping. Each wizard run is "I
+        // want to publish my current local state", so any leftover pending
+        // ops from prior wizard attempts (which would otherwise accumulate
+        // duplicate create-ops for the same entitySyncIds and bloat the
+        // outbox unboundedly across reruns) get cleared first.
+        // `force: true` is also required: previous wizard runs leave
+        // syncMeta.initialPushCompleted=true; without force, initialBootstrap
+        // short-circuits at line 1 and produces zero network requests.
+        await db.syncOutbox.clear();
         await engine.initialBootstrap({ force: true });
         return undefined;
       }),
@@ -313,6 +318,10 @@ export function SyncSetupWizard({ onClose, onCancel }: SyncSetupWizardProps) {
         if (cred) {
           await setSyncAuth({ kind: "authenticated", ...cred });
         }
+        // Wizard "Download server data" replaces the local copy with the
+        // server's. Drop any pending outbox ops so we don't push stale
+        // local mutations back up just before overwriting them locally.
+        await db.syncOutbox.clear();
         // SyncEngine.sync() with resetRequired=true would trigger a fullReset,
         // but to force the "download everything" path here we trigger the
         // snapshot-driven reset explicitly via a public-ish entry point:
