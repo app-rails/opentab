@@ -5,28 +5,30 @@ import { enforceRateLimit, requireDeviceToken, requireProtocolVersion } from "~/
 import { getSnapshot } from "~/services/sync.server";
 
 /**
+ * `GET /api/sync/snapshot`.
+ *
  * Snapshot is the full user tree (spec §2.3) — designed for cold start /
  * catch-up, not steady-state polling. Prod stays tight (10 / 5min) because
  * the response is expensive; dev is loose (100 / 5min) so wizard reloads,
  * HMR, and re-mounts during local development don't stall on 429.
- */
-export const SNAPSHOT_RATE_LIMIT = {
-  max: isProdEnv ? 10 : 100,
-  windowSec: 300,
-} as const;
-
-/**
- * `GET /api/sync/snapshot` — see `SNAPSHOT_RATE_LIMIT` for limits.
+ *
+ * Rate-limit constants live inside `loader` (not as a top-level export) so
+ * RR7 can tree-shake the `isProdEnv` reference — and with it the
+ * `@opentab/config/env/worker` → `cloudflare:workers` import chain — out of
+ * the client bundle. A module-level `export const` evaluating `isProdEnv`
+ * leaks `cloudflare:workers` into the client and breaks `pnpm build`.
  */
 export async function loader({ request, context }: LoaderFunctionArgs) {
   requireProtocolVersion(request);
   const auth = await requireDeviceToken(request);
+  const max = isProdEnv ? 10 : 100;
+  const windowSec = 300;
   await enforceRateLimit({
     kv: context.cloudflare.env.APP_KV,
     scope: auth.userId,
     endpoint: "sync.snapshot",
-    max: SNAPSHOT_RATE_LIMIT.max,
-    windowSec: SNAPSHOT_RATE_LIMIT.windowSec,
+    max,
+    windowSec,
   });
 
   const result = await getSnapshot({ userId: auth.userId, deviceId: auth.deviceId });

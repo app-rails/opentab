@@ -14,7 +14,13 @@ vi.mock("~/middlewares", async (importOriginal) => {
   };
 });
 
-import { loader, SNAPSHOT_RATE_LIMIT } from "../snapshot";
+import { loader } from "../snapshot";
+
+// Rate-limit budget is inlined in `loader` (kept off module scope so the
+// client bundle can tree-shake `cloudflare:workers`). Test env reads
+// APP_ENV=test → isProdEnv is false → dev limit (100) applies. Mirror that
+// here as a magic number with a pointer back to the source.
+const SNAPSHOT_DEV_RATE_LIMIT_MAX = 100; // see loader in ../snapshot.ts
 
 type LoaderArgs = Parameters<typeof loader>[0];
 
@@ -83,7 +89,7 @@ describe("GET /api/sync/snapshot", () => {
     expect(getSnapshotMock).toHaveBeenCalledWith({ userId: "u1", deviceId: "d1" });
   });
 
-  it("rate-limits per user once SNAPSHOT_RATE_LIMIT.max is reached", async () => {
+  it("rate-limits per user once the dev budget is reached", async () => {
     getSnapshotMock.mockResolvedValue({
       workspaces: [],
       collections: [],
@@ -92,10 +98,8 @@ describe("GET /api/sync/snapshot", () => {
     });
     const ctx = makeContext();
 
-    // Burn through the allowed budget. Test env reads APP_ENV=test → isProdEnv
-    // is false → dev limit (100) applies; the loop adapts to whatever the
-    // route exports so prod-vs-dev tuning doesn't silently break the test.
-    for (let i = 0; i < SNAPSHOT_RATE_LIMIT.max; i++) {
+    // Burn through the allowed budget under dev limits.
+    for (let i = 0; i < SNAPSHOT_DEV_RATE_LIMIT_MAX; i++) {
       await callLoader(makeRequest(), ctx);
     }
 
