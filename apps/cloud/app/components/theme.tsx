@@ -32,9 +32,9 @@ export const themeSwitcherAction = href("/api/theme-switcher");
 
 /**
  * Hook to get the current theme mode.
- * @internal
+ * @public
  */
-function useThemeMode() {
+export function useThemeMode() {
   const requestInfo = useRequestInfo();
   const optimisticMode = useOptimisticThemeMode();
   return optimisticMode ?? requestInfo.userPrefs.theme ?? "system";
