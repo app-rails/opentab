@@ -8,10 +8,10 @@
  * experience.
  *
  * Key naming: this file owns `opentab_sync_settings_v1` (note the `_v1`).
- * The legacy `opentab_sync_auth_v1` row in `sync-auth-storage.ts` will be
- * migrated into this shape by Task 6 of the extension-settings router plan;
- * this module deliberately ships *without* that migration so the storage
- * primitive stays small and easy to test in isolation.
+ * The legacy `opentab_sync_auth_v1` row in `sync-auth-storage.ts` is migrated
+ * lazily by `migrateFromV1` below the first time `getSyncSettings()` runs and
+ * the new key is absent. The migration is a one-shot: it writes the new key
+ * and removes the old one, so subsequent calls hit the fast path.
  */
 
 export interface SyncSettings {
@@ -95,9 +95,92 @@ function parseSyncSettings(raw: unknown): SyncSettings {
   };
 }
 
+/**
+ * One-shot migration from the legacy `opentab_sync_auth_v1` row written by
+ * `sync-auth-storage.ts`. We deliberately don't import the old `SyncAuthState`
+ * type here so that file can be deleted later without touching this one.
+ *
+ * Mapping rules (spec §3.0):
+ *   { kind: "disabled" }                                  -> defaults()
+ *   { kind: "configured", host }                          -> enabled + savedConfig + hostHistory
+ *   { kind: "authenticated", host, deviceId, deviceToken,
+ *     deviceName }                                        -> + auth (user undefined, filled by whoami later)
+ *   anything else (unknown kind, non-object payload)      -> defaults() + console.warn
+ *
+ * Returns the migrated settings on success, or `null` if the old key was
+ * absent (caller should then return defaults without writing).
+ */
+const LEGACY_SYNC_AUTH_KEY = "opentab_sync_auth_v1";
+
+async function migrateFromV1(): Promise<SyncSettings | null> {
+  const legacy = await chrome.storage.local.get(LEGACY_SYNC_AUTH_KEY);
+  if (!(LEGACY_SYNC_AUTH_KEY in legacy)) return null;
+
+  const raw = legacy[LEGACY_SYNC_AUTH_KEY];
+  const now = Date.now();
+  let migrated: SyncSettings;
+
+  if (isObject(raw) && raw.kind === "disabled") {
+    migrated = defaults();
+  } else if (
+    isObject(raw) &&
+    raw.kind === "configured" &&
+    typeof raw.host === "string" &&
+    raw.host.length > 0
+  ) {
+    migrated = {
+      enabled: true,
+      savedConfig: { host: raw.host, lastUsedAt: now },
+      auth: null,
+      hostHistory: [{ host: raw.host, lastUsedAt: now }],
+    };
+  } else if (
+    isObject(raw) &&
+    raw.kind === "authenticated" &&
+    typeof raw.host === "string" &&
+    raw.host.length > 0 &&
+    typeof raw.deviceId === "string" &&
+    typeof raw.deviceToken === "string" &&
+    typeof raw.deviceName === "string"
+  ) {
+    migrated = {
+      enabled: true,
+      savedConfig: { host: raw.host, lastUsedAt: now },
+      auth: {
+        deviceToken: raw.deviceToken,
+        deviceId: raw.deviceId,
+        deviceName: raw.deviceName,
+        issuedAt: now,
+      },
+      hostHistory: [{ host: raw.host, lastUsedAt: now }],
+    };
+  } else {
+    // Redact the payload before logging: it may contain a deviceToken if only
+    // some authenticated fields were valid. Only emit shape info, never values.
+    console.warn("[sync-settings] migrateFromV1: unrecognized legacy payload, resetting", {
+      kind: isObject(raw) ? raw.kind : typeof raw,
+      hasHost: isObject(raw) && typeof raw.host === "string",
+      hasDeviceId: isObject(raw) && typeof raw.deviceId === "string",
+      hasDeviceToken: isObject(raw) && typeof raw.deviceToken === "string",
+    });
+    migrated = defaults();
+  }
+
+  await chrome.storage.local.set({ [SYNC_SETTINGS_STORAGE_KEY]: migrated });
+  await chrome.storage.local.remove(LEGACY_SYNC_AUTH_KEY);
+  return migrated;
+}
+
 export async function getSyncSettings(): Promise<SyncSettings> {
   const result = await chrome.storage.local.get(SYNC_SETTINGS_STORAGE_KEY);
-  return parseSyncSettings(result[SYNC_SETTINGS_STORAGE_KEY]);
+  if (SYNC_SETTINGS_STORAGE_KEY in result) {
+    return parseSyncSettings(result[SYNC_SETTINGS_STORAGE_KEY]);
+  }
+
+  const migrated = await migrateFromV1();
+  if (migrated) return migrated;
+
+  return defaults();
 }
 
 export async function setSyncSettings(partial: Partial<SyncSettings>): Promise<void> {
