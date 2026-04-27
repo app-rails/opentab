@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Echo i18n keys back as their fallback so labels stay deterministic without
@@ -8,6 +8,25 @@ vi.mock("react-i18next", () => ({
     t: (key: string, fallback?: string | Record<string, unknown>) =>
       typeof fallback === "string" ? fallback : key,
   }),
+}));
+
+// T26 wired step-backup to call exportLocalBackupToDownloads. The header /
+// navigation tests below don't care about the real download path, only that
+// the step transitions on the "done" terminal state. Mock the lib so the
+// happy path resolves synchronously without touching chrome.downloads.
+vi.mock("@/lib/sync-setup/backup", () => ({
+  exportLocalBackupToDownloads: vi.fn(async () => ({
+    filename: "opentab-backup-test.json",
+    downloadId: 1,
+  })),
+}));
+
+// T26 step-authorize subscribes to the OAuth callback bridge on mount. The
+// real hook touches chrome.runtime + chrome.storage; tests don't exercise
+// the authorize flow yet, but the mock guards against jsdom blow-ups when
+// we eventually navigate past backup.
+vi.mock("@/lib/sync-setup/use-callback-bridge", () => ({
+  useSetupCallbackBridge: vi.fn(),
 }));
 
 import { ServerWizard } from "./server-wizard";
@@ -28,15 +47,24 @@ describe("<ServerWizard>", () => {
     expect(screen.queryByTestId("wizard-step-complete")).not.toBeInTheDocument();
   });
 
-  it("advances to connect when next is clicked from backup", () => {
+  it("advances to connect after the backup completes", async () => {
     renderWizard();
+    // Backup step starts at idle; Next is disabled until backup is done.
+    fireEvent.click(screen.getByTestId("wizard-backup-start"));
+    await waitFor(() => {
+      expect(screen.getByTestId("wizard-backup-done")).toBeInTheDocument();
+    });
     fireEvent.click(screen.getByTestId("wizard-next"));
     expect(screen.getByTestId("wizard-step-connect")).toBeInTheDocument();
     expect(screen.queryByTestId("wizard-step-backup")).not.toBeInTheDocument();
   });
 
-  it("returns to backup when prev is clicked from connect", () => {
+  it("returns to backup when prev is clicked from connect", async () => {
     renderWizard();
+    fireEvent.click(screen.getByTestId("wizard-backup-start"));
+    await waitFor(() => {
+      expect(screen.getByTestId("wizard-backup-done")).toBeInTheDocument();
+    });
     fireEvent.click(screen.getByTestId("wizard-next"));
     expect(screen.getByTestId("wizard-step-connect")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("wizard-prev"));
