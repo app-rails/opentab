@@ -1,8 +1,9 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MSG } from "@/lib/constants";
 import { db } from "@/lib/db";
-import { type SyncSettings, setSyncSettings } from "@/lib/sync-settings";
+import { fetchServerWhoami } from "@/lib/server-whoami-fetch";
+import { getSyncSettings, type SyncSettings, setSyncSettings } from "@/lib/sync-settings";
 import { useSyncSettings } from "@/lib/use-sync-settings";
 import { ServerEmpty } from "./server-empty";
 import { ServerHero } from "./server-hero";
@@ -34,6 +35,70 @@ export function ServerPage() {
   // expired-auth situation forever.
   const [reauthDismissed, setReauthDismissed] = useState(false);
 
+  // Reconnect-on-mount: when the page first sees an `enabled + auth` shape
+  // we issue one whoami probe to confirm the stored deviceToken still works
+  // before painting the connected view. The ref tracks the last token we've
+  // already validated so subsequent re-renders (and the storage onChanged
+  // we emit on a 401 → setSyncSettings({auth:null}) → useSyncSettings update)
+  // don't re-enter the effect for the same token. A genuinely new token
+  // (re-auth, host switch) flips the inequality and triggers a fresh probe.
+  const validatedTokenRef = useRef<string | null>(null);
+  const [reconnecting, setReconnecting] = useState(false);
+
+  const enabled = settings.enabled;
+  const deviceToken = settings.auth?.deviceToken ?? null;
+  const host = settings.savedConfig?.host ?? null;
+
+  useEffect(() => {
+    if (!enabled || !deviceToken || !host) return;
+    if (validatedTokenRef.current === deviceToken) return;
+    validatedTokenRef.current = deviceToken;
+    setReconnecting(true);
+
+    let cancelled = false;
+    void fetchServerWhoami({ host, deviceToken }).then(async (result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        // Backfill `auth.user` from whoami so the migrated-from-v1 row (which
+        // never had user info) gains an identity. Keep the rest of `auth`
+        // (deviceToken/deviceId/issuedAt) untouched — we only learned new
+        // fields, the existing ones are still valid. Re-read settings here
+        // because the in-render snapshot may already be stale by the time
+        // the network round-trip resolves.
+        const fresh = await getSyncSettings();
+        if (fresh.auth && fresh.auth.deviceToken === deviceToken) {
+          await setSyncSettings({
+            auth: {
+              ...fresh.auth,
+              user: {
+                id: result.whoami.user.id,
+                name: result.whoami.user.name ?? result.whoami.user.email,
+                email: result.whoami.user.email,
+              },
+            },
+          });
+        }
+        if (!cancelled) setReconnecting(false);
+        return;
+      }
+      if (result.error === "unauthorized") {
+        // Token rejected by the server: clear auth so the dispatcher drops
+        // into the reauth path (banner + wizard). The ref still holds the
+        // bad token, so the storage onChanged that follows won't re-fetch.
+        await setSyncSettings({ auth: null });
+        if (!cancelled) setReconnecting(false);
+        return;
+      }
+      // network / server: transient, leave auth in place. The connected view
+      // will surface its own retry affordances; we just drop the placeholder.
+      if (!cancelled) setReconnecting(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, deviceToken, host]);
+
   if (!settings.enabled && !settings.savedConfig) {
     return <ServerEmpty />;
   }
@@ -57,6 +122,19 @@ export function ServerPage() {
           </div>
         ) : null}
         <ServerWizardPlaceholder />
+      </div>
+    );
+  }
+  if (reconnecting) {
+    // Show a brief placeholder instead of <ServerConnected> while the whoami
+    // probe is in flight. Avoids a flash of "connected" right before a 401
+    // would yank the user into the reauth banner.
+    return (
+      <div
+        className="mx-auto max-w-3xl px-8 pt-10 text-muted-foreground text-sm"
+        data-testid="server-reconnecting"
+      >
+        正在使用上次的认证信息重新连接...
       </div>
     );
   }

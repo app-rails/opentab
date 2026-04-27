@@ -1,5 +1,6 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { FetchServerWhoamiResult } from "@/lib/server-whoami-fetch";
 import type { SyncSettings } from "@/lib/sync-settings";
 
 // Echo i18n keys back as their fallback so labels stay deterministic without
@@ -42,12 +43,50 @@ vi.mock("dexie-react-hooks", () => ({
   useLiveQuery: () => null,
 }));
 
+// Whoami probe runs on mount whenever (enabled && auth). Default to a 200 so
+// the dispatcher quickly drops the reconnecting placeholder and we see the
+// connected view; individual tests can override for unauthorized/network paths.
+const mockFetchServerWhoami = vi.fn<() => Promise<FetchServerWhoamiResult>>();
+vi.mock("@/lib/server-whoami-fetch", () => ({
+  fetchServerWhoami: () => mockFetchServerWhoami(),
+}));
+
+// setSyncSettings is exercised by the whoami success/401 branches. Stub it so
+// the dispatcher tests don't depend on chrome.storage; we only care that the
+// post-whoami render lands on the right branch.
+vi.mock("@/lib/sync-settings", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/sync-settings")>("@/lib/sync-settings");
+  return {
+    ...actual,
+    setSyncSettings: vi.fn(async () => {}),
+    getSyncSettings: vi.fn(async () => ({
+      enabled: false,
+      savedConfig: null,
+      auth: null,
+      hostHistory: [],
+    })),
+  };
+});
+
 import { MemoryRouter } from "react-router";
 import { ServerPage } from "./server-page";
+
+beforeEach(() => {
+  // Default: whoami succeeds. Tests that care about a different branch
+  // override before renderPage().
+  mockFetchServerWhoami.mockResolvedValue({
+    ok: true,
+    whoami: {
+      deviceId: "01956a8d-4f9c-7000-8000-000000000001",
+      user: { id: "user-1", email: "user@example.com", name: "Tester" },
+    },
+  });
+});
 
 afterEach(() => {
   cleanup();
   mockUseSyncSettings.mockReset();
+  mockFetchServerWhoami.mockReset();
 });
 
 function renderPage() {
@@ -149,7 +188,7 @@ describe("<ServerPage>", () => {
     expect(screen.getByTestId("server-wizard-placeholder")).toBeInTheDocument();
   });
 
-  it("renders ServerConnected with hero + info + stats + log when enabled and authenticated", () => {
+  it("renders ServerConnected with hero + info + stats + log when enabled and authenticated", async () => {
     mockUseSyncSettings.mockReturnValue({
       enabled: true,
       savedConfig: SAVED_CONFIG,
@@ -157,7 +196,11 @@ describe("<ServerPage>", () => {
       hostHistory: [],
     });
     renderPage();
-    expect(screen.getByTestId("server-connected")).toBeInTheDocument();
+    // Whoami probe runs on mount; wait for the reconnecting placeholder to
+    // resolve before asserting the connected view.
+    await waitFor(() => {
+      expect(screen.getByTestId("server-connected")).toBeInTheDocument();
+    });
     expect(screen.getByTestId("server-hero")).toBeInTheDocument();
     expect(screen.getByTestId("server-info-card")).toBeInTheDocument();
     expect(screen.getByTestId("server-stats-cards")).toBeInTheDocument();
@@ -165,5 +208,42 @@ describe("<ServerPage>", () => {
     expect(screen.queryByTestId("server-empty")).not.toBeInTheDocument();
     expect(screen.queryByTestId("server-paused")).not.toBeInTheDocument();
     expect(screen.queryByTestId("server-wizard-placeholder")).not.toBeInTheDocument();
+    expect(mockFetchServerWhoami).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the reconnecting placeholder while whoami is in flight", async () => {
+    // Hold the whoami promise open so we can observe the in-flight render
+    // before resolving. Once resolved, the placeholder must give way to the
+    // connected view.
+    let resolveWhoami: (result: FetchServerWhoamiResult) => void = () => {};
+    mockFetchServerWhoami.mockReturnValueOnce(
+      new Promise<FetchServerWhoamiResult>((res) => {
+        resolveWhoami = res;
+      }),
+    );
+    mockUseSyncSettings.mockReturnValue({
+      enabled: true,
+      savedConfig: SAVED_CONFIG,
+      auth: AUTH,
+      hostHistory: [],
+    });
+    renderPage();
+    // useEffect runs after first paint, then setReconnecting(true) triggers
+    // a re-render; waitFor lets the test framework flush both.
+    await waitFor(() => {
+      expect(screen.getByTestId("server-reconnecting")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("server-connected")).not.toBeInTheDocument();
+
+    resolveWhoami({
+      ok: true,
+      whoami: {
+        deviceId: "01956a8d-4f9c-7000-8000-000000000001",
+        user: { id: "user-1", email: "user@example.com", name: "Tester" },
+      },
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("server-connected")).toBeInTheDocument();
+    });
   });
 });
