@@ -143,13 +143,34 @@ function toWireOp(op: SyncOp): PushOp {
 export class SyncEngine {
   private isSyncing = false;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  // Pause flag toggled by background.ts when SyncSettings.enabled flips. Keeps
+  // the engine instance alive (outbox writes still queue via mutateWithOutbox)
+  // while suppressing the network round-trip — flipping enabled back on then
+  // resumes without re-running ensureSyncEngine().
+  private paused = false;
 
   constructor(private readonly client: SyncClient) {}
 
   // ---- public API -------------------------------------------------------
 
+  /** True while pause() has been called and resume() hasn't yet. */
+  get isPaused(): boolean {
+    return this.paused;
+  }
+
+  /** Suppress further sync() / syncIfNeeded() calls until resume(). */
+  pause(): void {
+    this.paused = true;
+  }
+
+  /** Re-enable sync() / syncIfNeeded() after a previous pause(). */
+  resume(): void {
+    this.paused = false;
+  }
+
   /** Check if a sync is needed based on polling interval, then sync. */
   async syncIfNeeded(): Promise<void> {
+    if (this.paused) return;
     const settings = await getSettings();
     const meta = await db.syncMeta.get("lastSyncAt");
     const lastSyncAt = typeof meta?.value === "number" ? meta.value : 0;
@@ -171,6 +192,7 @@ export class SyncEngine {
 
   /** Main sync: push local changes, then pull remote changes. */
   async sync(): Promise<void> {
+    if (this.paused) return;
     if (this.isSyncing) return;
     // Server rate-limits per-user; every entry point (storage-listener,
     // alarm, manual Sync now button, debounced mutate notify) routes

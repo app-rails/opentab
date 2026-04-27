@@ -102,6 +102,20 @@ export default defineBackground(() => {
     if (syncEngine) {
       syncEngine.sync().catch((err) => console.error("[bg] auth-flip sync error:", err));
     }
+    // Mirror the Settings → toggle into the engine's pause flag. ensureSyncEngine
+    // already null-tears the engine on `enabled=false`, but pause()/resume() is
+    // a defense-in-depth: if the engine instance is still around (e.g. a future
+    // refactor keeps it warm), the toggle still gates network I/O. The flip
+    // direction matters — only call resume() on the false→true edge so we
+    // don't repeatedly stomp the flag during unrelated settings writes.
+    const change = changes[SYNC_SETTINGS_STORAGE_KEY];
+    const oldEnabled = (change.oldValue as { enabled?: boolean } | undefined)?.enabled ?? false;
+    const newEnabled = (change.newValue as { enabled?: boolean } | undefined)?.enabled ?? false;
+    const engine = syncEngine;
+    if (engine) {
+      if (!newEnabled) engine.pause();
+      else if (oldEnabled === false && newEnabled) engine.resume();
+    }
   });
 
   // --- Message listeners ---
