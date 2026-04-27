@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { setSyncSettings } from "@/lib/sync-settings";
 import { DEFAULT_SYNC_HOST } from "@/lib/sync-setup/config";
-import type { WizardStepperApi } from "./server-wizard";
+import { ReconfigureCancelLink, type WizardStepperApi } from "./server-wizard";
 
 /**
  * Step 5 — confirm and persist SyncSettings.
@@ -58,12 +58,13 @@ export function StepComplete({ stepper }: { stepper: WizardStepperApi }) {
           )}
         </p>
       </div>
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-3">
         <Button data-testid="wizard-complete-finish" onClick={finalize} disabled={saving}>
           {saving
             ? t("settings.wizard.step_complete_saving", "正在保存...")
             : t("settings.wizard.step_complete_finish", "完成")}
         </Button>
+        <ReconfigureCancelLink />
       </div>
     </div>
   );

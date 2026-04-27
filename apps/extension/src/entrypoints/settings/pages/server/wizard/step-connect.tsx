@@ -10,7 +10,7 @@ import { setSyncSettings } from "@/lib/sync-settings";
 import { checkHealth } from "@/lib/sync-setup/api-handshake";
 import { DEFAULT_SYNC_HOST, normalizeHost } from "@/lib/sync-setup/config";
 import { useSyncSettings } from "@/lib/use-sync-settings";
-import type { WizardStepperApi } from "./server-wizard";
+import { ReconfigureCancelLink, type WizardStepperApi } from "./server-wizard";
 
 /**
  * Step 2 — pick the sync host and run the health handshake.
@@ -166,7 +166,7 @@ export function StepConnect({ stepper }: { stepper: WizardStepperApi }) {
         </div>
       )}
 
-      <div className="flex justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Button
           variant="outline"
           data-testid="wizard-prev"
@@ -175,16 +175,19 @@ export function StepConnect({ stepper }: { stepper: WizardStepperApi }) {
         >
           {t("settings.wizard.prev", "上一步")}
         </Button>
-        <Button data-testid="wizard-host-submit" onClick={onSubmit} disabled={isChecking}>
-          {isChecking ? (
-            <>
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              {t("settings.wizard.step_connect_checking", "正在检查...")}
-            </>
-          ) : (
-            t("settings.wizard.next", "下一步")
-          )}
-        </Button>
+        <div className="flex items-center gap-3">
+          <ReconfigureCancelLink />
+          <Button data-testid="wizard-host-submit" onClick={onSubmit} disabled={isChecking}>
+            {isChecking ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                {t("settings.wizard.step_connect_checking", "正在检查...")}
+              </>
+            ) : (
+              t("settings.wizard.next", "下一步")
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

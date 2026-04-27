@@ -19,7 +19,7 @@ import { fetchServerStats } from "@/lib/server-stats-fetch";
 // stub file written alongside this one.
 import { downloadSnapshot, uploadBootstrap } from "@/lib/sync-setup/wizard-transfer";
 import { useSyncSettings } from "@/lib/use-sync-settings";
-import type { WizardStepperApi } from "./server-wizard";
+import { ReconfigureCancelLink, type WizardStepperApi } from "./server-wizard";
 
 /**
  * Step 4 — pick a transfer direction and run the initial sync.
@@ -228,7 +228,7 @@ export function StepTransfer({ stepper }: { stepper: WizardStepperApi }) {
         </div>
       )}
 
-      <div className="flex justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Button
           variant="outline"
           data-testid="wizard-prev"
@@ -237,20 +237,23 @@ export function StepTransfer({ stepper }: { stepper: WizardStepperApi }) {
         >
           {t("settings.wizard.prev", "上一步")}
         </Button>
-        <Button
-          data-testid="wizard-transfer-confirm"
-          onClick={onConfirm}
-          disabled={direction === null || isTransferring}
-        >
-          {isTransferring ? (
-            <>
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              {t("settings.wizard.step_transfer_running", "正在同步...")}
-            </>
-          ) : (
-            t("settings.wizard.step_transfer_start", "开始同步")
-          )}
-        </Button>
+        <div className="flex items-center gap-3">
+          <ReconfigureCancelLink />
+          <Button
+            data-testid="wizard-transfer-confirm"
+            onClick={onConfirm}
+            disabled={direction === null || isTransferring}
+          >
+            {isTransferring ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                {t("settings.wizard.step_transfer_running", "正在同步...")}
+              </>
+            ) : (
+              t("settings.wizard.step_transfer_start", "开始同步")
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

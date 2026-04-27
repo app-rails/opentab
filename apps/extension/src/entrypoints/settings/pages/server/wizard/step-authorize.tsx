@@ -6,7 +6,7 @@ import { DEFAULT_SYNC_HOST } from "@/lib/sync-setup/config";
 import { openAuthorizationTab } from "@/lib/sync-setup/exchange";
 import type { SetupCallbackPayload } from "@/lib/sync-setup/setup-callback-shared";
 import { useSetupCallbackBridge } from "@/lib/sync-setup/use-callback-bridge";
-import type { WizardStepperApi } from "./server-wizard";
+import { ReconfigureCancelLink, type WizardStepperApi } from "./server-wizard";
 
 /**
  * Step 3 — open the authorization tab and wait for the OAuth callback.
@@ -181,7 +181,7 @@ export function StepAuthorize({ stepper }: { stepper: WizardStepperApi }) {
         </div>
       )}
 
-      <div className="flex justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Button
           variant="outline"
           data-testid="wizard-prev"
@@ -189,13 +189,16 @@ export function StepAuthorize({ stepper }: { stepper: WizardStepperApi }) {
         >
           {t("settings.wizard.prev", "上一步")}
         </Button>
-        <Button
-          data-testid="wizard-next"
-          onClick={() => stepper.navigation.next()}
-          disabled={state.kind !== "received"}
-        >
-          {t("settings.wizard.next", "下一步")}
-        </Button>
+        <div className="flex items-center gap-3">
+          <ReconfigureCancelLink />
+          <Button
+            data-testid="wizard-next"
+            onClick={() => stepper.navigation.next()}
+            disabled={state.kind !== "received"}
+          >
+            {t("settings.wizard.next", "下一步")}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import { ServerPaused } from "./server-paused";
 import { ServerReauthBanner } from "./server-reauth-banner";
 import { ServerStatsCards } from "./server-stats-cards";
 import { ServerSyncLog } from "./server-sync-log";
+import { ServerWizard } from "./wizard/server-wizard";
 
 /**
  * `/server` route — pure state dispatcher.
@@ -172,13 +173,27 @@ interface ServerConnectedProps {
  *   forget server  →  setSyncSettings({ enabled:false, savedConfig:null,
  *                                       auth:null, hostHistory:filtered })
  *                     TODO(T31): swap for a confirm modal before clearing.
- *   reconfigure    →  no-op TODO; T31 wires the wizard re-entry.
+ *   reconfigure    →  setReconfiguring(true) → render <ServerWizard> from
+ *                     the connect step with reconfigureMode (Step 1 backup
+ *                     visually skipped). Cancel → setReconfiguring(false),
+ *                     SyncSettings untouched, falls back to this connected
+ *                     view with the existing token.
+ *                     TODO(spec §6.1): if Step 3 OAuth exchange invalidates
+ *                     the prior token before complete, "取消重新配置" past
+ *                     Step 3 cannot recover the original connected view;
+ *                     pending decision in spec §6.1 last item.
  *   copy device id →  navigator.clipboard.writeText(auth.deviceId)
  *
  * lastSyncAt comes from db.syncMeta (engine writes it on every successful
  * sync; same source SyncStatusCard reads).
  */
 function ServerConnected({ savedConfig, auth, hostHistory }: ServerConnectedProps) {
+  // Local-only flag; reset on unmount. SyncSettings is the source of truth
+  // for "am I really connected" — `reconfiguring` only controls which view
+  // we paint *over* the connected state. Cancelling drops it back to false
+  // with no SyncSettings write, so the previous connected view returns.
+  const [reconfiguring, setReconfiguring] = useState(false);
+
   // useLiveQuery so the "last synced N min ago" surface refreshes whenever
   // the engine bumps the row — no manual polling needed.
   const lastSyncAt =
@@ -215,7 +230,11 @@ function ServerConnected({ savedConfig, auth, hostHistory }: ServerConnectedProp
   }, [hostHistory, savedConfig.host]);
 
   const handleReconfigure = useCallback(() => {
-    // TODO(T31): wire the wizard re-entry path (route + state reset).
+    setReconfiguring(true);
+  }, []);
+
+  const handleCancelReconfigure = useCallback(() => {
+    setReconfiguring(false);
   }, []);
 
   const handleCopyDeviceId = useCallback(() => {
@@ -225,6 +244,19 @@ function ServerConnected({ savedConfig, auth, hostHistory }: ServerConnectedProp
       // intentionally ignored — silent failure is acceptable for a copy.
     });
   }, [auth.deviceId]);
+
+  if (reconfiguring) {
+    // Re-enter the wizard from Step 2 (connect). Step 1 (backup) shown as
+    // "已跳过" in the header so users see the full 5-step rhythm but can't
+    // navigate back into a redundant local backup.
+    return (
+      <ServerWizard
+        startStep="connect"
+        reconfigureMode
+        onCancelReconfigure={handleCancelReconfigure}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6 p-8" data-testid="server-connected">

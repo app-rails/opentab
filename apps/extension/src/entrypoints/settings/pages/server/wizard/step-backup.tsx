@@ -3,7 +3,7 @@ import { CheckCircle2, CircleAlert, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { exportLocalBackupToDownloads } from "@/lib/sync-setup/backup";
-import type { WizardStepperApi } from "./server-wizard";
+import { ReconfigureCancelLink, type WizardStepperApi } from "./server-wizard";
 
 /**
  * Step 1 — pre-flight local backup.
@@ -113,11 +113,13 @@ export function StepBackup({ stepper }: { stepper: WizardStepperApi }) {
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <ReconfigureCancelLink />
         <Button
           data-testid="wizard-next"
           onClick={() => stepper.navigation.next()}
           disabled={state.kind !== "done"}
+          className="ml-auto"
         >
           {t("settings.wizard.next", "下一步")}
         </Button>
