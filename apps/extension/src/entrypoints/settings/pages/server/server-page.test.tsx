@@ -20,6 +20,28 @@ vi.mock("@/lib/use-sync-settings", () => ({
   useSyncSettings: () => mockUseSyncSettings(),
 }));
 
+// The connected branch composes four sub-components; we stub them to simple
+// testid-bearing divs so we only assert composition here. Each sub-component
+// has its own dedicated tests covering rendering details.
+vi.mock("./server-hero", () => ({
+  ServerHero: () => <div data-testid="server-hero" />,
+}));
+vi.mock("./server-info-card", () => ({
+  ServerInfoCard: () => <div data-testid="server-info-card" />,
+}));
+vi.mock("./server-stats-cards", () => ({
+  ServerStatsCards: () => <div data-testid="server-stats-cards" />,
+}));
+vi.mock("./server-sync-log", () => ({
+  ServerSyncLog: () => <div data-testid="server-sync-log" />,
+}));
+
+// dexie-react-hooks reads `db` at module init time. Stub useLiveQuery so the
+// connected branch's lastSyncAt fetch resolves to null without touching IndexedDB.
+vi.mock("dexie-react-hooks", () => ({
+  useLiveQuery: () => null,
+}));
+
 import { MemoryRouter } from "react-router";
 import { ServerPage } from "./server-page";
 
@@ -55,7 +77,7 @@ describe("<ServerPage>", () => {
     expect(screen.getByTestId("server-empty")).toBeInTheDocument();
     expect(screen.queryByTestId("server-paused")).not.toBeInTheDocument();
     expect(screen.queryByTestId("server-wizard-placeholder")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("server-connected-placeholder")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("server-connected")).not.toBeInTheDocument();
   });
 
   it("renders ServerPaused when disabled but a savedConfig still exists", () => {
@@ -69,7 +91,7 @@ describe("<ServerPage>", () => {
     expect(screen.getByTestId("server-paused")).toBeInTheDocument();
     expect(screen.queryByTestId("server-empty")).not.toBeInTheDocument();
     expect(screen.queryByTestId("server-wizard-placeholder")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("server-connected-placeholder")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("server-connected")).not.toBeInTheDocument();
   });
 
   it("renders the ServerWizard placeholder when enabled but not yet authenticated", () => {
@@ -83,10 +105,10 @@ describe("<ServerPage>", () => {
     expect(screen.getByTestId("server-wizard-placeholder")).toBeInTheDocument();
     expect(screen.queryByTestId("server-empty")).not.toBeInTheDocument();
     expect(screen.queryByTestId("server-paused")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("server-connected-placeholder")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("server-connected")).not.toBeInTheDocument();
   });
 
-  it("renders the ServerConnected placeholder when enabled and authenticated", () => {
+  it("renders ServerConnected with hero + info + stats + log when enabled and authenticated", () => {
     mockUseSyncSettings.mockReturnValue({
       enabled: true,
       savedConfig: SAVED_CONFIG,
@@ -94,7 +116,11 @@ describe("<ServerPage>", () => {
       hostHistory: [],
     });
     renderPage();
-    expect(screen.getByTestId("server-connected-placeholder")).toBeInTheDocument();
+    expect(screen.getByTestId("server-connected")).toBeInTheDocument();
+    expect(screen.getByTestId("server-hero")).toBeInTheDocument();
+    expect(screen.getByTestId("server-info-card")).toBeInTheDocument();
+    expect(screen.getByTestId("server-stats-cards")).toBeInTheDocument();
+    expect(screen.getByTestId("server-sync-log")).toBeInTheDocument();
     expect(screen.queryByTestId("server-empty")).not.toBeInTheDocument();
     expect(screen.queryByTestId("server-paused")).not.toBeInTheDocument();
     expect(screen.queryByTestId("server-wizard-placeholder")).not.toBeInTheDocument();
