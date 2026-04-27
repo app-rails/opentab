@@ -14,6 +14,11 @@
  * and removes the old one, so subsequent calls hit the fast path.
  */
 
+export interface HostEntry {
+  host: string;
+  lastUsedAt: number;
+}
+
 export interface SyncSettings {
   enabled: boolean;
   savedConfig: { host: string; lastUsedAt: number } | null;
@@ -24,7 +29,7 @@ export interface SyncSettings {
     user?: { id: string; name: string; email?: string };
     issuedAt: number;
   } | null;
-  hostHistory: Array<{ host: string; lastUsedAt: number }>;
+  hostHistory: HostEntry[];
 }
 
 export const SYNC_SETTINGS_STORAGE_KEY = "opentab_sync_settings_v1";
