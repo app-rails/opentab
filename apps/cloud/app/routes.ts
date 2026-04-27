@@ -87,6 +87,7 @@ export default [
     route("sync/push", "routes/api/sync/push.ts"),
     route("sync/pull", "routes/api/sync/pull.ts"),
     route("sync/snapshot", "routes/api/sync/snapshot.ts"),
+    route("sync/stats", "routes/api/sync/stats.ts"),
 
     // Extension setup exchange (spec §4.1)
     route("extension/exchange/consume", "routes/api/extension/exchange/consume.ts"),
