@@ -93,6 +93,10 @@ vi.mock("@/lib/resolve-account-id", () => ({
   resolveAccountId: vi.fn(async () => "account-1"),
 }));
 
+vi.mock("@/lib/sync-settings", () => ({
+  setSyncSettings: vi.fn(async () => {}),
+}));
+
 vi.stubGlobal("chrome", {
   runtime: {
     sendMessage: vi.fn().mockResolvedValue(undefined),
@@ -100,8 +104,10 @@ vi.stubGlobal("chrome", {
   },
 });
 
-import { SyncClient } from "@/lib/sync-client";
+import { SyncErrorCode } from "@opentab/protocol";
+import { SyncClient, SyncClientError } from "@/lib/sync-client";
 import { SyncEngine } from "@/lib/sync-engine";
+import { setSyncSettings } from "@/lib/sync-settings";
 
 function getState(): TestState {
   const s = globalThis.__syncEnginePauseTestState;
@@ -201,5 +207,55 @@ describe("SyncEngine.pause / resume", () => {
 
     expect(push).not.toHaveBeenCalled();
     expect(pull).not.toHaveBeenCalled();
+  });
+});
+
+describe("SyncEngine 401/403 handler", () => {
+  it("clears SyncSettings.auth when pull() rejects with 401 UNAUTHORIZED", async () => {
+    // Defense-in-depth: sync-client.ts already clears auth on its own 401
+    // handling, but the engine must do the same for any 401/403 error that
+    // bubbles up through the SyncClient layer (e.g. from a future client
+    // helper, or a test that bypasses the request() codepath). Without this,
+    // a 403 from the server would silently leave auth in place and the user
+    // would never see the reauth banner.
+    const { client, pull } = mockSyncClient();
+    pull.mockRejectedValueOnce(
+      new SyncClientError(SyncErrorCode.UNAUTHORIZED, 401, "device token revoked"),
+    );
+    const engine = new SyncEngine(client);
+
+    await engine.sync();
+
+    expect(setSyncSettings).toHaveBeenCalledWith({ auth: null });
+  });
+
+  it("clears SyncSettings.auth when pull() rejects with 403 FORBIDDEN", async () => {
+    // 403 is the FORBIDDEN sibling of 401 — same outcome from the user's
+    // perspective (the device can no longer authenticate), so the engine
+    // treats it identically to keep the reauth flow uniform. Asserted via
+    // pull() because the empty-outbox shim short-circuits push() before it
+    // ever calls client.push().
+    const { client, pull } = mockSyncClient();
+    pull.mockRejectedValueOnce(new SyncClientError("FORBIDDEN", 403, "device disabled"));
+    const engine = new SyncEngine(client);
+
+    await engine.sync();
+
+    expect(setSyncSettings).toHaveBeenCalledWith({ auth: null });
+  });
+
+  it("does NOT clear auth on 429 rate-limit (transient, not an auth issue)", async () => {
+    // 429 means the server is throttling, not that auth is invalid. Clearing
+    // auth here would force a wizard restart on every rate-limit event,
+    // which is the wrong UX.
+    const { client, pull } = mockSyncClient();
+    pull.mockRejectedValueOnce(
+      new SyncClientError(SyncErrorCode.RATE_LIMITED, 429, "rate limited", 60),
+    );
+    const engine = new SyncEngine(client);
+
+    await engine.sync();
+
+    expect(setSyncSettings).not.toHaveBeenCalled();
   });
 });

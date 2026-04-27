@@ -10,7 +10,7 @@ import { newPendingOp, type SyncOpInput } from "./mutate-with-outbox";
 import { resolveAccountId } from "./resolve-account-id";
 import { getSettings } from "./settings";
 import { createSyncClientFromState, type SyncClient, SyncClientError } from "./sync-client";
-import type { SyncSettings } from "./sync-settings";
+import { type SyncSettings, setSyncSettings } from "./sync-settings";
 import type { ViewMode } from "./view-mode";
 
 // ---------------------------------------------------------------------------
@@ -505,6 +505,14 @@ export class SyncEngine {
           break;
         }
       } catch (err) {
+        // Auth expiry: 401 (sync-client already cleared auth + broadcasted) or
+        // 403 (FORBIDDEN — server rejected an otherwise-valid token, e.g.
+        // revoked device). Re-clear auth as defense-in-depth so the reauth
+        // banner surfaces via server-page's `enabled && !auth && savedConfig`
+        // shape. Idempotent on the 401 path since sync-client already did it.
+        if (isAuthExpiredError(err)) {
+          await setSyncSettings({ auth: null });
+        }
         if (isTerminalBroadcastError(err)) {
           // sync-client already broadcasted; don't increment attempt counts.
           break;
@@ -554,6 +562,11 @@ export class SyncEngine {
       try {
         result = await this.client.pull(cursor, 100);
       } catch (err) {
+        // Same defense-in-depth auth-clearing as push() above; covers 403
+        // FORBIDDEN and re-runs the 401 clear idempotently.
+        if (isAuthExpiredError(err)) {
+          await setSyncSettings({ auth: null });
+        }
         if (isTerminalBroadcastError(err)) break;
         if (err instanceof SyncClientError && err.status === 429) {
           await applyCooldown(err.retryAfterSec);
@@ -991,4 +1004,15 @@ export function createSyncEngine(settings: SyncSettings): SyncEngine | null {
  */
 function isTerminalBroadcastError(err: unknown): boolean {
   return err instanceof SyncClientError && TERMINAL_BROADCAST_CODES.has(err.code);
+}
+
+/**
+ * 401 UNAUTHORIZED or 403 FORBIDDEN from the sync server — both mean the
+ * device's auth is no longer valid (token revoked, account disabled, server
+ * policy change, etc.). The engine clears `SyncSettings.auth` so the
+ * server-page dispatcher can route the user back into the wizard with a
+ * reauth banner explaining why. See spec §1.9 / Task 29.
+ */
+function isAuthExpiredError(err: unknown): boolean {
+  return err instanceof SyncClientError && (err.status === 401 || err.status === 403);
 }

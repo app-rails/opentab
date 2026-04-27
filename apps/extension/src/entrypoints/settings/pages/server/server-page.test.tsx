@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SyncSettings } from "@/lib/sync-settings";
 
@@ -106,6 +106,47 @@ describe("<ServerPage>", () => {
     expect(screen.queryByTestId("server-empty")).not.toBeInTheDocument();
     expect(screen.queryByTestId("server-paused")).not.toBeInTheDocument();
     expect(screen.queryByTestId("server-connected")).not.toBeInTheDocument();
+  });
+
+  it("shows the reauth banner above the wizard when savedConfig exists but auth is null", () => {
+    // The reauth path: engine cleared auth on a 401/403 but savedConfig is
+    // still on disk, so the user is back in the wizard "for a reason".
+    mockUseSyncSettings.mockReturnValue({
+      enabled: true,
+      savedConfig: SAVED_CONFIG,
+      auth: null,
+      hostHistory: [],
+    });
+    renderPage();
+    expect(screen.getByTestId("server-reauth-banner")).toBeInTheDocument();
+    expect(screen.getByTestId("server-wizard-placeholder")).toBeInTheDocument();
+  });
+
+  it("hides the reauth banner when savedConfig is null (first-run wizard, not a reauth)", () => {
+    // Without savedConfig there's no prior connection to explain — banner
+    // would be confusing on a literal first-run path.
+    mockUseSyncSettings.mockReturnValue({
+      enabled: true,
+      savedConfig: null,
+      auth: null,
+      hostHistory: [],
+    });
+    renderPage();
+    expect(screen.queryByTestId("server-reauth-banner")).not.toBeInTheDocument();
+    expect(screen.getByTestId("server-wizard-placeholder")).toBeInTheDocument();
+  });
+
+  it("clicking 稍后 dismisses the reauth banner for the rest of the mount", () => {
+    mockUseSyncSettings.mockReturnValue({
+      enabled: true,
+      savedConfig: SAVED_CONFIG,
+      auth: null,
+      hostHistory: [],
+    });
+    renderPage();
+    fireEvent.click(screen.getByTestId("server-reauth-banner-dismiss"));
+    expect(screen.queryByTestId("server-reauth-banner")).not.toBeInTheDocument();
+    expect(screen.getByTestId("server-wizard-placeholder")).toBeInTheDocument();
   });
 
   it("renders ServerConnected with hero + info + stats + log when enabled and authenticated", () => {

@@ -1,5 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { MSG } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { type SyncSettings, setSyncSettings } from "@/lib/sync-settings";
@@ -8,6 +8,7 @@ import { ServerEmpty } from "./server-empty";
 import { ServerHero } from "./server-hero";
 import { ServerInfoCard } from "./server-info-card";
 import { ServerPaused } from "./server-paused";
+import { ServerReauthBanner } from "./server-reauth-banner";
 import { ServerStatsCards } from "./server-stats-cards";
 import { ServerSyncLog } from "./server-sync-log";
 
@@ -26,6 +27,12 @@ import { ServerSyncLog } from "./server-sync-log";
  */
 export function ServerPage() {
   const settings = useSyncSettings();
+  // Local-only dismiss for the reauth banner. Defaults to "show" each mount
+  // — `useState`'s initial value runs once per component instance, so a
+  // dismissed banner re-appears the next time the user navigates away and
+  // back. Persisting dismissal across mounts would risk hiding a real
+  // expired-auth situation forever.
+  const [reauthDismissed, setReauthDismissed] = useState(false);
 
   if (!settings.enabled && !settings.savedConfig) {
     return <ServerEmpty />;
@@ -34,7 +41,24 @@ export function ServerPage() {
     return <ServerPaused config={settings.savedConfig} />;
   }
   if (settings.enabled && !settings.auth) {
-    return <ServerWizardPlaceholder />;
+    // savedConfig present + auth missing = reauth path (engine just cleared
+    // auth on a runtime 401/403). savedConfig absent = first-run wizard,
+    // banner would be confusing — only render it when there's prior config
+    // to explain "why am I back in the wizard?".
+    const showReauthBanner = settings.savedConfig != null && !reauthDismissed;
+    return (
+      <div className="space-y-4">
+        {showReauthBanner ? (
+          <div className="mx-auto max-w-3xl px-8 pt-10">
+            <ServerReauthBanner
+              onReauth={() => setReauthDismissed(false)}
+              onDismiss={() => setReauthDismissed(true)}
+            />
+          </div>
+        ) : null}
+        <ServerWizardPlaceholder />
+      </div>
+    );
   }
   return (
     <ServerConnected
