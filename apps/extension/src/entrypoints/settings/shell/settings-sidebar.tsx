@@ -1,6 +1,7 @@
 import { cn } from "@opentab/ui/lib/utils";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router";
+import { UserBar } from "./user-bar";
 
 // Sidebar nav items. Order matches spec §4.2: welcome → general →
 // import/export → server. i18n keys land in Task 33; for now use the
@@ -49,8 +50,11 @@ export function SettingsSidebar() {
         ))}
       </ul>
 
-      {/* Footer / UserBar slot. Status dot + UserBar wired in Task 32. */}
-      <div className="border-border border-t px-4 py-3" />
+      {/* Footer slot. UserBar holds avatar placeholder + theme + locale toggles;
+          status dot + username land in Task 32 (Group 9). */}
+      <div className="border-border border-t px-4 py-3">
+        <UserBar />
+      </div>
     </nav>
   );
 }
