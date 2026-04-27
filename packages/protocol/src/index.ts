@@ -8,6 +8,8 @@ export * from "./endpoints/health";
 export * from "./endpoints/pull";
 export * from "./endpoints/push";
 export * from "./endpoints/snapshot";
+export * from "./endpoints/stats";
+export * from "./endpoints/whoami";
 export * from "./entities";
 export * from "./errors";
 export * from "./ops";
