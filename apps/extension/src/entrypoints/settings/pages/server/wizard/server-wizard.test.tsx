@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { installChromeStorageMock } from "@/test/chrome-storage-mock";
 
 // Echo i18n keys back as their fallback so labels stay deterministic without
 // pulling in real i18next. Same pattern as welcome-page.test.tsx.
@@ -31,7 +32,17 @@ vi.mock("@/lib/sync-setup/use-callback-bridge", () => ({
 
 import { ServerWizard } from "./server-wizard";
 
-afterEach(cleanup);
+// step-connect (T27) reads via useSyncSettings → chrome.storage.local. Without
+// the mock, navigating past backup throws "chrome is not defined". Install a
+// fresh in-memory store per test so listeners don't leak across cases.
+beforeEach(() => {
+  installChromeStorageMock();
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 function renderWizard() {
   return render(<ServerWizard />);
