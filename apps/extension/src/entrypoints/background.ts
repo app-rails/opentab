@@ -86,12 +86,13 @@ export default defineBackground(() => {
   // SYNC_SETTINGS_STORAGE_KEY (via setSyncSettings). It also dispatches
   // SYNC_SETUP_COMPLETE in `handleComplete`, but that handler only fires
   // when the user clicks the wizard's "Setup complete" Close button — and
-  // App.tsx swaps the wizard for SyncStatusCard the moment auth flips, so
-  // the user typically never sees that step. Result: bg's ensureSyncEngine
-  // would be stuck on the pre-auth `disabled` snapshot until the next worker
-  // restart, and the outbox would never drain. Subscribe to storage changes
-  // directly so bg auto-wires the moment the wizard authenticates,
-  // independent of any UI message.
+  // the server page (apps/extension/src/entrypoints/settings/pages/server/)
+  // swaps the wizard for ServerConnected the moment auth flips, so the user
+  // typically never sees that step. Result: bg's ensureSyncEngine would be
+  // stuck on the pre-auth `disabled` snapshot until the next worker restart,
+  // and the outbox would never drain. Subscribe to storage changes directly
+  // so bg auto-wires the moment the wizard authenticates, independent of
+  // any UI message.
   chrome.storage.onChanged.addListener(async (changes, area) => {
     if (area !== "local") return;
     if (!(SYNC_SETTINGS_STORAGE_KEY in changes)) return;

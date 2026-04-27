@@ -241,8 +241,9 @@ export class SyncEngine {
 
     // Same data-loss-aversion stance as push(): never auto-promote to dead
     // based on attempt count. A persistent failure is a UX problem the user
-    // needs to see (via SyncStatusCard's failed-count surface), not a
-    // silent discard. Retry every failed op forever with capped backoff.
+    // needs to see (the server panel's sync log surfaces failed ops via the
+    // "仅重试中" filter in server-sync-log.tsx), not a silent discard. Retry
+    // every failed op forever with capped backoff.
     try {
       const result = await this.client.push(failedOps.map(toWireOp));
 

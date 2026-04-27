@@ -185,7 +185,7 @@ interface ServerConnectedProps {
  *   copy device id →  navigator.clipboard.writeText(auth.deviceId)
  *
  * lastSyncAt comes from db.syncMeta (engine writes it on every successful
- * sync; same source SyncStatusCard reads).
+ * sync; consumed by ServerInfoCard to render the relative timestamp).
  */
 function ServerConnected({ savedConfig, auth, hostHistory }: ServerConnectedProps) {
   // Local-only flag; reset on unmount. SyncSettings is the source of truth
