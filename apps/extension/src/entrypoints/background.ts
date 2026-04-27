@@ -1,7 +1,7 @@
 import { initializeAuth } from "@/lib/auth-manager";
 import { MSG } from "@/lib/constants";
-import { getSyncAuth, SYNC_AUTH_STORAGE_KEY } from "@/lib/sync-auth-storage";
 import { createSyncEngine, type SyncEngine } from "@/lib/sync-engine";
+import { getSyncSettings, SYNC_SETTINGS_STORAGE_KEY } from "@/lib/sync-settings";
 
 /**
  * Background service worker (spec §2.4.6).
@@ -9,13 +9,13 @@ import { createSyncEngine, type SyncEngine } from "@/lib/sync-engine";
  * Responsibilities:
  *   - Maintain the offline auth record.
  *   - Own the sync alarm / engine lifecycle — started when
- *     `opentab_sync_auth_v1.kind === "authenticated"` and torn down on
- *     disconnect / auth clear.
+ *     `opentab_sync_settings_v1.enabled` is true and `auth` is populated;
+ *     torn down on disconnect / toggle off / auth clear.
  *   - Broadcast live-tab changes.
  *   - Focus or open the dashboard tab on action click.
  *
  * Legacy note: Task 5 temporarily disabled all sync paths for Phase 0; this
- * task re-enables them gated on the sync-auth state.
+ * task re-enables them gated on the sync-settings state.
  */
 const SYNC_POLL_ALARM = "sync-poll";
 const AUTH_RETRY_ALARM = "opentab-auth-retry";
@@ -24,16 +24,20 @@ const SYNC_POLL_INTERVAL_MINUTES = 10;
 let syncEngine: SyncEngine | null = null;
 
 async function ensureSyncEngine(): Promise<void> {
-  const auth = await getSyncAuth();
-  if (auth.kind !== "authenticated") {
+  const settings = await getSyncSettings();
+  if (!settings.enabled || !settings.auth) {
     syncEngine = null;
     await browser.alarms.clear(SYNC_POLL_ALARM).catch(() => {});
-    console.log("[bg] sync disabled (auth.kind=%s)", auth.kind);
+    console.log(
+      "[bg] sync disabled (enabled=%s, hasAuth=%s)",
+      settings.enabled,
+      settings.auth != null,
+    );
     return;
   }
 
   try {
-    syncEngine = await createSyncEngine();
+    syncEngine = createSyncEngine(settings);
   } catch (err) {
     console.error("[bg] createSyncEngine failed:", err);
     syncEngine = null;
@@ -41,8 +45,9 @@ async function ensureSyncEngine(): Promise<void> {
   }
 
   if (!syncEngine) {
-    // createSyncEngine reads the same storage key; a null result means state
-    // changed between our read and its — fall back to disabled.
+    // createSyncEngine consumes the same settings snapshot we just read; a
+    // null result means the snapshot lacked host or auth — fall back to
+    // disabled.
     await browser.alarms.clear(SYNC_POLL_ALARM).catch(() => {});
     return;
   }
@@ -78,7 +83,7 @@ export default defineBackground(() => {
   // --- React to wizard-side auth flips ---
   //
   // The wizard finishes auth by writing chrome.storage.local under
-  // SYNC_AUTH_STORAGE_KEY (via setSyncAuth). It also dispatches
+  // SYNC_SETTINGS_STORAGE_KEY (via setSyncSettings). It also dispatches
   // SYNC_SETUP_COMPLETE in `handleComplete`, but that handler only fires
   // when the user clicks the wizard's "Setup complete" Close button — and
   // App.tsx swaps the wizard for SyncStatusCard the moment auth flips, so
@@ -89,7 +94,7 @@ export default defineBackground(() => {
   // independent of any UI message.
   chrome.storage.onChanged.addListener(async (changes, area) => {
     if (area !== "local") return;
-    if (!(SYNC_AUTH_STORAGE_KEY in changes)) return;
+    if (!(SYNC_SETTINGS_STORAGE_KEY in changes)) return;
     await ensureSyncEngine();
     // If auth just flipped to authenticated, kick off a sync immediately so
     // the wizard's bulk-pushed ops drain without waiting up to 10 min for

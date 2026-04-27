@@ -2,15 +2,15 @@ import { PROTOCOL_VERSION } from "@opentab/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MSG } from "@/lib/constants";
 import { createSyncClientFromState, SyncClient, SyncClientError } from "@/lib/sync-client";
+import type { SyncSettings } from "@/lib/sync-settings";
 
-// We mock the sync-auth-storage module so we can assert clearSyncAuth() is
-// invoked on 401 without going through chrome.storage.
-vi.mock("@/lib/sync-auth-storage", () => ({
-  clearSyncAuth: vi.fn().mockResolvedValue(undefined),
-  getSyncAuth: vi.fn(),
+// We mock the sync-settings module so we can assert setSyncSettings({ auth: null })
+// is invoked on 401 without going through chrome.storage.
+vi.mock("@/lib/sync-settings", () => ({
+  setSyncSettings: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { clearSyncAuth, getSyncAuth } from "@/lib/sync-auth-storage";
+import { setSyncSettings } from "@/lib/sync-settings";
 
 const HOST = "https://sync.example.com";
 const TOKEN = "dev-token-123";
@@ -150,7 +150,8 @@ describe("SyncClient auth + protocol lifecycle", () => {
 
     await expect(new SyncClient(HOST, TOKEN).push([])).rejects.toBeInstanceOf(SyncClientError);
 
-    expect(clearSyncAuth).toHaveBeenCalledTimes(1);
+    expect(setSyncSettings).toHaveBeenCalledTimes(1);
+    expect(setSyncSettings).toHaveBeenCalledWith({ auth: null });
     expect(sendMessage).toHaveBeenCalledWith({ type: MSG.SYNC_AUTH_REQUIRED });
   });
 
@@ -168,7 +169,7 @@ describe("SyncClient auth + protocol lifecycle", () => {
 
     expect(sendMessage).toHaveBeenCalledWith({ type: MSG.SYNC_PROTOCOL_MISMATCH });
     // 426 is NOT an auth failure — we must not clear auth.
-    expect(clearSyncAuth).not.toHaveBeenCalled();
+    expect(setSyncSettings).not.toHaveBeenCalled();
   });
 
   it("captures Retry-After on 429 so the engine can schedule a cooldown", async () => {
@@ -230,25 +231,51 @@ describe("SyncClient response parsing", () => {
 });
 
 describe("createSyncClientFromState", () => {
-  it("returns null when auth state is not authenticated", async () => {
-    installChromeMock();
-    vi.mocked(getSyncAuth).mockResolvedValue({ kind: "disabled" });
+  const disabledSettings: SyncSettings = {
+    enabled: false,
+    savedConfig: null,
+    auth: null,
+    hostHistory: [],
+  };
 
-    const client = await createSyncClientFromState();
-    expect(client).toBeNull();
+  const authenticatedSettings: SyncSettings = {
+    enabled: true,
+    savedConfig: { host: HOST, lastUsedAt: 1_700_000_000_000 },
+    auth: {
+      deviceToken: TOKEN,
+      deviceId: "018f3b1e-9f4b-7aaa-8bbb-cccccccccccc",
+      deviceName: "Chrome on MBP",
+      issuedAt: 1_700_000_000_000,
+    },
+    hostHistory: [{ host: HOST, lastUsedAt: 1_700_000_000_000 }],
+  };
+
+  it("returns null when sync is disabled", () => {
+    installChromeMock();
+    expect(createSyncClientFromState(disabledSettings)).toBeNull();
   });
 
-  it("returns a SyncClient when auth state is authenticated", async () => {
+  it("returns null when enabled but auth is missing", () => {
     installChromeMock();
-    vi.mocked(getSyncAuth).mockResolvedValue({
-      kind: "authenticated",
-      host: HOST,
-      deviceId: "018f3b1e-9f4b-7aaa-8bbb-cccccccccccc",
-      deviceToken: TOKEN,
-      deviceName: "Chrome on MBP",
-    });
+    const settings: SyncSettings = {
+      ...authenticatedSettings,
+      auth: null,
+    };
+    expect(createSyncClientFromState(settings)).toBeNull();
+  });
 
-    const client = await createSyncClientFromState();
+  it("returns null when enabled but savedConfig is missing", () => {
+    installChromeMock();
+    const settings: SyncSettings = {
+      ...authenticatedSettings,
+      savedConfig: null,
+    };
+    expect(createSyncClientFromState(settings)).toBeNull();
+  });
+
+  it("returns a SyncClient when enabled with savedConfig + auth", () => {
+    installChromeMock();
+    const client = createSyncClientFromState(authenticatedSettings);
     expect(client).toBeInstanceOf(SyncClient);
   });
 });

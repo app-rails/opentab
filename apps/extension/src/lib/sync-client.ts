@@ -16,7 +16,7 @@ import {
   snapshotResponseSchema,
 } from "@opentab/protocol";
 import { MSG } from "./constants";
-import { clearSyncAuth, getSyncAuth } from "./sync-auth-storage";
+import { type SyncSettings, setSyncSettings } from "./sync-settings";
 
 /**
  * Structural schema interface — avoids a direct `zod` dependency in the
@@ -163,7 +163,7 @@ export class SyncClient {
     });
 
     if (response.status === 401) {
-      await clearSyncAuth();
+      await setSyncSettings({ auth: null });
       broadcast(MSG.SYNC_AUTH_REQUIRED);
       const { code, message } = await readErrorCode(response, SyncErrorCode.UNAUTHORIZED);
       throw new SyncClientError(code, 401, message);
@@ -238,11 +238,13 @@ async function readErrorCode(
 }
 
 /**
- * Convenience: build a `SyncClient` from persisted sync-auth state. Returns
- * `null` if the user hasn't completed the exchange flow.
+ * Convenience: build a `SyncClient` from a sync-settings snapshot. Returns
+ * `null` when sync is toggled off, no host has been saved, or the user
+ * hasn't completed the exchange flow yet.
  */
-export async function createSyncClientFromState(): Promise<SyncClient | null> {
-  const state = await getSyncAuth();
-  if (state.kind !== "authenticated") return null;
-  return new SyncClient(state.host, state.deviceToken);
+export function createSyncClientFromState(settings: SyncSettings): SyncClient | null {
+  const host = settings.savedConfig?.host;
+  const token = settings.auth?.deviceToken;
+  if (!settings.enabled || !host || !token) return null;
+  return new SyncClient(host, token);
 }

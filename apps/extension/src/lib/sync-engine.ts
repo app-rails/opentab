@@ -10,6 +10,7 @@ import { newPendingOp, type SyncOpInput } from "./mutate-with-outbox";
 import { resolveAccountId } from "./resolve-account-id";
 import { getSettings } from "./settings";
 import { createSyncClientFromState, type SyncClient, SyncClientError } from "./sync-client";
+import type { SyncSettings } from "./sync-settings";
 import type { ViewMode } from "./view-mode";
 
 // ---------------------------------------------------------------------------
@@ -950,12 +951,12 @@ export class SyncEngine {
 }
 
 /**
- * Factory: builds a `SyncEngine` wired to persisted auth. Returns `null` when
- * the extension isn't in the `authenticated` state — callers should treat
- * that as "sync is dormant" and not attempt to operate on the engine.
+ * Factory: builds a `SyncEngine` wired to a sync-settings snapshot. Returns
+ * `null` when sync is toggled off or auth/host is missing — callers should
+ * treat that as "sync is dormant" and not attempt to operate on the engine.
  */
-export async function createSyncEngine(): Promise<SyncEngine | null> {
-  const client = await createSyncClientFromState();
+export function createSyncEngine(settings: SyncSettings): SyncEngine | null {
+  const client = createSyncClientFromState(settings);
   if (client === null) return null;
   return new SyncEngine(client);
 }
