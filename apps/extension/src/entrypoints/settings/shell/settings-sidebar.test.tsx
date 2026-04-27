@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { SyncSettings } from "@/lib/sync-settings";
 
 // Mock dependencies before importing the component-under-test so the module
 // graph picks up the stubs. The sidebar pulls in <UserBar>, which itself uses
@@ -23,6 +24,15 @@ vi.mock("@/lib/locale", () => ({
   }),
 }));
 
+// useSyncSettings drives the server nav dot/label and the UserBar avatar/name.
+// Same pattern as server-page.test.tsx: each it() block sets the next return
+// value, then renders so the snapshot is deterministic without chrome.storage.
+const mockUseSyncSettings = vi.fn<() => SyncSettings>();
+
+vi.mock("@/lib/use-sync-settings", () => ({
+  useSyncSettings: () => mockUseSyncSettings(),
+}));
+
 // Map the few i18n keys this sidebar reads to the real `EN`/`中` glyphs the
 // production locale files ship; everything else echoes the fallback (or the
 // key) so labels stay deterministic without pulling in i18next.
@@ -43,16 +53,56 @@ vi.mock("react-i18next", () => ({
 import { MemoryRouter } from "react-router";
 import { SettingsSidebar } from "./settings-sidebar";
 
+const DISABLED_NO_CONFIG: SyncSettings = {
+  enabled: false,
+  savedConfig: null,
+  auth: null,
+  hostHistory: [],
+};
+
+const SAVED_CONFIG = { host: "https://sync.example.com", lastUsedAt: 1_700_000_000_000 };
+
+const DISABLED_WITH_CONFIG: SyncSettings = {
+  enabled: false,
+  savedConfig: SAVED_CONFIG,
+  auth: null,
+  hostHistory: [{ host: SAVED_CONFIG.host, lastUsedAt: SAVED_CONFIG.lastUsedAt }],
+};
+
+const ENABLED_WIZARD: SyncSettings = {
+  enabled: true,
+  savedConfig: SAVED_CONFIG,
+  auth: null,
+  hostHistory: [],
+};
+
+const ENABLED_AUTH: SyncSettings = {
+  enabled: true,
+  savedConfig: SAVED_CONFIG,
+  auth: {
+    deviceToken: "token-abc",
+    deviceId: "device-123",
+    deviceName: "Mac mini",
+    user: { id: "user-1", name: "Zhao Lion", email: "user@example.com" },
+    issuedAt: 1_700_000_000_000,
+  },
+  hostHistory: [],
+};
+
 afterEach(() => {
   cleanup();
   mockSetTheme.mockClear();
   mockCycleLocale.mockClear();
   mockSetLocale.mockClear();
+  mockUseSyncSettings.mockReset();
   currentLocale = "en";
 });
 
 beforeEach(() => {
   currentLocale = "en";
+  // Default to "disabled, no config" so existing tests that don't care about
+  // sync state still render the sidebar without exploding.
+  mockUseSyncSettings.mockReturnValue(DISABLED_NO_CONFIG);
 });
 
 function renderAt(initialPath: string) {
@@ -67,7 +117,8 @@ describe("<SettingsSidebar>", () => {
   it("renders 4 NavLinks with the expected hrefs", () => {
     renderAt("/");
     const links = screen.getAllByRole("link");
-    expect(links).toHaveLength(4);
+    // 4 nav links + 1 UserBar avatar/name link to /server
+    expect(links.length).toBeGreaterThanOrEqual(4);
     expect(links[0]).toHaveAttribute("href", "/");
     expect(links[1]).toHaveAttribute("href", "/general");
     expect(links[2]).toHaveAttribute("href", "/import-export");
@@ -103,5 +154,96 @@ describe("<SettingsSidebar>", () => {
     renderAt("/");
     fireEvent.click(screen.getByTestId("user-bar-locale"));
     expect(mockCycleLocale).toHaveBeenCalledTimes(1);
+  });
+
+  describe("server nav status dot", () => {
+    it("shows gray dot + 未启用 label when disabled and never configured", () => {
+      mockUseSyncSettings.mockReturnValue(DISABLED_NO_CONFIG);
+      renderAt("/");
+      const dot = screen.getByTestId("settings-sidebar-server-dot");
+      // gray = bg-muted-foreground/40 (corresponds to spec --text-tertiary)
+      expect(dot.className).toContain("bg-muted-foreground");
+      const label = screen.getByTestId("settings-sidebar-server-label");
+      expect(label).toHaveTextContent("未启用");
+    });
+
+    it("shows gray dot + 已暂停 label when disabled but a savedConfig exists", () => {
+      mockUseSyncSettings.mockReturnValue(DISABLED_WITH_CONFIG);
+      renderAt("/");
+      const dot = screen.getByTestId("settings-sidebar-server-dot");
+      expect(dot.className).toContain("bg-muted-foreground");
+      const label = screen.getByTestId("settings-sidebar-server-label");
+      expect(label).toHaveTextContent("已暂停");
+    });
+
+    it("shows yellow dot + 配置中 label when enabled but not yet authenticated", () => {
+      mockUseSyncSettings.mockReturnValue(ENABLED_WIZARD);
+      renderAt("/");
+      const dot = screen.getByTestId("settings-sidebar-server-dot");
+      // yellow = bg-amber-500 (corresponds to spec --warning)
+      expect(dot.className).toContain("bg-amber-500");
+      const label = screen.getByTestId("settings-sidebar-server-label");
+      expect(label).toHaveTextContent("配置中");
+    });
+
+    it("shows green dot + 已启用 label when enabled and authenticated", () => {
+      mockUseSyncSettings.mockReturnValue(ENABLED_AUTH);
+      renderAt("/");
+      const dot = screen.getByTestId("settings-sidebar-server-dot");
+      // green = bg-emerald-500 (corresponds to spec --success)
+      expect(dot.className).toContain("bg-emerald-500");
+      const label = screen.getByTestId("settings-sidebar-server-label");
+      expect(label).toHaveTextContent("已启用");
+    });
+
+    it("dot carries an aria-label so screen readers get the status text", () => {
+      mockUseSyncSettings.mockReturnValue(ENABLED_AUTH);
+      renderAt("/");
+      const dot = screen.getByTestId("settings-sidebar-server-dot");
+      // aria-label comes from the tooltip copy (full status sentence) so
+      // screen readers hear something more useful than the short visual label.
+      expect(dot).toHaveAttribute("aria-label", expect.stringMatching(/.+/));
+    });
+  });
+
+  describe("UserBar identity", () => {
+    it("shows '未登录' when disabled and never configured", () => {
+      mockUseSyncSettings.mockReturnValue(DISABLED_NO_CONFIG);
+      renderAt("/");
+      const userBar = screen.getByTestId("user-bar");
+      expect(within(userBar).getByTestId("user-bar-name")).toHaveTextContent("未登录");
+      // Avatar falls back to "?" when there's no identity to show.
+      expect(within(userBar).getByTestId("user-bar-avatar")).toHaveTextContent("?");
+    });
+
+    it("shows '已暂停' when disabled but a savedConfig exists", () => {
+      mockUseSyncSettings.mockReturnValue(DISABLED_WITH_CONFIG);
+      renderAt("/");
+      const userBar = screen.getByTestId("user-bar");
+      expect(within(userBar).getByTestId("user-bar-name")).toHaveTextContent("已暂停");
+    });
+
+    it("shows '配置中' when enabled but auth is missing (wizard)", () => {
+      mockUseSyncSettings.mockReturnValue(ENABLED_WIZARD);
+      renderAt("/");
+      const userBar = screen.getByTestId("user-bar");
+      expect(within(userBar).getByTestId("user-bar-name")).toHaveTextContent("配置中");
+    });
+
+    it("shows the user.name first letter + name when authenticated", () => {
+      mockUseSyncSettings.mockReturnValue(ENABLED_AUTH);
+      renderAt("/");
+      const userBar = screen.getByTestId("user-bar");
+      expect(within(userBar).getByTestId("user-bar-avatar")).toHaveTextContent("Z");
+      expect(within(userBar).getByTestId("user-bar-name")).toHaveTextContent("Zhao Lion");
+    });
+
+    it("avatar+name link points at /server so users can jump into setup", () => {
+      mockUseSyncSettings.mockReturnValue(DISABLED_NO_CONFIG);
+      renderAt("/");
+      const userBar = screen.getByTestId("user-bar");
+      const link = within(userBar).getByTestId("user-bar-link");
+      expect(link).toHaveAttribute("href", "/server");
+    });
   });
 });

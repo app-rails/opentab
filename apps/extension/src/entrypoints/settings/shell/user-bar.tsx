@@ -1,17 +1,60 @@
 import { Button } from "@opentab/ui/components/button";
+import { cn } from "@opentab/ui/lib/utils";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 import { ThemeToggler } from "@/components/theme-toggler";
 import { useLocale } from "@/lib/locale";
+import type { SyncSettings } from "@/lib/sync-settings";
 import { useTheme } from "@/lib/theme";
+import { useSyncSettings } from "@/lib/use-sync-settings";
 
-// Footer for the settings sidebar. Mirrors workspace-sidebar.tsx:94-97 + 270-287
-// in spirit (icon ThemeToggler + cycleLocale button + small label) but trims:
-// no Tooltip wrapper, no export/import, no settings link. Avatar is a gray
-// placeholder until Task 32 (Group 9) wires status dot, username, and tooltip.
+// 4-state derivation per spec §4.4. Identity tier (avatar bg + label) tracks
+// the same axes as the sidebar dot:
+//   enabled ∧ auth        → user.name first letter, accent bg
+//   enabled ∧ !auth       → "?" gray, "配置中"
+//   !enabled ∧ savedConfig → "?" gray, "已暂停"
+//   !enabled ∧ !savedConfig → "?" gray, "未登录"
+// Avatar+name area is wrapped in <Link to="/server"> so any non-authenticated
+// state has an obvious one-click jump back to the wizard.
+type Identity = {
+  initial: string;
+  name: string;
+  accent: boolean;
+};
+
+function deriveIdentity(s: SyncSettings, t: (k: string, fb?: string) => string): Identity {
+  if (s.enabled && s.auth) {
+    const display = s.auth.user?.name ?? s.auth.deviceName ?? "已认证";
+    const initial = display.trim().charAt(0).toUpperCase() || "?";
+    return { initial, name: display, accent: true };
+  }
+  if (s.enabled) {
+    return {
+      initial: "?",
+      name: t("settings.sidebar.user_status_wizard", "配置中"),
+      accent: false,
+    };
+  }
+  if (s.savedConfig) {
+    return {
+      initial: "?",
+      name: t("settings.sidebar.user_status_paused", "已暂停"),
+      accent: false,
+    };
+  }
+  return {
+    initial: "?",
+    name: t("settings.sidebar.user_status_signed_out", "未登录"),
+    accent: false,
+  };
+}
+
 export function UserBar() {
   const { mode } = useTheme();
   const { locale, cycleLocale } = useLocale();
   const { t } = useTranslation();
+  const settings = useSyncSettings();
+  const identity = deriveIdentity(settings, t);
 
   const themeLabel = t("sidebar.theme_label", { mode: t(`sidebar.theme_${mode}`) });
   // Inlined like workspace-sidebar.tsx:95-97. Lift to useLocale in Task 32.
@@ -21,8 +64,30 @@ export function UserBar() {
 
   return (
     <div data-testid="user-bar" className="flex items-center gap-2">
-      {/* Avatar placeholder. Real avatar + status dot lands in Task 32. */}
-      <div className="size-6 shrink-0 rounded-full bg-muted" aria-hidden="true" />
+      <Link
+        to="/server"
+        data-testid="user-bar-link"
+        className="flex min-w-0 flex-1 items-center gap-2 rounded-md hover:opacity-80"
+      >
+        <span
+          data-testid="user-bar-avatar"
+          aria-hidden="true"
+          className={cn(
+            "flex size-6 shrink-0 items-center justify-center rounded-full text-xs",
+            identity.accent
+              ? "bg-accent font-medium text-accent-foreground"
+              : "bg-muted text-muted-foreground",
+          )}
+        >
+          {identity.initial}
+        </span>
+        <span
+          data-testid="user-bar-name"
+          className="min-w-0 truncate text-muted-foreground text-xs"
+        >
+          {identity.name}
+        </span>
+      </Link>
 
       <div className="ml-auto flex items-center gap-0.5">
         <ThemeToggler
