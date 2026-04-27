@@ -1,5 +1,6 @@
 import { Button } from "@opentab/ui/components/button";
 import { cn } from "@opentab/ui/lib/utils";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { ThemeToggler } from "@/components/theme-toggler";
@@ -22,7 +23,7 @@ type Identity = {
   accent: boolean;
 };
 
-function deriveIdentity(s: SyncSettings, t: (k: string, fb?: string) => string): Identity {
+function deriveIdentity(s: SyncSettings, t: TFunction): Identity {
   if (s.enabled && s.auth) {
     const display = s.auth.user?.name ?? s.auth.deviceName ?? "已认证";
     const initial = display.trim().charAt(0).toUpperCase() || "?";

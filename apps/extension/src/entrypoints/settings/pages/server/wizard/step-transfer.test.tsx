@@ -56,8 +56,8 @@ vi.mock("@/lib/db", () => ({
 // uploadBootstrap / downloadSnapshot are placeholders for T31's extracted
 // transfer service. step-transfer dispatches one of them when the user
 // confirms a direction; we mock both to assert the right one is invoked.
-const mockUploadBootstrap = vi.fn(async () => {});
-const mockDownloadSnapshot = vi.fn(async () => {});
+const mockUploadBootstrap = vi.fn(async (_args: { host: string; deviceToken: string }) => {});
+const mockDownloadSnapshot = vi.fn(async (_args: { host: string; deviceToken: string }) => {});
 vi.mock("@/lib/sync-setup/wizard-transfer", () => ({
   uploadBootstrap: (args: { host: string; deviceToken: string }) => mockUploadBootstrap(args),
   downloadSnapshot: (args: { host: string; deviceToken: string }) => mockDownloadSnapshot(args),
