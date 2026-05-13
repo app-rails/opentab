@@ -11,7 +11,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -29,9 +29,11 @@ jobs:
           echo "Previous tag: ${PREVIOUS_TAG:-<none>}"
           echo "previous_tag=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.8.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -58,7 +60,7 @@ jobs:
           zip -r "${GITHUB_WORKSPACE}/opentab-chrome-extension-v${VERSION}.zip" chrome-mv3/
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           previous_tag: ${{ steps.prev_tag.outputs.previous_tag }}
