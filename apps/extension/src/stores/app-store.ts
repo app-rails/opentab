@@ -164,6 +164,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   clearFocusCollection: () => set({ focusCollectionId: null }),
 
   initialize: async () => {
+    const activeWorkspaceIdAtStart = get().activeWorkspaceId;
     try {
       const accountId = await resolveAccountId();
       const workspaces = await db.workspaces
@@ -184,6 +185,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         tabsByCollection = await loadTabsByCollection(collections);
       }
 
+      if (get().activeWorkspaceId !== activeWorkspaceIdAtStart) {
+        set({ workspaces, isLoading: false });
+        return;
+      }
+
       set({
         workspaces,
         activeWorkspaceId,
@@ -201,10 +207,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().activeWorkspaceId === id) return;
     set({ activeWorkspaceId: id });
 
-    updateSettings({ active_workspace_id: id }).catch((err) => {
-      console.error("[store] failed to persist active workspace:", err);
-    });
-    chrome.runtime.sendMessage({ type: MSG.WORKSPACE_CHANGED, workspaceId: id }).catch(() => {});
+    updateSettings({ active_workspace_id: id })
+      .then(() => {
+        if (get().activeWorkspaceId === id) {
+          chrome.runtime
+            .sendMessage({ type: MSG.WORKSPACE_CHANGED, workspaceId: id })
+            .catch(() => {});
+        }
+      })
+      .catch((err) => {
+        console.error("[store] failed to persist active workspace:", err);
+      });
 
     loadCollections(id)
       .then(async (collections) => {

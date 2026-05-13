@@ -38,13 +38,24 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
   );
   const [closeAfter, setCloseAfter] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    getSettings().then((s) => {
-      if (!cancelled) setCloseAfter(s.save_tabs_close_after);
-    });
+    setSettingsLoaded(false);
+    setCloseAfter(false);
+    getSettings()
+      .then((s) => {
+        if (!cancelled) setCloseAfter(s.save_tabs_close_after);
+      })
+      .catch((err) => {
+        console.error("[save-tabs] failed to load settings:", err);
+        if (!cancelled) setCloseAfter(false);
+      })
+      .finally(() => {
+        if (!cancelled) setSettingsLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -79,6 +90,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
   const trimmedName = name.trim();
   const canSave =
     trimmedName.length > 0 && trimmedName.length <= WORKSPACE_NAME_MAX_LENGTH && !noneSelected;
+  const saveDisabled = !canSave || !settingsLoaded || saving;
 
   function toggleTab(tabId: number) {
     setSelectedIds((prev) => {
@@ -162,7 +174,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && canSave && !saving) handleSave();
+              if (e.key === "Enter" && !saveDisabled) handleSave();
             }}
           />
 
@@ -205,6 +217,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <Checkbox
               checked={closeAfter}
+              disabled={!settingsLoaded}
               onCheckedChange={(v) => handleCloseAfterChange(v === true)}
             />
             <span>{t("dialog.save_tabs.close_after")}</span>
@@ -215,7 +228,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>
             {t("dialog.cancel")}
           </Button>
-          <Button onClick={handleSave} disabled={!canSave || saving}>
+          <Button onClick={handleSave} disabled={saveDisabled}>
             {t("dialog.save_tabs.save")}
           </Button>
         </DialogFooter>
