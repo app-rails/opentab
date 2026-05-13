@@ -145,7 +145,7 @@ interface AppState {
   saveTabsAsCollection: (
     name: string,
     tabs: { url: string; title: string; favIconUrl?: string }[],
-  ) => Promise<void>;
+  ) => Promise<boolean>;
 
   // Sync
   refreshAfterSync: () => Promise<void>;
@@ -1091,11 +1091,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   saveTabsAsCollection: async (name, tabs) => {
     const validName = validateName(name);
-    if (!validName || tabs.length === 0) return;
+    if (!validName || tabs.length === 0) return false;
     const { activeWorkspaceId, collections, workspaces } = get();
-    if (activeWorkspaceId == null) return;
+    if (activeWorkspaceId == null) return false;
 
     const parentWs = workspaces.find((w) => w.id === activeWorkspaceId);
+    if (!parentWs) return false;
 
     const sorted = [...collections].sort(compareByOrder);
     const firstCollectionOrder = sorted.length > 0 ? sorted[0].order : null;
@@ -1136,7 +1137,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         action: "create",
         payload: {
           syncId: collection.syncId,
-          parentSyncId: parentWs!.syncId,
+          parentSyncId: parentWs.syncId,
           name: validName,
           order: collectionOrder,
           updatedAt: now,
@@ -1182,8 +1183,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         collections: [collection, ...get().collections],
         tabsByCollection: newMap,
       });
+      return true;
     } catch (err) {
       console.error("[store] failed to save tabs as collection:", err);
+      return false;
     }
   },
 

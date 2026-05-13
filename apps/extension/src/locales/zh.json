@@ -142,7 +142,9 @@
       "select_all": "全选",
       "selected_count": "已选 {{selected}} / {{total}}",
       "save": "保存",
-      "toast_success": "已保存 {{count}} 个标签页到「{{name}}」"
+      "toast_success": "已保存 {{count}} 个标签页到「{{name}}」",
+      "toast_error": "无法保存选中的标签页",
+      "close_after": "保存后关闭这些标签页"
     }
   },
   "live_tab": {
