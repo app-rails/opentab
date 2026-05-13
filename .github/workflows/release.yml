@@ -58,7 +58,7 @@ jobs:
           zip -r "${GITHUB_WORKSPACE}/opentab-chrome-extension-v${VERSION}.zip" chrome-mv3/
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           previous_tag: ${{ steps.prev_tag.outputs.previous_tag }}
