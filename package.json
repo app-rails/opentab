@@ -11,12 +11,12 @@
     "postinstall": "lefthook install"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.9",
-    "@commitlint/cli": "^20.5.0",
-    "@commitlint/config-conventional": "^20.5.0",
-    "lefthook": "^2.1.5",
-    "turbo": "^2",
-    "typescript": "^5"
+    "@biomejs/biome": "^2.4.15",
+    "@commitlint/cli": "^21.0.1",
+    "@commitlint/config-conventional": "^21.0.1",
+    "lefthook": "^2.1.6",
+    "turbo": "^2.9.12",
+    "typescript": "^6.0.3"
   },
   "packageManager": "pnpm@10.8.0",
   "pnpm": {
