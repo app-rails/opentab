@@ -5,6 +5,28 @@ All notable changes to OpenTab will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.3] - 2026-05-13
+
+Maintenance release. No user-facing changes — all CI/build/dependency work
+under the hood to keep the project on supported runtimes before GitHub's
+Node 20 deprecation on 2026-06-02.
+
+### Changed
+
+- **Dependencies refreshed** — 19 production deps and 16 development deps
+  bumped, including TypeScript 6, Vite 8, `@vitejs/plugin-react` 6,
+  `@types/node` 25, vitest 4.1.6, and wxt 0.20.26.
+- **GitHub Actions on Node 24** — `actions/checkout`, `actions/setup-node`,
+  `pnpm/action-setup`, and `softprops/action-gh-release` all bumped to their
+  current majors.
+- **Release notes** are now scoped to commits since the previous tag (no
+  more replaying the full repo history on every release page).
+
+### Fixed
+
+- `apps/{web,extension}/tsconfig.json`: dropped the deprecated `baseUrl`
+  option so the build keeps working on TypeScript 6+ (TS 7 removes it).
+
 ## [0.0.2] - 2026-05-13
 
 ### Added
@@ -73,5 +95,6 @@ Download `opentab-chrome-extension-v0.0.1.zip` from the GitHub release, unzip,
 then load the `chrome-mv3` folder via `chrome://extensions/` → Developer mode →
 "Load unpacked".
 
+[0.0.3]: https://github.com/app-rails/opentab/releases/tag/v0.0.3
 [0.0.2]: https://github.com/app-rails/opentab/releases/tag/v0.0.2
 [0.0.1]: https://github.com/app-rails/opentab/releases/tag/v0.0.1
