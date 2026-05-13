@@ -20,9 +20,12 @@ jobs:
         env:
           CURRENT_TAG: ${{ github.ref_name }}
         run: |
+          # Walk the version-sorted (descending) tag list, locate the
+          # current tag, and emit the line that follows it — i.e. the
+          # version immediately preceding the one being released. This is
+          # robust to retroactive re-runs where newer tags already exist.
           PREVIOUS_TAG=$(git tag --list 'v*' --sort=-v:refname \
-            | grep -vFx "$CURRENT_TAG" \
-            | head -1)
+            | awk -v cur="$CURRENT_TAG" 'found { print; exit } $0 == cur { found = 1 }')
           echo "Previous tag: ${PREVIOUS_TAG:-<none>}"
           echo "previous_tag=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
 
