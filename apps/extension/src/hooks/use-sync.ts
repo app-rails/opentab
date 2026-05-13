@@ -7,7 +7,9 @@ export function useSync() {
   useEffect(() => {
     chrome.runtime.sendMessage({ type: MSG.SYNC_REQUEST }).catch(() => {});
     const handler = (msg: { type: string }) => {
-      if (msg.type === MSG.SYNC_APPLIED) refreshAfterSync();
+      if (msg.type === MSG.SYNC_APPLIED || msg.type === MSG.IMPORT_COMPLETED) {
+        refreshAfterSync();
+      }
     };
     chrome.runtime.onMessage.addListener(handler);
     return () => chrome.runtime.onMessage.removeListener(handler);
