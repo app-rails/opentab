@@ -1,5 +1,5 @@
 import { waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings } from "@/lib/settings";
 
 const mocks = vi.hoisted(() => ({
@@ -114,6 +114,10 @@ beforeEach(() => {
     isLoading: true,
     focusCollectionId: null,
   });
+});
+
+afterEach(() => {
+  (globalThis as { chrome?: unknown }).chrome = undefined;
 });
 
 describe("workspace active-state sync", () => {
