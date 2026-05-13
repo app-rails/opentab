@@ -7,6 +7,7 @@ import {
 import { regenerateOrders, sortTabs } from "@/lib/collection-sort";
 import {
   DEFAULT_ICON,
+  MSG,
   WORKSPACE_ICON_OPTIONS,
   WORKSPACE_NAME_MAX_LENGTH,
   type WorkspaceIconName,
@@ -15,6 +16,7 @@ import type { CollectionTab, TabCollection, Workspace } from "@/lib/db";
 import { db } from "@/lib/db";
 import { activeCollections, activeTabs } from "@/lib/db-queries";
 import { mutateWithOutbox, type SyncOpInput } from "@/lib/mutate-with-outbox";
+import { getSettings, updateSettings } from "@/lib/settings";
 import { compareByOrder } from "@/lib/utils";
 import type { ViewMode } from "@/lib/view-mode";
 
@@ -70,6 +72,7 @@ interface AppState {
 
   initialize: () => Promise<void>;
   setActiveWorkspace: (id: number) => void;
+  applyActiveWorkspaceFromBroadcast: (id: number | null) => void;
 
   // Workspace CRUD (existing)
   createWorkspace: (name: string, icon: string) => Promise<void>;
@@ -168,7 +171,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         .equals(accountId)
         .filter((w) => !w.deletedAt)
         .sortBy("order");
-      const activeWorkspaceId = workspaces[0]?.id ?? null;
+
+      const persisted = await getSettings();
+      const persistedId = persisted.active_workspace_id;
+      const persistedExists = persistedId != null && workspaces.some((w) => w.id === persistedId);
+      const activeWorkspaceId = persistedExists ? persistedId : (workspaces[0]?.id ?? null);
 
       let collections: TabCollection[] = [];
       let tabsByCollection = new Map<number, CollectionTab[]>();
@@ -193,6 +200,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   setActiveWorkspace: (id) => {
     if (get().activeWorkspaceId === id) return;
     set({ activeWorkspaceId: id });
+
+    updateSettings({ active_workspace_id: id }).catch((err) => {
+      console.error("[store] failed to persist active workspace:", err);
+    });
+    chrome.runtime.sendMessage({ type: MSG.WORKSPACE_CHANGED, workspaceId: id }).catch(() => {});
+
     loadCollections(id)
       .then(async (collections) => {
         if (get().activeWorkspaceId !== id) return;
@@ -205,6 +218,25 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (get().activeWorkspaceId === id) {
           set({ collections: [], tabsByCollection: new Map() });
         }
+      });
+  },
+
+  applyActiveWorkspaceFromBroadcast: (id) => {
+    if (get().activeWorkspaceId === id) return;
+    set({ activeWorkspaceId: id });
+    if (id == null) {
+      set({ collections: [], tabsByCollection: new Map() });
+      return;
+    }
+    loadCollections(id)
+      .then(async (collections) => {
+        if (get().activeWorkspaceId !== id) return;
+        const tabsByCollection = await loadTabsByCollection(collections);
+        if (get().activeWorkspaceId !== id) return;
+        set({ collections, tabsByCollection });
+      })
+      .catch((err) => {
+        console.error("[store] failed to apply broadcast workspace:", err);
       });
   },
 

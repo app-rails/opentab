@@ -14,6 +14,8 @@ export interface AppSettings {
   sidebar_collapsed: boolean;
   right_panel_collapsed: boolean;
   sync_polling_interval: number;
+  active_workspace_id: number | null;
+  save_tabs_close_after: boolean;
 }
 
 const DEFAULTS: AppSettings = {
@@ -25,6 +27,8 @@ const DEFAULTS: AppSettings = {
   sidebar_collapsed: false,
   right_panel_collapsed: false,
   sync_polling_interval: 600_000, // 10 minutes, clamped [60_000, 3_600_000]
+  active_workspace_id: null,
+  save_tabs_close_after: false,
 };
 
 const KEYS = Object.keys(DEFAULTS) as (keyof AppSettings)[];
