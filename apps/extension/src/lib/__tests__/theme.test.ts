@@ -14,6 +14,8 @@ const defaultSettings = {
   sidebar_collapsed: false,
   right_panel_collapsed: false,
   sync_polling_interval: 600_000,
+  active_workspace_id: null,
+  save_tabs_close_after: false,
 };
 
 import { getSettings, saveSettings } from "@/lib/settings";

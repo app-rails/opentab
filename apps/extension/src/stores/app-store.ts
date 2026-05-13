@@ -7,6 +7,7 @@ import {
 import { regenerateOrders, sortTabs } from "@/lib/collection-sort";
 import {
   DEFAULT_ICON,
+  MSG,
   WORKSPACE_ICON_OPTIONS,
   WORKSPACE_NAME_MAX_LENGTH,
   type WorkspaceIconName,
@@ -15,6 +16,7 @@ import type { CollectionTab, TabCollection, Workspace } from "@/lib/db";
 import { db } from "@/lib/db";
 import { activeCollections, activeTabs } from "@/lib/db-queries";
 import { mutateWithOutbox, type SyncOpInput } from "@/lib/mutate-with-outbox";
+import { getSettings, updateSettings } from "@/lib/settings";
 import { compareByOrder } from "@/lib/utils";
 import type { ViewMode } from "@/lib/view-mode";
 
@@ -70,6 +72,7 @@ interface AppState {
 
   initialize: () => Promise<void>;
   setActiveWorkspace: (id: number) => void;
+  applyActiveWorkspaceFromBroadcast: (id: number | null) => void;
 
   // Workspace CRUD (existing)
   createWorkspace: (name: string, icon: string) => Promise<void>;
@@ -142,7 +145,7 @@ interface AppState {
   saveTabsAsCollection: (
     name: string,
     tabs: { url: string; title: string; favIconUrl?: string }[],
-  ) => Promise<void>;
+  ) => Promise<boolean>;
 
   // Sync
   refreshAfterSync: () => Promise<void>;
@@ -161,6 +164,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   clearFocusCollection: () => set({ focusCollectionId: null }),
 
   initialize: async () => {
+    const activeWorkspaceIdAtStart = get().activeWorkspaceId;
     try {
       const accountId = await resolveAccountId();
       const workspaces = await db.workspaces
@@ -168,13 +172,22 @@ export const useAppStore = create<AppState>((set, get) => ({
         .equals(accountId)
         .filter((w) => !w.deletedAt)
         .sortBy("order");
-      const activeWorkspaceId = workspaces[0]?.id ?? null;
+
+      const persisted = await getSettings();
+      const persistedId = persisted.active_workspace_id;
+      const persistedExists = persistedId != null && workspaces.some((w) => w.id === persistedId);
+      const activeWorkspaceId = persistedExists ? persistedId : (workspaces[0]?.id ?? null);
 
       let collections: TabCollection[] = [];
       let tabsByCollection = new Map<number, CollectionTab[]>();
       if (activeWorkspaceId != null) {
         collections = await loadCollections(activeWorkspaceId);
         tabsByCollection = await loadTabsByCollection(collections);
+      }
+
+      if (get().activeWorkspaceId !== activeWorkspaceIdAtStart) {
+        set({ workspaces, isLoading: false });
+        return;
       }
 
       set({
@@ -193,6 +206,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   setActiveWorkspace: (id) => {
     if (get().activeWorkspaceId === id) return;
     set({ activeWorkspaceId: id });
+
+    updateSettings({ active_workspace_id: id })
+      .then(() => {
+        if (get().activeWorkspaceId === id) {
+          chrome.runtime
+            .sendMessage({ type: MSG.WORKSPACE_CHANGED, workspaceId: id })
+            .catch(() => {});
+        }
+      })
+      .catch((err) => {
+        console.error("[store] failed to persist active workspace:", err);
+      });
+
     loadCollections(id)
       .then(async (collections) => {
         if (get().activeWorkspaceId !== id) return;
@@ -205,6 +231,25 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (get().activeWorkspaceId === id) {
           set({ collections: [], tabsByCollection: new Map() });
         }
+      });
+  },
+
+  applyActiveWorkspaceFromBroadcast: (id) => {
+    if (get().activeWorkspaceId === id) return;
+    set({ activeWorkspaceId: id });
+    if (id == null) {
+      set({ collections: [], tabsByCollection: new Map() });
+      return;
+    }
+    loadCollections(id)
+      .then(async (collections) => {
+        if (get().activeWorkspaceId !== id) return;
+        const tabsByCollection = await loadTabsByCollection(collections);
+        if (get().activeWorkspaceId !== id) return;
+        set({ collections, tabsByCollection });
+      })
+      .catch((err) => {
+        console.error("[store] failed to apply broadcast workspace:", err);
       });
   },
 
@@ -558,7 +603,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const newMap = new Map(tabsByCollection);
     newMap.set(newId!, []);
     set({
-      collections: [...get().collections, collection],
+      collections: [collection, ...get().collections],
       tabsByCollection: newMap,
     });
   },
@@ -1059,11 +1104,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   saveTabsAsCollection: async (name, tabs) => {
     const validName = validateName(name);
-    if (!validName || tabs.length === 0) return;
+    if (!validName || tabs.length === 0) return false;
     const { activeWorkspaceId, collections, workspaces } = get();
-    if (activeWorkspaceId == null) return;
+    if (activeWorkspaceId == null) return false;
 
     const parentWs = workspaces.find((w) => w.id === activeWorkspaceId);
+    if (!parentWs) return false;
 
     const sorted = [...collections].sort(compareByOrder);
     const firstCollectionOrder = sorted.length > 0 ? sorted[0].order : null;
@@ -1104,7 +1150,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         action: "create",
         payload: {
           syncId: collection.syncId,
-          parentSyncId: parentWs!.syncId,
+          parentSyncId: parentWs.syncId,
           name: validName,
           order: collectionOrder,
           updatedAt: now,
@@ -1147,11 +1193,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       const newMap = new Map(get().tabsByCollection);
       newMap.set(collectionId!, freshTabs);
       set({
-        collections: [...get().collections, collection],
+        collections: [collection, ...get().collections],
         tabsByCollection: newMap,
       });
+      return true;
     } catch (err) {
       console.error("[store] failed to save tabs as collection:", err);
+      return false;
     }
   },
 

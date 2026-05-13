@@ -5,6 +5,7 @@ import { Toaster, toast } from "sonner";
 import { ImportDetail } from "@/components/import/import-detail";
 import { ImportSummaryBar } from "@/components/import/import-summary-bar";
 import { ImportTree } from "@/components/import/import-tree";
+import { MSG } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { computeDiff } from "@/lib/import/diff";
 import { executeImport } from "@/lib/import/execute";
@@ -209,6 +210,7 @@ export default function App() {
           tabs: result.tabCount,
         }),
       );
+      chrome.runtime.sendMessage({ type: MSG.IMPORT_COMPLETED }).catch(() => {});
       setTimeout(() => window.close(), 2000);
     } catch (err) {
       console.error("Import failed:", err);

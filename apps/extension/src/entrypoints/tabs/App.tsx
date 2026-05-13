@@ -26,6 +26,7 @@ import { WorkspaceSidebar } from "@/components/layout/workspace-sidebar";
 import { TabFavicon } from "@/components/tab-favicon";
 import { useLiveTabSync } from "@/hooks/use-live-tab-sync";
 import { useSync } from "@/hooks/use-sync";
+import { useWorkspaceSync } from "@/hooks/use-workspace-sync";
 import { DRAG_TYPES, type DragData, resolveTargetCollectionId } from "@/lib/dnd-types";
 import { getSettings, saveSettings } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
@@ -81,6 +82,7 @@ export default function App() {
 
   useLiveTabSync();
   useSync();
+  useWorkspaceSync();
   const { mode } = useTheme();
 
   // Layout state

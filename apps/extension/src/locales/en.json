@@ -142,7 +142,9 @@
       "select_all": "Select all",
       "selected_count": "{{selected}} of {{total}} selected",
       "save": "Save",
-      "toast_success": "Saved {{count}} tab(s) to \"{{name}}\""
+      "toast_success": "Saved {{count}} tab(s) to \"{{name}}\"",
+      "toast_error": "Could not save selected tabs",
+      "close_after": "Close these tabs after saving"
     }
   },
   "live_tab": {

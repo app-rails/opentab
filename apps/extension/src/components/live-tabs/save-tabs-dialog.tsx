@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { TabFavicon } from "@/components/tab-favicon";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/constants";
+import { getSettings, updateSettings } from "@/lib/settings";
 import { useAppStore } from "@/stores/app-store";
 
 function formatTimestamp(): string {
@@ -35,6 +36,30 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
   const [selectedIds, setSelectedIds] = useState<Set<number>>(
     () => new Set(tabs.map((t) => t.id!)),
   );
+  const [closeAfter, setCloseAfter] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setSettingsLoaded(false);
+    setCloseAfter(false);
+    getSettings()
+      .then((s) => {
+        if (!cancelled) setCloseAfter(s.save_tabs_close_after);
+      })
+      .catch((err) => {
+        console.error("[save-tabs] failed to load settings:", err);
+        if (!cancelled) setCloseAfter(false);
+      })
+      .finally(() => {
+        if (!cancelled) setSettingsLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   // Reset state when dialog opens
   const handleOpenChange = (nextOpen: boolean) => {
@@ -65,6 +90,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
   const trimmedName = name.trim();
   const canSave =
     trimmedName.length > 0 && trimmedName.length <= WORKSPACE_NAME_MAX_LENGTH && !noneSelected;
+  const saveDisabled = !canSave || !settingsLoaded || saving;
 
   function toggleTab(tabId: number) {
     setSelectedIds((prev) => {
@@ -86,20 +112,50 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
     }
   }
 
-  function handleSave() {
+  function handleCloseAfterChange(next: boolean) {
+    setCloseAfter(next);
+    updateSettings({ save_tabs_close_after: next }).catch((err) => {
+      console.error("[save-tabs] failed to persist close_after:", err);
+    });
+  }
+
+  async function handleSave() {
     if (!canSave) return;
-    const selectedTabs = tabs
-      .filter((t) => selectedIds.has(t.id!))
-      .map((t) => ({
-        url: t.url ?? "",
-        title: t.title ?? t.url ?? "Untitled",
-        favIconUrl: t.favIconUrl,
-      }));
-    saveTabsAsCollection(trimmedName, selectedTabs);
-    toast.success(
-      t("dialog.save_tabs.toast_success", { count: selectedTabs.length, name: trimmedName }),
-    );
-    onOpenChange(false);
+    const selectedTabs = tabs.filter((t) => selectedIds.has(t.id!));
+    const payload = selectedTabs.map((t) => ({
+      url: t.url ?? "",
+      title: t.title ?? t.url ?? "Untitled",
+      favIconUrl: t.favIconUrl,
+    }));
+
+    setSaving(true);
+    try {
+      const saved = await saveTabsAsCollection(trimmedName, payload);
+      if (!saved) {
+        toast.error(t("dialog.save_tabs.toast_error"));
+        return;
+      }
+
+      toast.success(
+        t("dialog.save_tabs.toast_success", { count: payload.length, name: trimmedName }),
+      );
+
+      if (closeAfter) {
+        const selfPrefix = chrome.runtime.getURL("");
+        const closableIds = selectedTabs
+          .filter((t) => t.id != null && !(t.url ?? "").startsWith(selfPrefix))
+          .map((t) => t.id!);
+        if (closableIds.length > 0) {
+          chrome.tabs.remove(closableIds).catch((err) => {
+            console.error("[save-tabs] close failed:", err);
+          });
+        }
+      }
+
+      onOpenChange(false);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -118,7 +174,7 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && canSave) handleSave();
+              if (e.key === "Enter" && !saveDisabled) handleSave();
             }}
           />
 
@@ -156,13 +212,23 @@ export function SaveTabsDialog({ open, onOpenChange, tabs }: SaveTabsDialogProps
               })}
             </span>
           </div>
+
+          {/* biome-ignore lint/a11y/noLabelWithoutControl: label wraps Radix Checkbox which renders input internally */}
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <Checkbox
+              checked={closeAfter}
+              disabled={!settingsLoaded}
+              onCheckedChange={(v) => handleCloseAfterChange(v === true)}
+            />
+            <span>{t("dialog.save_tabs.close_after")}</span>
+          </label>
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>
             {t("dialog.cancel")}
           </Button>
-          <Button onClick={handleSave} disabled={!canSave}>
+          <Button onClick={handleSave} disabled={saveDisabled}>
             {t("dialog.save_tabs.save")}
           </Button>
         </DialogFooter>
