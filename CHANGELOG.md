@@ -5,6 +5,38 @@ All notable changes to OpenTab will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.2] - 2026-05-13
+
+### Added
+
+- **Server sync engine (opt-in)** — outbox + change-log architecture wires the
+  better-auth backend up end-to-end for reliable multi-device sync; still
+  fully optional, local-first stays the default.
+- **Theme toggler with ripple animation** — animated light/dark/system switcher
+  in the sidebar.
+- **Sort & dedupe tabs in a collection** — sort by title, URL, or date and
+  remove duplicates with one click.
+- **Move collections across workspaces** — drag a collection onto another
+  workspace, with an optional "switch + focus" follow-up.
+- **Export/import buttons in the sidebar** — back up or restore collection data
+  without digging through menus.
+- **Optional "close tabs after saving as collection"** — declutter the window
+  in one step.
+
+### Changed
+
+- New workspaces and collections are inserted at the top of the list for
+  faster access.
+- Active workspace now syncs across all open OpenTab pages in real time.
+- Import/export icons swapped to match directional intuition.
+
+### Fixed
+
+- Hardened save-tabs hydration and workspace-switch race conditions.
+- Open OpenTab pages refresh after a backup import.
+- Dexie `versionchange` events no longer leave the extension in a broken state
+  after schema upgrades.
+
 ## [0.0.1] - 2026-04-11
 
 Initial release of OpenTab — a local-first Chrome extension for managing browser
@@ -41,4 +73,5 @@ Download `opentab-chrome-extension-v0.0.1.zip` from the GitHub release, unzip,
 then load the `chrome-mv3` folder via `chrome://extensions/` → Developer mode →
 "Load unpacked".
 
+[0.0.2]: https://github.com/app-rails/opentab/releases/tag/v0.0.2
 [0.0.1]: https://github.com/app-rails/opentab/releases/tag/v0.0.1
