@@ -21,7 +21,7 @@
   "packageManager": "pnpm@10.8.0",
   "pnpm": {
     "overrides": {
-      "@vitejs/plugin-react": "^5"
+      "@vitejs/plugin-react": "^6"
     }
   }
 }
