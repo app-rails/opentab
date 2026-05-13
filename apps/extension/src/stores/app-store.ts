@@ -558,7 +558,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const newMap = new Map(tabsByCollection);
     newMap.set(newId!, []);
     set({
-      collections: [...get().collections, collection],
+      collections: [collection, ...get().collections],
       tabsByCollection: newMap,
     });
   },
@@ -1147,7 +1147,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const newMap = new Map(get().tabsByCollection);
       newMap.set(collectionId!, freshTabs);
       set({
-        collections: [...get().collections, collection],
+        collections: [collection, ...get().collections],
         tabsByCollection: newMap,
       });
     } catch (err) {
