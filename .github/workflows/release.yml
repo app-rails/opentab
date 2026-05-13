@@ -12,6 +12,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find previous release tag
+        id: prev_tag
+        env:
+          CURRENT_TAG: ${{ github.ref_name }}
+        run: |
+          PREVIOUS_TAG=$(git tag --list 'v*' --sort=-v:refname \
+            | grep -vFx "$CURRENT_TAG" \
+            | head -1)
+          echo "Previous tag: ${PREVIOUS_TAG:-<none>}"
+          echo "previous_tag=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
 
       - uses: pnpm/action-setup@v4
 
@@ -45,4 +58,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          previous_tag: ${{ steps.prev_tag.outputs.previous_tag }}
           files: opentab-chrome-extension-v${{ env.VERSION }}.zip
