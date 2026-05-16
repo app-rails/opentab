@@ -1,6 +1,6 @@
 import { MonitorIcon, SmartphoneIcon } from "lucide-react";
 import { parseUserAgent } from "~/lib/utils";
-import type { Route } from "../../routes/settings/+types/sessions";
+import type { Route } from "../../routes/dash/settings/+types/sessions";
 import { DateTimeDisplay } from "../datetime-display";
 
 export function SessionItem({
