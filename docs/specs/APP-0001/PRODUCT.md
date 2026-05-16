@@ -35,17 +35,18 @@ opentab 仓库当前同时承载扩展端、服务端（`apps/server` Node + Hon
 3. 扩展端遇到服务端返回 HTTP 401 时，统一清空本地 auth 状态并触发 re-init，不区分 token 过期 / token 撤销 / token 缺失等子原因
 4. 扩展端遇到服务端返回 HTTP 426（protocol version mismatch）时，UI 给出阻塞性提示要求用户升级扩展版本，不再尝试自动重试同步
 5. 扩展端遇到其它 4xx / 5xx 时，根据响应 body 的 `error.code` 字符串做语义判定，不再依赖 tRPC procedure name 路由
-6. `@opentabai/api` 包导出 `PROTOCOL_VERSION` 常量、`endpoints` 对象（key 为业务名，value 为 endpoint 定义）、`apiCall` client helper、`UUID_V7_REGEX`、所有 request / response zod schemas、错误码 enum、长度上限常量；不导出任何 tRPC router / context 类型
+6. `@opentabai/api` 包导出 `PROTOCOL_VERSION` 常量、`endpoints` 对象（key 为业务名，value 为 endpoint 定义；至少覆盖 sync 簇 push / pull / snapshot、auth 簇含 exchange / consume、health 簇 `/api/health` 返回 `HealthResponse`）、`apiCall` client helper、`checkProtocolCompatibility(serverHealth: HealthResponse): CompatibilityResult` 辅助函数、`UUID_V7_REGEX`、所有 request / response zod schemas（含 `HealthResponse`、`ExchangeConsumeRequest`、`ExchangeConsumeResponse`）、错误码 enum、长度上限常量；不导出任何 tRPC router / context 类型；客户端遇到 server 返回未定义在 enum 内的 error code 时，统一降级为 `ErrorCode.INTERNAL`，不抛 schema 校验失败
 7. `@opentabai/api` 通过 `pnpm publish` 推到 npm 后，第三方项目 `pnpm add @opentabai/api` 能在 Node 20+ ESM 环境直接 import 上述所有导出
 8. 扩展端 settings 的 `sync_polling_interval` 默认值落在 30_000 – 60_000 毫秒区间（具体值见 Decisions）；用户已修改过的设置不被覆盖
 9. `pnpm install && pnpm build` 在改造后从干净仓库一次成功，无对已删除 workspace 的悬挂引用
 10. `pnpm --filter @opentab/extension dev` 启动后扩展能加载并连接到本地 opentab-server（默认 `http://localhost:8787`，可通过环境变量覆盖）
-11. README.md 顶部和 CLAUDE.md 的项目概览段不再提及 `apps/server` / `apps/web`，并明确说明云同步由独立 hosted service 提供
+11. README.md 顶部和 `CONTEXT.md` 的"项目概览 / 常用命令 / Monorepo 结构"段不再提及 `apps/server` / `apps/web` / `packages/{auth,db,config,shared,ui}`，并明确说明云同步由独立 hosted service 提供；CLAUDE.md 当前已无项目概览段，仅需 grep 校验它不含旧架构引用，无需主动改写
 
 ## Decisions
 
-- **`@opentabai/api` schema-only 包**：定义并导出 wire protocol 所有共享内容；接口形态：`defineEndpoint({path, method, request, response}): EndpointDef`、`endpoints.sync.push: EndpointDef<typeof PushRequest, typeof PushResponse>`、`apiCall<E extends EndpointDef>(endpoint: E, body: z.input<E['request']>, opts: ApiCallOpts): Promise<z.output<E['response']>>`、`PROTOCOL_VERSION: string`、`UUID_V7_REGEX: RegExp`、`ErrorCode` enum
-- **`apiCall` helper 行为**：负责 request body zod 校验 → fetch → HTTP status code 检查（200 直接 response.parse；401 / 426 抛专属错误；其它 4xx / 5xx 解析 `{ error: { code, message } }` 后抛 `ApiError`）→ response body zod 校验；headers 中固定带 `X-Protocol-Version`
+- **`@opentabai/api` schema-only 包**：定义并导出 wire protocol 所有共享内容；接口形态：`defineEndpoint({path, method, request, response}): EndpointDef`、`endpoints.{sync.push, sync.pull, sync.snapshot, auth.exchange, auth.consume, health.check}: EndpointDef<typeof Req, typeof Res>`（覆盖 sync / auth / health 三簇）、`apiCall<E extends EndpointDef>(endpoint: E, body: z.input<E['request']>, opts: ApiCallOpts): Promise<z.output<E['response']>>`、`checkProtocolCompatibility(serverHealth: HealthResponse): { compatible: boolean; reason?: string }`、`PROTOCOL_VERSION: string`、`UUID_V7_REGEX: RegExp`、`ErrorCode` enum、`HealthResponse` / `ExchangeConsumeRequest` / `ExchangeConsumeResponse` 等 zod schemas 与对应类型；本条目与 Behavior 6 是同一清单的两种视角（Behavior 6 描述"导出了什么"，本条目描述"接口形态如何"），AC 第 "Behavior 6, 7" 项以两者并集为准
+- **`apiCall` helper 行为**：负责 request body zod 校验 → fetch → HTTP status code 检查（200 直接 response.parse；401 / 426 抛专属错误；其它 4xx / 5xx 解析 `{ error: { code, message } }` 后抛 `ApiError`，未知 code 字符串降级为 `ErrorCode.INTERNAL` 而非 schema 失败）→ response body zod 校验；headers 中固定带 `X-OpenTab-Protocol-Version`（与 opentab-server protocol gate 期望的 header 名严格一致）
+- **`checkProtocolCompatibility` 辅助函数**：接收 `/api/health` 响应中的 server `HealthResponse`，与本地 `PROTOCOL_VERSION` 比较，返回 `{ compatible: boolean, reason?: string }`；扩展启动 / 网络恢复时调用一次，不通过则触发与 426 同样的阻塞 UI（与 426 共享同一升级提示）
 - **扩展端 API 客户端 (`api-client.ts`)**：替换原 `trpc.ts`，对外暴露 `getExtensionApiCall(): Promise<ApiCallBound>`，封装 baseURL 拼接、Bearer token 注入、settings 缓存；接口形态：`apiCall<E extends EndpointDef>(endpoint: E, body: z.input<E['request']>): Promise<z.output<E['response']>>`（baseURL 和 auth header 已绑定，返回已通过 `response.parse` 的 typed payload；不暴露 raw fetch `Response`）
 - **扩展端 sync 引擎适配**：`sync-engine.ts` 内所有 `trpc.sync.*` 调用换成 `apiCall(endpoints.sync.*, body)`；保留原有重试 / 增量 / outbox 语义，仅替换网络层
 - **错误处理统一**：扩展端定义三类错误 `UnauthorizedError`（401）、`VersionMismatchError`（426）、`ApiError`（其它，含 `code: ErrorCode` 字段）；删除原 tRPC 错误判定逻辑
@@ -68,10 +69,10 @@ opentab 仓库当前同时承载扩展端、服务端（`apps/server` Node + Hon
 - [ ] 覆盖 Behavior 6, 7 — `@opentabai/api` 包的导出形状与 Decisions 中"`@opentabai/api` schema-only 包"条目及 Behavior 6 列出的清单一致，不含任何 tRPC 痕迹（grep `@trpc/`、`router(`、`procedure` 应全空）
 - [ ] 覆盖 User Story 7, 8 + Behavior 9 — 删 server/web 后 `pnpm install && pnpm build` 从干净仓库一次通过，`pnpm-workspace.yaml` / `turbo.json` / 根 `package.json` scripts 不存在指向已删目录的引用
 - [ ] 覆盖 Behavior 8 — `sync_polling_interval` 默认值改后，新装扩展首次同步间隔为 60_000ms；已升级的扩展保留用户原值
-- [ ] 覆盖 Behavior 10 — 启动本地 opentab-server 后扩展能完成一次完整的 push / pull 同步循环
+- [ ] 覆盖 Behavior 10 — 启动本地 opentab-server 后，用手工注入的合法 token 跑通一次完整 push / pull 同步循环（device flow UI 在 OOS；token 获取路径依 Open Questions "v1 sync 认证路径"决议——若决议恢复 anonymous 兼容则升级为真 e2e）
 - [ ] 覆盖 User Story 8 — `apps/extension/src/components/ui/` 下所有原 `@opentab/ui` 组件存在并可被引用，全仓（含 `.ts` / `.tsx` / `.css` / `tsconfig*.json` / `components.json` / `tailwind` 配置等）不再出现 `@opentab/ui` import 或 `packages/ui` 路径引用，特别核对 `apps/extension/src/assets/main.css` 的 `@source` 指令已更新
 - [ ] 覆盖 User Story 8 — `pnpm --filter @opentab/extension dev` 启动后，对 tabs（newtab）/ settings / import 三个 entrypoint 做手动 smoke test：原本依赖 `@opentab/ui` 的页面（如 collection 卡片、save-tabs dialog、theme toggler）视觉与交互无回归
-- [ ] 覆盖 Behavior 11 — README.md 和 CLAUDE.md 不含 `apps/server` / `apps/web` 字样；README 顶部含"Cloud sync provided by a separate hosted service"段落
+- [ ] 覆盖 Behavior 11 — README.md / CLAUDE.md / CONTEXT.md 均不含 `apps/server` / `apps/web` / `packages/{auth,db,config,shared,ui}` 字样；README 顶部含"Cloud sync provided by a separate hosted service"段落；CONTEXT.md 的 Monorepo 结构段同步更新
 
 ## Testing Decisions
 
@@ -97,11 +98,13 @@ opentab 仓库当前同时承载扩展端、服务端（`apps/server` Node + Hon
 ## Open Questions
 
 - `@opentabai/api` 是否需要在首版就拆 sub-path exports（如 `@opentabai/api/schemas` vs `@opentabai/api/client`）？默认单一入口 `@opentabai/api`，等真有第三方客户端来集成再拆
+- **跨仓包名同步（执行前必须解决）**：opentab-server 仓现有 PRD / ADR 仍指 `@opentab/api`，本仓 PRD 按 memory 锁定决策用 `@opentabai/api`。两者必须在 ISSUE-4 publish 前统一——默认按本仓决策推 server 侧 PRD/ADR/实现改 `@opentabai/api`，但需要用户在 opentab-server 仓做对应更新或显式翻盘到 `@opentab/api`
+- **v1 sync 认证路径（ISSUE-3 e2e 验收的前置）**：device flow UI 在 OOS，但 opentab-server v1 sync 入口已定为 setup/exchange + deviceToken，扩展原本走的 anonymous sign-in 是否在 server v1 继续支持需要确认。如果不支持，ISSUE-3 的"完整 push / pull 同步循环"验收要降级为"用手工注入的合法 token 跑通"，真正的 e2e 留 Phase 3 装上 device flow UI 后做
 
 ## Further Notes
 
-- 协议形态决策来源：opentab-server 仓 `docs/adr/0003-trpc-contract-via-npm.md`（在 review 阶段把 tRPC 翻盘为 JSON over HTTP）
-- 错误模型决策来源：opentab-server 仓 `docs/adr/0012-error-model.md`
+- 协议形态决策来源：opentab-server 仓 `docs/adr/0003-protocol-contract-via-npm.md`（在 review 阶段把 tRPC 翻盘为 JSON over HTTP）
+- 错误模型决策来源：opentab-server 仓 `docs/adr/0012-error-codes-and-protocol-evolution.md`
 - 跨仓改造账本：`~/.claude/projects/-Users-liang-zhao-code-github-app-rails-opentab/memory/project_server_rewrite.md`（含 2026-05-16 锁定的所有子决策）
 - 关联私有仓 PR：[opentab-server#1](https://github.com/app-rails/opentab-server/pull/1)（v1 PRD + 12 份 ADR）
 - 关联本仓 PR：[opentab#58](https://github.com/app-rails/opentab/pull/58)（agent 基线文档，独立合并）
