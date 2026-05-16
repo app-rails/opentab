@@ -20,5 +20,4 @@ status: needs-triage
 
 ## Blocked by
 
-- APP-0001/ISSUE-3
 - APP-0001/ISSUE-6

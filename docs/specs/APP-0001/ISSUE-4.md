@@ -13,7 +13,7 @@ status: needs-triage
 
 ## Acceptance
 
-- [ ] 覆盖 PRODUCT.Acceptance "User Story 4" — npm 上可访问 `@opentabai/api@0.1.0`，新建空仓 `pnpm add @opentabai/api` 后能 import 所有声明的导出并 typecheck 通过
+- [ ] 覆盖 PRODUCT.Acceptance "User Story 4 + Behavior 7" — npm 上可访问 `@opentabai/api@0.1.0`，新建空仓 `pnpm add @opentabai/api` 后能 import 所有声明的导出并 typecheck 通过
 - [ ] **发版前置（PRODUCT.OpenQuestions "跨仓包名同步"）**：确认 npm scope `opentabai` 归属于本项目维护者（`npm access list packages opentabai` 或 `npm org ls opentabai`），且 `@opentabai/api` 当前为可创建状态（`npm view @opentabai/api` 返回 404）
 - [ ] **发版前置（PRODUCT.OpenQuestions "跨仓包名同步"）**：opentab-server 仓的 PRD / ADR / 实现已统一更新为 `@opentabai/api`（或 PRODUCT.OpenQuestions 翻盘后两仓均改回 `@opentab/api`）；publish 时两仓决策必须一致
 - [ ] 切片特有：发版前在本地 `pnpm pack` 验证 tarball 只含 `dist/`，无源码、无测试、无 `node_modules`、无 `tsconfig`

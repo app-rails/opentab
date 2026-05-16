@@ -9,7 +9,7 @@ status: needs-triage
 
 ## What to build
 
-删除 `apps/server`、`apps/web`、`packages/auth`、`packages/db`、`packages/config`、`packages/shared`、`packages/ui` 整个目录。把 `AuthState` 类型从 `@opentab/shared` 搬到 `apps/extension/src/lib/auth-storage.ts`（扩展独占数据结构）。更新 `pnpm-workspace.yaml`（仅保留 `apps/extension` 和 `packages/api`）、`turbo.json`（清理对应 pipeline）、根 `package.json` scripts（删 server / web 相关条目），移除 `@trpc/client` / `@trpc/server` 顶层依赖。覆盖 PRODUCT.UserStory #1、#2、#3、#7、PRODUCT.Behavior #1、#9。
+删除 `apps/server`、`apps/web`、`packages/auth`、`packages/db`、`packages/config`、`packages/shared`、`packages/ui` 整个目录（删 `packages/ui` 是 User Story 8 的收尾步骤，依赖 ISSUE-5 把扩展端引用先迁完）。把 `AuthState` 类型从 `@opentab/shared` 搬到 `apps/extension/src/lib/auth-storage.ts`（扩展独占数据结构）。更新 `pnpm-workspace.yaml`（仅保留 `apps/extension` 和 `packages/api`）、`turbo.json`（清理对应 pipeline）、根 `package.json` scripts（删 server / web 相关条目），移除根 `package.json` 与已删 server / web 中所有 `@trpc/client` / `@trpc/server` 残留依赖。覆盖 PRODUCT.UserStory #1、#2、#3、#7、#8、PRODUCT.Behavior #1、#9。
 
 ## Acceptance
 
