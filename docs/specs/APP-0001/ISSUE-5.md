@@ -13,8 +13,8 @@ status: needs-triage
 
 ## Acceptance
 
-- [ ] 覆盖 PRODUCT.Acceptance "User Story 8 / components/ui 项" — 全仓（含 `.ts` / `.tsx` / `.css` / `tsconfig*.json` / `components.json` / `tailwind` 配置）grep `@opentab/ui` 与 `packages/ui` 路径引用全空，`apps/extension/src/assets/main.css` `@source` 指令更新到位
-- [ ] 覆盖 PRODUCT.Acceptance "User Story 8 / smoke test 项" — tabs（newtab）/ settings / import 三个 entrypoint 手动 smoke：collection 卡片、save-tabs dialog、theme toggler 视觉与交互无回归
+- [ ] 覆盖 PRODUCT.Acceptance "User Story 8（`@opentab/ui` import 清零）" — 全仓（含 `.ts` / `.tsx` / `.css` / `tsconfig*.json` / `components.json` / `tailwind` 配置）grep `@opentab/ui` 与 `packages/ui` 路径引用全空，`apps/extension/src/assets/main.css` `@source` 指令更新到位
+- [ ] 覆盖 PRODUCT.Acceptance "User Story 8（tabs / settings / import smoke test）" — tabs（newtab）/ settings / import 三个 entrypoint 手动 smoke：collection 卡片、save-tabs dialog、theme toggler 视觉与交互无回归
 - [ ] 切片特有：`pnpm --filter @opentab/extension build` 通过，产物 chunk 体积无异常增长
 - [ ] 切片特有：现有 `vi.mock("@opentab/ui/...")` 的测试同步改成 mock 相对路径或直接放行组件渲染
 - [ ] 切片特有：`apps/extension/package.json` 含全部迁入的运行时依赖，`pnpm install` 无 unmet peer 警告

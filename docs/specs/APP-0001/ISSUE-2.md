@@ -13,7 +13,7 @@ status: needs-triage
 
 ## Acceptance
 
-- [ ] 覆盖 PRODUCT.Acceptance "Behavior 6, 7" — 所有业务 endpoint 形状与 opentab-server `docs/adr/0003-protocol-contract-via-npm.md` 描述一致；至少包含 sync 簇 push / pull / snapshot、auth 簇 exchange / consume、health 簇 `/api/health`
+- [ ] 覆盖 PRODUCT.Acceptance "Behavior 6" — 所有业务 endpoint 形状与 opentab-server `docs/adr/0003-protocol-contract-via-npm.md` 描述一致；至少包含 sync 簇 push / pull / snapshot、auth 簇 exchange / consume、health 簇 `/api/health`（Behavior 7 的真 publish 由 ISSUE-4 兜底）
 - [ ] 切片特有：`HealthResponse` schema 含 `protocolVersion` 字段并被 `checkProtocolCompatibility` 实际消费（替换 ISSUE-1 中的 `passthrough()` 占位）
 - [ ] 切片特有：`ExchangeConsumeRequest` / `ExchangeConsumeResponse` 类型作为 named export 暴露，供扩展端在 ISSUE-3 中使用
 - [ ] 切片特有：每条 endpoint 都有 zod 双向校验测试（合法 input pass、非法 input fail），fixtures 与 opentab-server 侧同源
