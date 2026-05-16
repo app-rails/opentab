@@ -1,6 +1,6 @@
 ---
 id: APP-0001
-status: approved
+status: implementing
 ---
 
 # opentab 仓 v1 改造（schema-only 包 + 扩展端切到 JSON over HTTP）
