@@ -2,18 +2,6 @@
 
 Behavioral guidelines to reduce common LLM coding mistakes — **what to do / what not to do**.
 
-## 项目关键文档
-
-工作前先扫一眼这三份，各司其职：
-
-| 文档 | 回答的问题 | 何时读 |
-|------|------------|--------|
-| [ETHOS.md](./ETHOS.md) | **为什么这样**（信念基础） | 判断 tradeoff、原则冲突时 |
-| **CLAUDE.md**（本文件） | **做什么 / 不做什么**（行为规则） | 每次开工前 |
-| [CONTEXT.md](./CONTEXT.md) | **在哪里做事**（项目架构、命令、领域） | 改代码、跑命令、找文件前 |
-
-**冲突优先级：** 用户当前指令 > CLAUDE.md > ETHOS.md。CONTEXT.md 是事实参考，不参与冲突仲裁。
-
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
 ## 0. Communication
@@ -97,3 +85,17 @@ Behavioral guidelines to reduce common LLM coding mistakes — **what to do / wh
 ---
 
 **These guidelines are working if:** diff 里没有不必要的改动、不再因过度设计返工、提问发生在动手前而不是踩坑后。
+
+---
+
+## 项目关键文档
+
+工作前先扫一眼这三份，各司其职：
+
+| 文档 | 回答的问题 | 何时读 |
+|------|------------|--------|
+| [ETHOS.md](./ETHOS.md) | **为什么这样**（信念基础） | 判断 tradeoff、原则冲突时 |
+| **CLAUDE.md**（本文件） | **做什么 / 不做什么**（行为规则） | 每次开工前 |
+| [CONTEXT.md](./CONTEXT.md) | **在哪里做事**（项目架构、命令、领域） | 改代码、跑命令、找文件前 |
+
+**冲突优先级：** 用户当前指令 > CLAUDE.md > ETHOS.md。CONTEXT.md 是事实参考，不参与冲突仲裁。
