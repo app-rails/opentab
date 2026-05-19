@@ -26,7 +26,7 @@
   "devDependencies": {
     "@better-auth/cli": "^1.4.21",
     "@opentab/config": "workspace:^",
-    "@types/node": "^25.7.0",
+    "@types/node": "^25.9.0",
     "tsx": "^4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
